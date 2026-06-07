@@ -1,0 +1,20 @@
+{
+  "name": "mefai-verifiable-protocol",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MEFAI verifiable protocol layer · commit-reveal prediction registry and drawdown Risk Governor for the autonomous trading agent",
+  "license": "MIT",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy-bnbhack.ts --network bscTestnet",
+    "deploy:mainnet": "hardhat run scripts/deploy-bnbhack.ts --network bscMainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "chai": "^4.5.0",
+    "ethers": "^6.13.0",
+    "hardhat": "^2.22.0",
+    "typescript": "^5.5.0"
+  }
+}

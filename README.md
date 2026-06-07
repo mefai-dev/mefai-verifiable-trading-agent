@@ -114,22 +114,25 @@ pip install -r requirements.txt
 cp .env.example .env      # fill in your own values; defaults run in paper mode
 
 # 2. Generate a synthetic sample book so the engine has data to fit
-#    (the production book of labeled outcomes is private and gitignored)
+#    (the production book of labeled outcomes is private and gitignored).
+#    Point every component at it with one env var (default is data/signal.db).
 python3 bnbhack/data/make_sample_db.py
+export MEFAI_SIGNAL_DB="$PWD/bnbhack/data/signal.db"
 
 # 3. Verify the engine: drawdown-budget guarantee + direction-aware PnL
 python3 -m unittest discover -s bnbhack/tests
 
-# 4. Run the autonomous loop (paper mode, signs nothing)
-cd bnbhack/agent
-python3 loop.py
+# 4. Run one cycle of the autonomous loop (paper mode, signs nothing)
+python3 bnbhack/agent/loop.py --once
 
 # 5. Serve the live cockpit API
-cd bnbhack/api
-python3 -m uvicorn backend:app --host 127.0.0.1 --port 8401
+python3 -m uvicorn backend:app --app-dir bnbhack/api --host 127.0.0.1 --port 8401
 
-# 6. Run a strategy-skill backtest
+# 6. Run a strategy-skill walk-forward backtest
 python3 bnbhack/skills/risk-budgeted-allocator/backtest/walk_forward.py
+
+# 7. Build and test the verifiable layer (needs no key, no RPC, no funds)
+cd bnbhack/contracts && npm install && npm test   # 15 tests, all green
 ```
 
 The backtests are out-of-sample walk-forward simulations: each cell learns its
@@ -173,6 +176,18 @@ ratio carries positive expectancy.
 - **ERC-8004** · the agent's portable on-chain identity.
 - **x402** · the machine-payable feed standard that lets agents pay agents for
   proven alpha with no human in the loop.
+
+---
+
+## Security
+
+MEFAI can move money, so it is built to fail safe. It signs nothing until two
+separate flags are set, clears every spend through a fail-closed security gate,
+talks only to a loopback proxy and an allowlisted set of RPC hosts, and anchors
+its equity to a contract that halts trading when a drawdown budget is breached.
+The full posture, threat model and disclosure process are in
+[`SECURITY.md`](SECURITY.md). Verified contract addresses are in
+[`bnbhack/contracts/DEPLOYMENTS.md`](bnbhack/contracts/DEPLOYMENTS.md).
 
 ---
 

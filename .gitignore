@@ -12,6 +12,9 @@
 # is ignored; the bnbhack/data/ source dir (schema + sample generator) is kept,
 # and any actual database file is still ignored everywhere by the *.db rules.
 /data/
+# Backtest / report artifacts are regenerated from the data; never committed so
+# no number in the repo is one a reviewer cannot reproduce from source.
+output/
 *.db
 *.db-journal
 *.db-wal
@@ -36,11 +39,13 @@ build/
 .cache/
 *.tsbuildinfo
 
-# Solidity / Foundry
+# Solidity / Foundry / Hardhat
 out/
 cache/
+artifacts/
 broadcast/
 lib/
+typechain-types/
 
 # Editor / OS
 .DS_Store

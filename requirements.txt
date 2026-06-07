@@ -13,8 +13,13 @@ pydantic>=2.12,<3.0
 httpx>=0.28,<0.29
 
 # EIP-712 typed-data signing for the x402 machine-payable feed and the
-# chain writer / identity helpers (bnbhack/agent/x402_feed.py, chain_writer.py)
+# identity helpers (bnbhack/agent/x402_feed.py, erc8004_identity.py)
 eth-account>=0.13,<0.14
+
+# BSC reads/writes for the commit-reveal registry and equity anchoring
+# (bnbhack/agent/chain_writer.py). Only exercised when a chain path runs;
+# the agent stays in paper mode by default and signs nothing.
+web3>=7,<8
 
 # Everything else the agent uses (sqlite3, hashlib, secrets, dataclasses,
 # argparse, decimal, math) ships with the Python 3.11+ standard library.
