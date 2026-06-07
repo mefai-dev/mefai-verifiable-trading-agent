@@ -109,18 +109,26 @@ frontend/
 ## Quickstart
 
 ```bash
-# 1. Configure
+# 1. Install dependencies and configure
+pip install -r requirements.txt
 cp .env.example .env      # fill in your own values; defaults run in paper mode
 
-# 2. Run the autonomous loop (paper mode, signs nothing)
+# 2. Generate a synthetic sample book so the engine has data to fit
+#    (the production book of labeled outcomes is private and gitignored)
+python3 bnbhack/data/make_sample_db.py
+
+# 3. Verify the engine: drawdown-budget guarantee + direction-aware PnL
+python3 -m unittest discover -s bnbhack/tests
+
+# 4. Run the autonomous loop (paper mode, signs nothing)
 cd bnbhack/agent
 python3 loop.py
 
-# 3. Serve the live cockpit API
+# 5. Serve the live cockpit API
 cd bnbhack/api
 python3 -m uvicorn backend:app --host 127.0.0.1 --port 8401
 
-# 4. Run a strategy-skill backtest
+# 6. Run a strategy-skill backtest
 python3 bnbhack/skills/risk-budgeted-allocator/backtest/walk_forward.py
 ```
 
@@ -128,6 +136,17 @@ The backtests are out-of-sample walk-forward simulations: each cell learns its
 edge from a training window and is tested on a later window it never saw, with
 equity compounded net of cost under the same drawdown budget the live engine
 uses.
+
+### A note on the data and the frontend
+
+- **The labeled-outcome book is private.** The 181k resolved outcomes are real
+  account data, excluded by `.gitignore`. `bnbhack/data/` ships the exact table
+  schema and a seeded, clearly-synthetic sample generator so anyone can run the
+  full pipeline locally without it. See `bnbhack/data/README.md`.
+- **`frontend/compete/` is an excerpt, not a standalone app.** It is the
+  jury-facing presentation that lives inside the larger MEFAI terminal, included
+  here as source for review. It reads from the cockpit API in step 5 and is not
+  meant to be built in isolation.
 
 ---
 

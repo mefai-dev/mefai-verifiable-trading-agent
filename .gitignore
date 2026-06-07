@@ -8,8 +8,10 @@
 *.pem
 *.keystore
 
-# Local state and databases
-data/
+# Local state and databases. The runtime data/ dir (generated DBs, local state)
+# is ignored; the bnbhack/data/ source dir (schema + sample generator) is kept,
+# and any actual database file is still ignored everywhere by the *.db rules.
+/data/
 *.db
 *.db-journal
 *.db-wal

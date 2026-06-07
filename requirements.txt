@@ -1,0 +1,20 @@
+# MEFAI · The Verifiable Trading Agent · Python runtime dependencies
+# Pinned to the minor versions the agent and cockpit are developed against.
+# Install with:  pip install -r requirements.txt
+
+# Cockpit API (bnbhack/api/backend.py)
+fastapi>=0.135,<0.136
+uvicorn>=0.42,<0.43
+pydantic>=2.12,<3.0
+
+# Async HTTP for the CMC Agent Hub client, the security solver and the
+# position manager (bnbhack/agent/cmc_mcp.py, tx_security_solver.py,
+# position_manager.py)
+httpx>=0.28,<0.29
+
+# EIP-712 typed-data signing for the x402 machine-payable feed and the
+# chain writer / identity helpers (bnbhack/agent/x402_feed.py, chain_writer.py)
+eth-account>=0.13,<0.14
+
+# Everything else the agent uses (sqlite3, hashlib, secrets, dataclasses,
+# argparse, decimal, math) ships with the Python 3.11+ standard library.
