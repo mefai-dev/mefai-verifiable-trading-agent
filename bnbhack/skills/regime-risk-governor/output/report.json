@@ -1,0 +1,121 @@
+{
+  "skill": "regime-risk-governor",
+  "slice": {
+    "symbol": null,
+    "timeframe": "15m",
+    "signal_type": "buy"
+  },
+  "has_edge": true,
+  "note": "recommend TP 3.0% / SL 3.0% -> expectancy +0.399% (+/-0.032) per-risk +0.133R over 4112 trades",
+  "aligned": [
+    {
+      "strength": 0.0,
+      "deploy": true,
+      "risk_scale": 0.6,
+      "alignment": 1
+    },
+    {
+      "strength": 0.2,
+      "deploy": true,
+      "risk_scale": 0.68,
+      "alignment": 1
+    },
+    {
+      "strength": 0.4,
+      "deploy": true,
+      "risk_scale": 0.76,
+      "alignment": 1
+    },
+    {
+      "strength": 0.6,
+      "deploy": true,
+      "risk_scale": 0.84,
+      "alignment": 1
+    },
+    {
+      "strength": 0.8,
+      "deploy": true,
+      "risk_scale": 0.92,
+      "alignment": 1
+    },
+    {
+      "strength": 1.0,
+      "deploy": true,
+      "risk_scale": 1.0,
+      "alignment": 1
+    }
+  ],
+  "opposed": [
+    {
+      "strength": 0.0,
+      "deploy": true,
+      "risk_scale": 0.5,
+      "alignment": -1
+    },
+    {
+      "strength": 0.2,
+      "deploy": true,
+      "risk_scale": 0.4,
+      "alignment": -1
+    },
+    {
+      "strength": 0.4,
+      "deploy": true,
+      "risk_scale": 0.3,
+      "alignment": -1
+    },
+    {
+      "strength": 0.6,
+      "deploy": true,
+      "risk_scale": 0.2,
+      "alignment": -1
+    },
+    {
+      "strength": 0.8,
+      "deploy": false,
+      "risk_scale": 0.0,
+      "alignment": -1
+    },
+    {
+      "strength": 1.0,
+      "deploy": false,
+      "risk_scale": 0.0,
+      "alignment": -1
+    }
+  ],
+  "aligned_size_non_decreasing": true,
+  "opposed_size_non_increasing": true,
+  "extreme_opposition_stands_aside": true,
+  "drawdown_gate": {
+    "internal_cap": 0.14,
+    "rows": [
+      {
+        "drawdown": 0.0,
+        "R": 0.14,
+        "max_risk_fraction": 0.021
+      },
+      {
+        "drawdown": 0.05,
+        "R": 0.09,
+        "max_risk_fraction": 0.0135
+      },
+      {
+        "drawdown": 0.1,
+        "R": 0.04,
+        "max_risk_fraction": 0.006
+      },
+      {
+        "drawdown": 0.14,
+        "R": 0.0,
+        "max_risk_fraction": 0.0
+      },
+      {
+        "drawdown": 0.16,
+        "R": 0.0,
+        "max_risk_fraction": 0.0
+      }
+    ],
+    "room_zero_at_cap": true
+  },
+  "gate_checks_ok": true
+}

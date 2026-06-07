@@ -1,0 +1,677 @@
+/* BNB HACK · live working demo per skill.
+   Clicking a capability card opens its dossier and, where the data is reachable
+   key-free, a working panel that runs the same read the agent runs. Every number
+   here is live: global metrics and the per token audit come from the CMC backed
+   intelligence endpoint, order flow from the real Binance spot tape. The few hub
+   feeds that need the CMC Pro key (derivatives, narratives, macro, news) show the
+   exact invoke and the response shape the agent consumes, but never fabricated
+   numbers. Integrity is the point: a judge sees real output or an honest schema,
+   never a faked feed. */
+
+import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import {
+  usePoll, fetchCmcGlobal, fetchCmcIntel, fetchCmcGate, fetchX402Products, fetchLoopState,
+  fetchSecurity, fetchFusion, fetchRecentSignals, fetchDebate, fetchSizing, fetchTpSl, fetchLeaderboard,
+} from '../api'
+import type {
+  CmcGlobal, CmcIntel, CmcToken, CmcGate, X402Catalog, LoopEnvelope, SecurityVerdict,
+  FusionResult, RecentSignals, DebateResult, SizingResult, TpSl, Leaderboard,
+} from '../api'
+import { Chip, CountUp, PctCell, CoinLogo, fmtUsd, fmtPrice, fmtNum, fmtPct, clamp01, shortAddr, Btn } from '../ui'
+import type { SkillDef } from '../skills'
+import { SKILLS } from '../skills'
+import { ADDR, AGENT_ID, scan, chainLabel } from '../config'
+import { OrderFlowPanel } from './orderFlow'
+import { WalletGuardPanel } from './walletGuard'
+import { OmniSignalPanel } from './omniSignal'
+
+const TONE = 'var(--cmc)'
+const BNB_TONE = 'var(--gold)'
+const TW_TONE = 'var(--trust)'
+
+function DemoFrame({ label, right, children }: { label: string; right?: ReactNode; children: ReactNode }) {
+  return <div className="cp-sk-demo">
+    <div className="cp-sk-demo-h">
+      <span className="cp-sk-demo-live">LIVE</span>
+      <span className="cp-sk-demo-l">{label}</span>
+      {right && <span className="cp-sk-demo-r mono">{right}</span>}
+    </div>
+    {children}
+  </div>
+}
+
+function MiniStat({ label, value, tone, sub }: { label: string; value: ReactNode; tone?: string; sub?: string }) {
+  return <div style={{ padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+    <div style={{ fontSize: 10, letterSpacing: .5, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 700 }}>{label}</div>
+    <div style={{ fontSize: 16, fontWeight: 800, color: tone || 'var(--c-text)', marginTop: 3 }}>{value}</div>
+    {sub && <div style={{ fontSize: 10.5, color: 'var(--c-muted-2)', marginTop: 2 }}>{sub}</div>}
+  </div>
+}
+const statGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(116px,1fr))', gap: 8 }
+
+/* ── live global + regime (cmc-global, cmc-mcap-ta) ── */
+function GlobalDemo({ regime }: { regime?: boolean }) {
+  const { data: g } = usePoll<CmcGlobal>((s) => fetchCmcGlobal(s), 60_000)
+  const chg = g?.mcap_change_24h ?? 0
+  const read = chg > 1.5 ? { t: 'Risk on', c: 'var(--green)' } : chg < -1.5 ? { t: 'Risk off', c: 'var(--red)' } : { t: 'Neutral', c: 'var(--gold)' }
+  return <DemoFrame label={regime ? 'Total market cap regime read' : 'Global metrics live'} right={g ? 'updated' : 'reading'}>
+    {regime && <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+      <Chip tone={read.c} solid>{read.t}</Chip>
+      <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>from the 24h market cap trend</span>
+    </div>}
+    <div style={statGrid}>
+      <MiniStat label="Total cap" value={g ? fmtUsd(g.total_market_cap_usd) : '-'} tone={TONE} />
+      <MiniStat label="24h volume" value={g ? fmtUsd(g.total_volume_usd) : '-'} />
+      <MiniStat label="BTC dom" value={g ? <CountUp value={g.btc_dominance} decimals={1} suffix="%" /> : '-'} tone="var(--gold)" />
+      <MiniStat label="ETH dom" value={g ? <CountUp value={g.eth_dominance} decimals={1} suffix="%" /> : '-'} tone="var(--trust)" />
+      <MiniStat label="Cap 24h" value={g ? <PctCell value={g.mcap_change_24h} /> : '-'} tone={read.c} />
+      <MiniStat label="Assets" value={g ? <CountUp value={g.active_cryptocurrencies} /> : '-'} />
+    </div>
+  </DemoFrame>
+}
+
+/* ── token picker shared by quote / metrics / info / ta / research ── */
+function useTokens() {
+  const { data } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
+  return data?.tokens ?? []
+}
+function TokenPick({ tokens, sym, setSym }: { tokens: CmcToken[]; sym: string; setSym: (s: string) => void }) {
+  const picks = tokens.slice(0, 6)
+  return <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+    {picks.map((t) => (
+      <button key={t.symbol} className={`cp-pill ${sym === t.symbol ? 'on' : ''}`} aria-pressed={sym === t.symbol} onClick={() => setSym(t.symbol)}>
+        <CoinLogo symbol={t.symbol} size={15} />{t.symbol}
+      </button>
+    ))}
+  </div>
+}
+
+function QuoteDemo({ metrics }: { metrics?: boolean }) {
+  const tokens = useTokens()
+  const [sym, setSym] = useState('BTC')
+  const t = tokens.find((x) => x.symbol === sym) || tokens[0]
+  return <DemoFrame label={metrics ? 'Per asset metrics live' : 'Latest quote live'} right={t ? `#${t.rank}` : 'reading'}>
+    <TokenPick tokens={tokens} sym={t?.symbol ?? sym} setSym={setSym} />
+    {t && <div style={statGrid}>
+      <MiniStat label="Price" value={fmtPrice(t.price)} tone={TONE} />
+      <MiniStat label="1h" value={<PctCell value={t.change_1h} />} />
+      <MiniStat label="24h" value={<PctCell value={t.change_24h} />} />
+      <MiniStat label="7d" value={<PctCell value={t.change_7d} />} />
+      <MiniStat label="24h volume" value={fmtUsd(t.volume_24h)} />
+      <MiniStat label="Market cap" value={fmtUsd(t.market_cap)} />
+    </div>}
+  </DemoFrame>
+}
+
+function InfoDemo() {
+  const tokens = useTokens()
+  const [sym, setSym] = useState('BNB')
+  const t = tokens.find((x) => x.symbol === sym) || tokens[0]
+  return <DemoFrame label="Asset profile live" right={t ? t.name : 'reading'}>
+    <TokenPick tokens={tokens} sym={t?.symbol ?? sym} setSym={setSym} />
+    {t && <div style={statGrid}>
+      <MiniStat label="Name" value={<span style={{ fontSize: 13 }}>{t.name}</span>} />
+      <MiniStat label="Rank" value={`#${t.rank}`} tone={TONE} />
+      <MiniStat label="Contract chain" value={<span style={{ fontSize: 13 }}>{t.contract_chain || 'native'}</span>} />
+      <MiniStat label="Ecosystems" value={<span style={{ fontSize: 12 }}>{(t.ecosystems || []).slice(0, 2).join(', ') || '-'}</span>} />
+    </div>}
+  </DemoFrame>
+}
+
+const verdictTone = (v: string) => {
+  const k = (v || '').toLowerCase()
+  if (k.includes('strong') || k === 'buy') return 'var(--green)'
+  if (k === 'avoid') return 'var(--red)'
+  if (k === 'weak') return 'var(--gold)'
+  return 'var(--c-muted)'
+}
+
+function SignalDemo({ research }: { research?: boolean }) {
+  const tokens = useTokens()
+  const [sym, setSym] = useState('BTC')
+  const t = tokens.find((x) => x.symbol === sym) || tokens[0]
+  return <DemoFrame label={research ? 'Asset dossier live' : 'Technical read live'} right={t ? `${t.symbol} audit` : 'reading'}>
+    <TokenPick tokens={tokens} sym={t?.symbol ?? sym} setSym={setSym} />
+    {t && <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <div style={{ fontSize: 30, fontWeight: 900, color: TONE, lineHeight: 1 }}>{fmtNum(t.mefai_score, 0)}</div>
+        <div>
+          <Chip tone={verdictTone(t.verdict)} solid>{t.verdict}</Chip>
+          <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 4 }}>MEFAI conviction score</div>
+        </div>
+        {t.has_anomaly && <Chip tone="var(--red)">anomaly</Chip>}
+      </div>
+      {t.verdict_reason && <p style={{ fontSize: 12, lineHeight: 1.55, color: 'var(--c-text-2)', margin: 0 }}>{t.verdict_reason}</p>}
+      {research && <div style={{ ...statGrid, marginTop: 10 }}>
+        <MiniStat label="Price" value={fmtPrice(t.price)} />
+        <MiniStat label="24h" value={<PctCell value={t.change_24h} />} />
+        <MiniStat label="7d" value={<PctCell value={t.change_7d} />} />
+      </div>}
+    </>}
+  </DemoFrame>
+}
+
+function SearchDemo() {
+  const tokens = useTokens()
+  const [q, setQ] = useState('bnb')
+  const needle = q.trim().toLowerCase()
+  const hits = needle
+    ? tokens.filter((t) => t.symbol.toLowerCase().includes(needle) || t.name.toLowerCase().includes(needle)).slice(0, 4)
+    : []
+  return <DemoFrame label="Resolve a ticker live" right={`${hits.length} match`}>
+    <input value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} placeholder="Type a name or ticker"
+      className="mono" style={{ width: '100%', padding: '9px 11px', borderRadius: 9, border: '1px solid var(--c-line-2)', background: 'var(--c-panel)', color: 'var(--c-text)', fontSize: 13, outline: 'none', marginBottom: 10 }} />
+    <div style={{ display: 'grid', gap: 6 }}>
+      {hits.map((t) => (
+        <div key={t.symbol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}><CoinLogo symbol={t.symbol} size={16} />{t.symbol} · {t.name}</span>
+          <span className="mono" style={{ fontSize: 12, color: 'var(--c-muted)' }}>rank #{t.rank} · score {fmtNum(t.mefai_score, 0)}</span>
+        </div>
+      ))}
+      {needle && hits.length === 0 && <div style={{ fontSize: 12, color: 'var(--c-muted-2)' }}>No asset in the live set matches that.</div>}
+    </div>
+  </DemoFrame>
+}
+
+function ReportDemo() {
+  const { data } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
+  const sum = data?.market_summary
+  const top = (data?.tokens ?? []).slice(0, 5)
+  return <DemoFrame label="Market report live" right={sum ? `${sum.total_tokens} audited` : 'reading'}>
+    {sum && <>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        <Chip tone="var(--green)" solid>{sum.strong_buy} strong buy</Chip>
+        <Chip tone="var(--green)">{sum.buy} buy</Chip>
+        <Chip tone="var(--c-muted)">{sum.neutral} neutral</Chip>
+        <Chip tone="var(--gold)">{sum.weak} weak</Chip>
+        <Chip tone="var(--red)">{sum.avoid} avoid</Chip>
+      </div>
+      <div style={{ ...statGrid, marginBottom: 10 }}>
+        <MiniStat label="Avg score" value={<CountUp value={sum.avg_score} decimals={1} />} tone={TONE} />
+        <MiniStat label="Anomalies" value={<CountUp value={sum.anomaly_count} />} tone={sum.anomaly_count > 0 ? 'var(--red)' : 'var(--green)'} />
+      </div>
+      <div style={{ display: 'grid', gap: 5 }}>
+        {top.map((t) => (
+          <div key={t.symbol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 12.5 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700 }}><CoinLogo symbol={t.symbol} size={15} />{t.symbol}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><PctCell value={t.change_24h} /><Chip tone={verdictTone(t.verdict)}>{t.verdict}</Chip></span>
+          </div>
+        ))}
+      </div>
+    </>}
+  </DemoFrame>
+}
+
+function McpDemo() {
+  const tools = useMemo(() => SKILLS.filter((s) => s.group === 'cmc' && s.kind === 'mcp-tool'), [])
+  return <DemoFrame label="MCP server surface" right={`${tools.length} tools`}>
+    <p style={{ fontSize: 12, color: 'var(--c-muted)', margin: '0 0 10px' }}>Every tool the live agent calls is one of these served verbatim from the CoinMarketCap MCP server.</p>
+    <div style={{ display: 'grid', gap: 5 }}>
+      {tools.map((t) => (
+        <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderRadius: 8, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+          <code className="mono" style={{ fontSize: 11.5, color: 'var(--c-text-2)' }}>{t.name}</code>
+          <span style={{ fontSize: 10.5, color: t.used ? TONE : 'var(--c-muted-2)', fontWeight: 700 }}>{t.used ? 'live' : 'idle'}</span>
+        </div>
+      ))}
+    </div>
+  </DemoFrame>
+}
+
+/* ── honest schema demo for hub feeds that need the CMC Pro key ── */
+function SchemaDemo({ s }: { s: SkillDef }) {
+  const note = s.used
+    ? 'Live hub feed · the agent calls this on the CMC Pro key. We show the exact invoke and the response shape it consumes but render no fabricated numbers here so what you see is either real output or an honest schema.'
+    : 'Available surface · not wired into the live agent today. The invoke and shape below are what it would return when enabled.'
+  const fields = (s.outputs || '').split('·').map((x) => x.trim()).filter(Boolean)
+  return <div className="cp-sk-demo">
+    <div className="cp-sk-demo-h">
+      <span className="cp-sk-demo-live" style={{ background: 'var(--c-muted-2)', color: 'var(--c-text)' }}>{s.used ? 'FEED' : 'AVAIL'}</span>
+      <span className="cp-sk-demo-l">Response shape</span>
+    </div>
+    {s.invoke && <code className="cp-sk-invoke mono" style={{ display: 'block', marginBottom: 10 }}>{s.invoke}</code>}
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+      {fields.map((f) => <span key={f} className="cp-sk-tag">{f}</span>)}
+    </div>
+    <p style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--c-muted-2)', margin: 0 }}>{note}</p>
+  </div>
+}
+
+function Reading() { return <div style={{ fontSize: 12, color: 'var(--c-muted-2)', padding: '6px 2px' }}>reading live feed<span className="cp-ellipsis" /></div> }
+function Down({ what }: { what: string }) { return <div style={{ fontSize: 12, color: 'var(--c-muted-2)', padding: '4px 2px', lineHeight: 1.5 }}>{what}</div> }
+const miniLabel: React.CSSProperties = { fontSize: 10, letterSpacing: .5, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 700, marginBottom: 4 }
+const rowBox: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', borderRadius: 8, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }
+
+const dirTone = (d: number) => d > 0 ? 'var(--green)' : d < 0 ? 'var(--red)' : 'var(--c-muted)'
+const dirText = (d: number) => d > 0 ? 'LONG' : d < 0 ? 'SHORT' : 'NEUTRAL'
+const sigTone = (s?: string) => { const k = (s || '').toUpperCase(); if (k.includes('LONG') || k.includes('BUY')) return 'var(--green)'; if (k.includes('SHORT') || k.includes('SELL')) return 'var(--red)'; return 'var(--gold)' }
+const checkTone = (s: string) => { const k = (s || '').toUpperCase(); if (k === 'PASS') return 'var(--green)'; if (k === 'WARN') return 'var(--gold)'; if (k === 'FAIL' || k === 'BLOCK') return 'var(--red)'; return 'var(--c-muted)' }
+const pctTone = (v: string): string => { const t = (v || '').trim(); if (!t || t === '-') return 'var(--c-text)'; return t.startsWith('-') ? 'var(--red)' : 'var(--green)' }
+
+/* ── CoinMarketCap hub gates, fully live (cmc-deriv / narratives / macro) ── */
+const GATE_TOOL: Record<string, { slug: string; label: string }> = {
+  'cmc-deriv': { slug: 'derivatives', label: 'Derivatives metrics live' },
+  'cmc-narratives': { slug: 'narratives', label: 'Trending narratives live' },
+  'cmc-macro': { slug: 'macro-events', label: 'Upcoming macro events live' },
+}
+function DerivGate({ d }: { d: any }) {
+  const oi = d.totalOpenInterest || {}, vol = d.totalVolume || {}, fut = d.futures || {}, perp = d.perpetuals || {}
+  return <div style={statGrid}>
+    <MiniStat label="Open interest" value={oi.current || '-'} tone={TONE} sub={oi.percentage_change_24h ? `24h ${oi.percentage_change_24h}` : undefined} />
+    <MiniStat label="Total volume 24h" value={vol.total_usd_24h || '-'} sub={vol.pct_change_prev_24h_vs_prior_24h ? `${vol.pct_change_prev_24h_vs_prior_24h} vs prior` : undefined} />
+    <MiniStat label="Futures OI" value={fut.openInterest?.current || '-'} sub={fut.openInterest?.percentage_change_24h ? `24h ${fut.openInterest.percentage_change_24h}` : undefined} />
+    <MiniStat label="Perp OI" value={perp.openInterest?.current || '-'} sub={perp.openInterest?.percentage_change_24h ? `24h ${perp.openInterest.percentage_change_24h}` : undefined} />
+  </div>
+}
+const cell = (r: any[], i: number) => (i >= 0 && r[i] != null ? String(r[i]) : '-')
+function NarrativesGate({ d }: { d: any }) {
+  const cl = d.categoryList || {}
+  const headers: string[] = cl.headers || []
+  const rows: any[][] = cl.rows || []
+  const iName = headers.indexOf('categoryName'), iCh = headers.indexOf('marketCapChangePercentage24h'), iCap = headers.indexOf('marketCapUsd')
+  if (iName < 0 || rows.length === 0) return null
+  return <div style={{ display: 'grid', gap: 5 }}>
+    {rows.slice(0, 8).map((r, i) => (
+      <div key={i} style={rowBox}>
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{i + 1} · {cell(r, iName)}</span>
+        <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span className="mono" style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>{cell(r, iCap)}</span>
+          <span className="mono" style={{ fontSize: 12, color: pctTone(cell(r, iCh)), fontWeight: 700, minWidth: 56, textAlign: 'right' }}>{cell(r, iCh)}</span>
+        </span>
+      </div>
+    ))}
+  </div>
+}
+function MacroGate({ d }: { d: any }) {
+  const ev = d.upcomingEventNews || {}
+  const headers: string[] = ev.headers || []
+  const rows: any[][] = ev.rows || []
+  const iTitle = headers.indexOf('title'), iDate = headers.indexOf('eventDate')
+  if (iTitle < 0 || rows.length === 0) return null
+  return <div style={{ display: 'grid', gap: 6 }}>
+    {rows.slice(0, 6).map((r, i) => (
+      <div key={i} style={{ padding: '8px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.4 }}>{cell(r, iTitle)}</div>
+        <div className="mono" style={{ fontSize: 11, color: TONE, marginTop: 3 }}>{cell(r, iDate)}</div>
+      </div>
+    ))}
+  </div>
+}
+function gateValid(id: string, d: any): boolean {
+  if (id === 'cmc-deriv') return !!(d.totalOpenInterest || d.totalVolume || d.futures || d.perpetuals)
+  if (id === 'cmc-narratives') return (d.categoryList?.headers || []).indexOf('categoryName') >= 0 && (d.categoryList?.rows || []).length > 0
+  if (id === 'cmc-macro') return (d.upcomingEventNews?.headers || []).indexOf('title') >= 0 && (d.upcomingEventNews?.rows || []).length > 0
+  return false
+}
+function CmcGateDemo({ s }: { s: SkillDef }) {
+  const map = GATE_TOOL[s.id]
+  const { data, error, loading } = usePoll<CmcGate>((sig) => fetchCmcGate(map.slug, sig), 120_000, [map.slug])
+  if (loading) return <DemoFrame label={map.label} right="reading"><Reading /></DemoFrame>
+  if (error || !data?.data || !gateValid(s.id, data.data)) return <SchemaDemo s={s} />
+  return <DemoFrame label={map.label} right="CMC hub">
+    {s.id === 'cmc-deriv' && <DerivGate d={data.data} />}
+    {s.id === 'cmc-narratives' && <NarrativesGate d={data.data} />}
+    {s.id === 'cmc-macro' && <MacroGate d={data.data} />}
+  </DemoFrame>
+}
+
+/* ── x402 machine payable catalog, live (cmc-skill-x402 / bnb-x402) ── */
+function X402Demo() {
+  const { data, error, loading } = usePoll<X402Catalog>((s) => fetchX402Products(s), 120_000)
+  return <DemoFrame label="Machine payable products live" right={data ? `${data.network} · ${data.products.length}` : 'reading'}>
+    {loading && <Reading />}
+    {error && <Down what="The product catalog is not reachable right now." />}
+    {data && <div style={{ display: 'grid', gap: 6 }}>
+      {data.products.map((p) => {
+        const raw = Number(p.price_atomic) / 1e18
+        const price = Number.isFinite(raw) ? raw : null
+        return <div key={p.product_id} style={{ padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{p.title}</span>
+            <Chip tone={BNB_TONE}>{price == null ? '-' : fmtNum(price, 2)} per call</Chip>
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 4, lineHeight: 1.5 }}>{p.description}</div>
+        </div>
+      })}
+    </div>}
+  </DemoFrame>
+}
+
+/* ── Trust Wallet, live from the autonomous loop snapshot ── */
+function useLoop() { return usePoll<LoopEnvelope>((s) => fetchLoopState(s), 30_000) }
+function BalanceDemo() {
+  const { data, error, loading } = useLoop()
+  const st = data?.available ? data.state : undefined
+  return <DemoFrame label="Agent wallet equity live" right={st ? 'paper book' : 'reading'}>
+    {loading && <Reading />}
+    {(error || (data && !data.available)) && !loading && <Down what="The autonomous loop snapshot is not available right now." />}
+    {st && <div style={statGrid}>
+      <MiniStat label="Equity" value={fmtUsd(st.equity)} tone={TW_TONE} />
+      <MiniStat label="Peak equity" value={fmtUsd(st.peak_equity)} />
+      <MiniStat label="Drawdown" value={fmtPct(st.drawdown * 100, 2)} tone={st.drawdown > 0 ? 'var(--red)' : 'var(--green)'} />
+      <MiniStat label="Risk budget" value={fmtPct(st.internal_cap * 100, 0)} sub="internal cap" />
+    </div>}
+  </DemoFrame>
+}
+function LoopDemo() {
+  const { data, error, loading } = useLoop()
+  const st = data?.available ? data.state : undefined
+  return <DemoFrame label="Autonomous loop snapshot live" right={st ? `cycle ${st.cycle}` : 'reading'}>
+    {loading && <Reading />}
+    {(error || (data && !data.available)) && !loading && <Down what="The autonomous loop is not reporting right now." />}
+    {st && <>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        <Chip tone={st.governor.ok ? 'var(--green)' : 'var(--red)'} solid>{st.mode} mode</Chip>
+        <Chip tone={TW_TONE}>{st.config.watchlist.length} symbols watched</Chip>
+        <Chip tone="var(--c-muted)">{Math.round(st.uptime_s / 3600)}h uptime</Chip>
+      </div>
+      <div style={{ ...statGrid, marginBottom: 10 }}>
+        <MiniStat label="Wallet" value={<code className="mono" style={{ fontSize: 11 }}>{shortAddr(st.agent.wallet)}</code>} />
+        <MiniStat label="Cycle" value={fmtNum(st.cycle, 0)} tone={TW_TONE} />
+        <MiniStat label="Interval" value={`${fmtNum(st.config.interval, 0)}s`} />
+      </div>
+      <div style={{ display: 'grid', gap: 5 }}>
+        {(st.decisions || []).slice(0, 4).map((dc, i) => (
+          <div key={i} style={rowBox}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 12 }}><CoinLogo symbol={dc.symbol} size={14} />{dc.symbol.replace('USDT', '')}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--c-muted)' }}>conv {fmtNum(dc.conviction, 0)}</span>
+              <Chip tone={dc.action === 'SKIP' ? 'var(--c-muted)' : 'var(--green)'}>{dc.action}</Chip>
+            </span>
+          </div>
+        ))}
+      </div>
+    </>}
+  </DemoFrame>
+}
+function IdentityDemo() {
+  return <DemoFrame label="Agent identity verifiable" right={chainLabel(ADDR.erc8004)}>
+    <div style={{ ...statGrid, marginBottom: 10 }}>
+      <MiniStat label="Standard" value="ERC-8004" tone="#A78BFA" />
+      <MiniStat label="Agent wallet" value={<code className="mono" style={{ fontSize: 11 }}>{shortAddr(ADDR.agent)}</code>} />
+    </div>
+    <div style={{ marginBottom: 10 }}>
+      <div style={miniLabel}>Agent id</div>
+      <code className="mono" style={{ fontSize: 10.5, color: 'var(--c-text-2)', wordBreak: 'break-all', lineHeight: 1.5 }}>{AGENT_ID}</code>
+    </div>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <Btn sm variant="ghost" href={scan(ADDR.erc8004)}>Identity registry</Btn>
+      <Btn sm variant="ghost" href={scan(ADDR.agent)}>Agent wallet</Btn>
+    </div>
+  </DemoFrame>
+}
+const SAMPLE_PLAN = { token: '0x55d398326f99059fF775485246999027B3197955', router: '0x10ED43C718714eb63d5aA57B78B54704E256024E', chain_id: 56, slippage_bps: 50, equity: 1000, equity_floor: 860 }
+function SecurityGateDemo() {
+  const { data, error, loading } = usePoll<SecurityVerdict>((s) => fetchSecurity(SAMPLE_PLAN, s), 120_000)
+  return <DemoFrame label="Pre trade safety gate live" right={data ? `score ${fmtNum(data.score, 0)}` : 'reading'}>
+    {loading && <Reading />}
+    {error && <Down what="The security gate is not reachable right now." />}
+    {data && <>
+      <div style={{ marginBottom: 10 }}><Chip tone={data.go ? 'var(--green)' : 'var(--red)'} solid>{data.go ? 'GO' : 'NO GO'}</Chip></div>
+      <div style={{ display: 'grid', gap: 5 }}>
+        {data.checks.map((c) => (
+          <div key={c.name} style={rowBox} title={c.detail}>
+            <span style={{ fontWeight: 600, fontSize: 12 }}>{c.name.replace(/_/g, ' ')}</span>
+            <Chip tone={checkTone(c.status)}>{c.status}</Chip>
+          </div>
+        ))}
+      </div>
+    </>}
+  </DemoFrame>
+}
+
+/* ── honest twak command shape for kit primitives with no browser safe path ── */
+function CommandDemo({ s }: { s: SkillDef }) {
+  const fields = (s.outputs || '').split('·').map((x) => x.trim()).filter(Boolean)
+  const inputs = (s.inputs || '').split('·').map((x) => x.trim()).filter(Boolean)
+  return <div className="cp-sk-demo">
+    <div className="cp-sk-demo-h">
+      <span className="cp-sk-demo-live" style={{ background: TW_TONE }}>twak</span>
+      <span className="cp-sk-demo-l">Command surface</span>
+    </div>
+    {s.invoke && <code className="cp-sk-invoke mono" style={{ display: 'block', marginBottom: 10 }}>{s.invoke}</code>}
+    {inputs.length > 0 && <div style={{ marginBottom: 8 }}>
+      <div style={miniLabel}>Inputs</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{inputs.map((f) => <span key={f} className="cp-sk-tag">{f}</span>)}</div>
+    </div>}
+    {fields.length > 0 && <div style={{ marginBottom: 10 }}>
+      <div style={miniLabel}>Returns</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{fields.map((f) => <span key={f} className="cp-sk-tag">{f}</span>)}</div>
+    </div>}
+    <p style={{ fontSize: 11.5, lineHeight: 1.55, color: 'var(--c-muted-2)', margin: '0 0 10px' }}>
+      {s.used
+        ? 'The live agent runs this exact command through the Trust Wallet kit. Execution spends from the agent wallet so the call and its shape are shown here with no fabricated output.'
+        : 'Available in the kit not wired into the live loop today. The call and its shape are what it returns when enabled.'}
+    </p>
+    <Btn sm variant="ghost" href={scan(ADDR.agent)}>Agent wallet on BscScan</Btn>
+  </div>
+}
+
+/* ── BNB Chain, fully live engines ── */
+const PAIRS4 = [{ base: 'BTC', spot: 'BTCUSDT', slash: 'BTC/USDT' }, { base: 'ETH', spot: 'ETHUSDT', slash: 'ETH/USDT' }, { base: 'BNB', spot: 'BNBUSDT', slash: 'BNB/USDT' }, { base: 'SOL', spot: 'SOLUSDT', slash: 'SOL/USDT' }]
+function PairPicks({ sel, set }: { sel: string; set: (x: typeof PAIRS4[number]) => void }) {
+  return <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+    {PAIRS4.map((x) => <button key={x.base} className={`cp-pill ${sel === x.base ? 'on' : ''}`} aria-pressed={sel === x.base} onClick={() => set(x)}><CoinLogo symbol={x.base} size={15} />{x.base}</button>)}
+  </div>
+}
+function FusionDemo() {
+  const [a, setA] = useState(PAIRS4[2])
+  const { data, error, loading } = usePoll<FusionResult>((s) => fetchFusion(a.spot, '1h', s), 60_000, [a.spot])
+  return <DemoFrame label="Signal fusion live" right={data ? `${data.n_sources} sources` : 'reading'}>
+    <PairPicks sel={a.base} set={setA} />
+    {loading && <Reading />}
+    {error && <Down what="Fusion did not answer for this asset right now." />}
+    {data && <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <Chip tone={dirTone(data.direction)} solid>{dirText(data.direction)}</Chip>
+        <span className="mono" style={{ fontSize: 12, color: 'var(--c-muted)' }}>{fmtPct(clamp01(data.agreement) * 100, 0)} agreement · {fmtPct(data.coverage * 100, 0)} coverage</span>
+      </div>
+      <div style={{ display: 'grid', gap: 5 }}>
+        {(data.sources || []).filter((x) => x.available).slice(0, 6).map((x) => (
+          <div key={x.name} style={rowBox}>
+            <span style={{ fontWeight: 600, fontSize: 12 }}>{x.name}</span>
+            <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--c-muted)' }}>w {fmtPct(x.weight_pct * 100, 0)}</span>
+              <Chip tone={dirTone(x.direction)}>{dirText(x.direction)}</Chip>
+            </span>
+          </div>
+        ))}
+      </div>
+    </>}
+  </DemoFrame>
+}
+function RecentSignalsDemo() {
+  const { data, error, loading } = usePoll<RecentSignals>((s) => fetchRecentSignals(8, undefined, s), 60_000)
+  const sigs = data?.signals ?? []
+  const wins = sigs.filter((x) => x.result === 'win').length
+  return <DemoFrame label="Resolved signals live" right={sigs.length ? `${wins}/${sigs.length} win` : 'reading'}>
+    {loading && <Reading />}
+    {error && <Down what="The signal record is not reachable right now." />}
+    {sigs.length > 0 && <div style={{ display: 'grid', gap: 5 }}>
+      {sigs.slice(0, 7).map((x, i) => (
+        <div key={`${x.symbol}-${x.direction}-${i}`} style={rowBox}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 12 }}><CoinLogo symbol={x.symbol} size={14} />{x.symbol.replace('.P', '')}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Chip tone={x.direction === 'short' ? 'var(--red)' : 'var(--green)'}>{x.direction.toUpperCase()}</Chip>
+            <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: x.pnl >= 0 ? 'var(--green)' : 'var(--red)', minWidth: 54, textAlign: 'right' }}>{x.pnl >= 0 ? '+' : ''}{fmtNum(x.pnl, 2)}%</span>
+            <Chip tone={x.result === 'win' ? 'var(--green)' : 'var(--red)'}>{x.result}</Chip>
+          </span>
+        </div>
+      ))}
+    </div>}
+  </DemoFrame>
+}
+function CouncilDemo() {
+  const [a, setA] = useState(PAIRS4[2])
+  const { data, error, loading } = usePoll<DebateResult>((s) => fetchDebate(a.slash, s), 90_000, [a.slash])
+  const c = data?.consensus
+  return <DemoFrame label="AI council consensus live" right={data?.experts ? `${data.experts.length} experts` : 'reading'}>
+    <PairPicks sel={a.base} set={setA} />
+    {loading && <Reading />}
+    {!loading && (error || !c) && <Down what="The council is not reachable for this asset right now." />}
+    {c && <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <Chip tone={sigTone(c.signal)} solid>{c.signal}</Chip>
+        <span className="mono" style={{ fontSize: 12, color: 'var(--c-muted)' }}>{fmtPct((c.agreement_pct ?? c.confidence * 100), 0)} agreement</span>
+      </div>
+      {c.summary && <p style={{ fontSize: 12, lineHeight: 1.55, color: 'var(--c-text-2)', margin: 0 }}>{c.summary}</p>}
+    </>}
+  </DemoFrame>
+}
+function SizingDemo() {
+  const { data, error, loading } = usePoll<SizingResult>(async (s) => {
+    // Size against the agent's live paper book; if the loop snapshot is down we
+    // refuse to show a notional derived from a placeholder equity.
+    const ls = await fetchLoopState(s)
+    if (!ls.available || !ls.state) throw new Error('loop snapshot unavailable')
+    const equity = ls.state.equity
+    let conviction = 0.5 // neutral lean if fusion is briefly unreachable
+    try { const f = await fetchFusion('BNBUSDT', '1h', s); if (Number.isFinite(f.net)) conviction = clamp01(Math.abs(f.net)) } catch { /* keep neutral lean */ }
+    return fetchSizing({ symbol: 'BNBUSDT', timeframe: '1h', equity, conviction }, s)
+  }, 120_000)
+  return <DemoFrame label="Drawdown budget sizing live" right={data ? (data.approved ? 'sized' : 'no bet') : 'reading'}>
+    {loading && <Reading />}
+    {error && <Down what="The sizing service is not reachable right now." />}
+    {data && <>
+      <div style={statGrid}>
+        <MiniStat label="Notional" value={fmtUsd(data.notional)} tone={BNB_TONE} />
+        <MiniStat label="Leverage" value={`${fmtNum(data.leverage, 1)}x`} />
+        <MiniStat label="Worst case" value={fmtUsd(data.worst_case_loss)} tone="var(--red)" sub="if the stop hits" />
+        <MiniStat label="Equity" value={fmtUsd(data.equity)} sub="paper book" />
+      </div>
+      {data.reasons?.length > 0 && <p style={{ fontSize: 11.5, color: 'var(--c-muted)', margin: '8px 0 0', lineHeight: 1.5 }}>{data.reasons[0]}</p>}
+    </>}
+  </DemoFrame>
+}
+function TpSlDemo() {
+  const [a, setA] = useState(PAIRS4[2])
+  const { data, error, loading } = usePoll<TpSl>((s) => fetchTpSl(a.spot, '1h', 12, s), 120_000, [a.spot])
+  const cell = data?.best_per_risk || data?.best
+  return <DemoFrame label="TP/SL bracket live" right={data?.n_total ? `${fmtNum(data.n_total, 0)} samples` : 'reading'}>
+    <PairPicks sel={a.base} set={setA} />
+    {loading && <Reading />}
+    {error && <Down what="The optimizer is not reachable right now." />}
+    {data && !cell && !loading && <Down what={data.note || 'No bracket reached the minimum sample threshold for this asset so the agent would not commit a bracket here.'} />}
+    {cell && <div style={statGrid}>
+      <MiniStat label="Take profit" value={fmtPct(cell.tp, 2)} tone="var(--green)" />
+      <MiniStat label="Stop loss" value={fmtPct(cell.sl, 2)} tone="var(--red)" />
+      <MiniStat label="R:R" value={fmtNum(cell.rr, 2)} tone={BNB_TONE} />
+      <MiniStat label="Sample" value={fmtNum(cell.n, 0)} sub="labeled outcomes" />
+    </div>}
+  </DemoFrame>
+}
+function LeaderboardDemo() {
+  const { data, error, loading } = usePoll<Leaderboard>((s) => fetchLeaderboard('symbol', 'expectancy', '24h', 8, s), 120_000)
+  const ov = data?.overall
+  return <DemoFrame label="Verifiable leaderboard live" right={data ? `${data.qualified} qualified` : 'reading'}>
+    {loading && <Reading />}
+    {error && <Down what="The leaderboard is not reachable right now." />}
+    {ov && <div style={{ ...statGrid, marginBottom: 10 }}>
+      <MiniStat label="Resolved" value={fmtNum(ov.n_resolved, 0)} tone={BNB_TONE} sub="labeled outcomes" />
+      <MiniStat label="Win rate" value={fmtPct(ov.win_rate * 100, 1)} />
+      <MiniStat label="Expectancy" value={fmtNum(ov.expectancy, 4)} sub="per signal" />
+    </div>}
+    {data && <div style={{ display: 'grid', gap: 5 }}>
+      {data.entries.slice(0, 6).map((e) => (
+        <div key={e.key} style={rowBox}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 12 }}><CoinLogo symbol={e.key} size={14} />{e.key.replace('.P', '')}</span>
+          <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span className="mono" style={{ fontSize: 11, color: 'var(--c-muted)' }}>{fmtNum(e.n_resolved, 0)} res</span>
+            <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: e.expectancy >= 0 ? 'var(--green)' : 'var(--red)', minWidth: 48, textAlign: 'right' }}>{fmtNum(e.expectancy, 3)}</span>
+          </span>
+        </div>
+      ))}
+    </div>}
+  </DemoFrame>
+}
+const PROOF_ADDR: Record<string, keyof typeof ADDR> = {
+  'bnb-registry': 'registry', 'bnb-governor': 'governor', 'bnb-ledger': 'ledger', 'bnb-identity': 'erc8004', 'bnb-keeper': 'keeper',
+}
+function ProofDemo({ s }: { s: SkillDef }) {
+  const { data, loading } = useLoop()
+  const st = data?.available ? data.state : undefined
+  const addr = ADDR[PROOF_ADDR[s.id] || 'ledger']
+  return <DemoFrame label="Verifiable record live" right={chainLabel(addr)}>
+    {loading && <Reading />}
+    {st && s.id === 'bnb-governor' && <div style={{ ...statGrid, marginBottom: 10 }}>
+      <MiniStat label="Governor" value={st.governor.ok ? 'OK' : 'HALT'} tone={st.governor.ok ? 'var(--green)' : 'var(--red)'} />
+      <MiniStat label="Drawdown" value={`${fmtNum(st.governor.dd_bps, 0)} bps`} sub="vs 1400 cap" />
+    </div>}
+    {st && (st.reveals?.length ?? 0) > 0 && <div style={{ display: 'grid', gap: 5, marginBottom: 10 }}>
+      {st.reveals.slice(0, 4).map((r, i) => (
+        <div key={`${r.symbol}-${i}`} style={rowBox}>
+          <span style={{ fontWeight: 700, fontSize: 12 }}>{r.symbol}</span>
+          <code className="mono" style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.detail}</code>
+        </div>
+      ))}
+    </div>}
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <code className="mono" style={{ fontSize: 11, color: 'var(--c-text-2)' }}>{shortAddr(addr)}</code>
+      <Btn sm variant="ghost" href={scan(addr)}>View on BscScan</Btn>
+    </div>
+  </DemoFrame>
+}
+
+/* ── registry: id → live demo. Missing ids simply show the dossier only. ── */
+export const SKILL_DEMO: Record<string, (s: SkillDef) => ReactNode> = {
+  'cmc-global': () => <GlobalDemo />,
+  'cmc-mcap-ta': () => <GlobalDemo regime />,
+  'cmc-quotes': () => <QuoteDemo />,
+  'cmc-metrics': () => <QuoteDemo metrics />,
+  'cmc-info': () => <InfoDemo />,
+  'cmc-ta': () => <SignalDemo />,
+  'cmc-skill-research': () => <SignalDemo research />,
+  'cmc-search': () => <SearchDemo />,
+  'cmc-search-info': () => <SearchDemo />,
+  'cmc-skill-report': () => <ReportDemo />,
+  'cmc-skill-mcp': () => <McpDemo />,
+  'cmc-orderflow': () => <OrderFlowPanel />,
+  'cmc-deriv': (s) => <CmcGateDemo s={s} />,
+  'cmc-narratives': (s) => <CmcGateDemo s={s} />,
+  'cmc-macro': (s) => <CmcGateDemo s={s} />,
+  'cmc-news': (s) => <SchemaDemo s={s} />,
+  'cmc-skill-x402': () => <X402Demo />,
+  'cmc-skill-api-crypto': (s) => <SchemaDemo s={s} />,
+  'cmc-skill-api-dex': (s) => <SchemaDemo s={s} />,
+  'cmc-skill-api-exchange': (s) => <SchemaDemo s={s} />,
+  'cmc-skill-api-market': (s) => <SchemaDemo s={s} />,
+
+  /* Trust Wallet · live where browser safe, honest command shape otherwise */
+  'tw-guard': () => <WalletGuardPanel />,
+  'tw-approve': () => <WalletGuardPanel />,
+  'tw-balance': () => <BalanceDemo />,
+  'tw-wallet': () => <LoopDemo />,
+  'tw-serve': () => <LoopDemo />,
+  'tw-erc8004': () => <IdentityDemo />,
+  'tw-compete': () => <IdentityDemo />,
+  'tw-erc8183': () => <IdentityDemo />,
+  'tw-risk': () => <SecurityGateDemo />,
+  'tw-swap': (s) => <CommandDemo s={s} />,
+  'tw-transfer': (s) => <CommandDemo s={s} />,
+  'tw-bridge': (s) => <CommandDemo s={s} />,
+  'tw-fiat': (s) => <CommandDemo s={s} />,
+  'tw-dca': (s) => <CommandDemo s={s} />,
+  'tw-limit': (s) => <CommandDemo s={s} />,
+  'tw-alert': (s) => <CommandDemo s={s} />,
+  'tw-sign': (s) => <CommandDemo s={s} />,
+  'tw-market': (s) => <CommandDemo s={s} />,
+  'tw-history': (s) => <CommandDemo s={s} />,
+  'tw-x402': (s) => <CommandDemo s={s} />,
+  'tw-api': (s) => <CommandDemo s={s} />,
+  'tw-sdk': (s) => <CommandDemo s={s} />,
+
+  /* BNB Chain · MEFAI's own live engines and verifiable records */
+  'bnb-omni': () => <OmniSignalPanel />,
+  'bnb-fusion': () => <FusionDemo />,
+  'bnb-signals': () => <RecentSignalsDemo />,
+  'bnb-council': () => <CouncilDemo />,
+  'bnb-sizing': () => <SizingDemo />,
+  'bnb-tpsl': () => <TpSlDemo />,
+  'bnb-leaderboard': () => <LeaderboardDemo />,
+  'bnb-registry': (s) => <ProofDemo s={s} />,
+  'bnb-governor': (s) => <ProofDemo s={s} />,
+  'bnb-ledger': (s) => <ProofDemo s={s} />,
+  'bnb-identity': (s) => <ProofDemo s={s} />,
+  'bnb-keeper': (s) => <ProofDemo s={s} />,
+  'bnb-x402': () => <X402Demo />,
+}

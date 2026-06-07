@@ -1,0 +1,34 @@
+# MEFAI BNB HACK autonomous trading loop (Track 1 LIVE driver).
+# Reference template. Install with:
+#   cp deploy/mefai-bnbhack-loop.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now mefai-bnbhack-loop
+#
+# The loop runs PAPER / DRY by default: it decides, gates, sizes, plans and
+# publishes its live state, but signs NOTHING. Going live is opt-in via the
+# EnvironmentFile (BNBHACK_EXECUTE_TRADES=1 for spot, BNBHACK_EXECUTE_CHAIN=1 for
+# commit-reveal + equity), and each still requires the relevant key to be set.
+# Secrets come only from the EnvironmentFile; nothing sensitive is in the repo.
+# A single instance keeps the pending-commit SQLite + nonce locks coherent.
+
+[Unit]
+Description=MEFAI BNB HACK Autonomous Loop
+After=network.target
+StartLimitIntervalSec=300s
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/mefai-agent/bnbhack/agent
+EnvironmentFile=/opt/mefai-agent/.env
+# Signing secrets (twak wallet password / HMAC / access id) live here, loaded
+# only by the loop. The public backend (mefai-bnbhack.service) does NOT load this
+# file, so its process environment never carries the trade-signing credentials.
+EnvironmentFile=/opt/mefai-agent/secrets/agent-secrets.env
+ExecStart=/usr/bin/python3 loop.py
+Restart=always
+RestartSec=10
+OOMScoreAdjust=-400
+
+[Install]
+WantedBy=multi-user.target
