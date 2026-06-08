@@ -256,9 +256,9 @@ def _metrics(curve: List[Tuple[int, float]], rets: List[float],
 
 def _svg(kelly: List[Tuple[int, float]], naive: List[Tuple[int, float]],
          gated: List[Tuple[int, float]], path: str) -> None:
-    """Minimal dependency-free equity-curve SVG. Gold is the risk engine
-    headline (Kelly + drawdown budget), blue is the naive flat-leverage floor
-    baseline, dashed gold is the optional net-of-cost edge-gate overlay."""
+    """Minimal dependency-free equity-curve SVG. Solid gold is raw Kelly +
+    drawdown budget, dashed gold is the net-of-cost edge-gate overlay (the leg
+    that ships live), blue is the constant-leverage naive reference."""
     W, H, PAD = 900, 380, 48
     if len(kelly) < 2:
         return
@@ -358,27 +358,33 @@ def run() -> dict:
         "naive_flat_leverage": naive,
         "note": ("Returns are NET of the modelled round-trip cost. Edge stats "
                  "come only from the train window; the test equity curve is "
-                 "fully out of sample. The headline is the risk engine: "
-                 "drawdown-budget fractional-Kelly sizing (kelly_engine). It "
-                 "sizes each signal by its measured edge and halts new risk as "
-                 "drawdown approaches the cap, which is what controls the curve. "
-                 "The naive_flat_leverage leg runs the SAME edge-positive signals "
-                 "at a CONSTANT leverage set to the engine's own realised average "
-                 "(so it is not over-levered) but with no drawdown budget stop; "
-                 "without that stop it keeps sizing into the same picks and the "
-                 "curve runs to ruin, which is exactly the failure mode the "
-                 "drawdown budget exists to prevent. The gap from naive to "
-                 "kelly_engine is therefore the value of the risk budget, not a "
-                 "leverage mismatch. The kelly_engine_with_edge_gate leg "
-                 "layers a stricter net-of-cost selection on top of Kelly: it "
-                 "only sizes a bucket whose measured per-trade expectancy clears "
-                 "the round-trip cost with a statistical margin. At the live "
-                 "production basis (24h horizon, 0.2 percent V3 round-trip) the "
-                 "metrics show this overlay improving both net return and Calmar, "
-                 "so it is enabled live; at higher modelled costs the same overlay "
-                 "instead lowers turnover and return for similar drawdown, acting "
-                 "as a conservative risk-tightening filter. The reported figures, "
-                 "not this prose, are the source of truth for the active basis."),
+                 "fully out of sample. Three legs are reported side by side on "
+                 "the SAME edge-positive signals so the contribution of each "
+                 "control is isolated, not asserted. (1) kelly_engine is raw "
+                 "drawdown-budget fractional-Kelly sizing: it sizes each signal "
+                 "by its measured edge and collapses new risk toward zero as "
+                 "drawdown approaches the cap. (2) kelly_engine_with_edge_gate "
+                 "layers a stricter net-of-cost selection on top: it only sizes a "
+                 "bucket whose measured per-trade expectancy clears the round-trip "
+                 "cost with a statistical margin. This gated leg is what ships "
+                 "live. (3) naive_flat_leverage runs the same picks at a CONSTANT "
+                 "leverage fixed to the Kelly leg's own realised average, with no "
+                 "drawdown-budget stop, as a reference floor. Which leg leads on "
+                 "raw return depends entirely on the data: on the shipped "
+                 "synthetic sample, which is smooth and edge-positive by "
+                 "construction, an un-stopped constant-leverage leg can post the "
+                 "highest raw return and the lowest drawdown precisely because the "
+                 "synthetic series never delivers the adverse cluster the budget "
+                 "exists to survive. The drawdown budget is insurance, not a "
+                 "return amplifier, and it is priced against tail risk that "
+                 "illustrative data does not contain. Read max_drawdown_pct and "
+                 "calmar for the risk comparison, not sharpe: sharpe here is "
+                 "frequency-annualised (sqrt of trades per year) and is inflated "
+                 "on a dense, low-noise sample, so its absolute level is not "
+                 "meaningful and only its sign and cross-leg ordering carry "
+                 "information. The printed figures, not this prose, are the source "
+                 "of truth; on the private production book the leg ordering "
+                 "differs from the synthetic sample shipped in this repository."),
     }
 
 

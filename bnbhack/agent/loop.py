@@ -43,6 +43,7 @@ import signal as _signal
 import sqlite3
 import tempfile
 import time
+from contextlib import closing
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -152,6 +153,14 @@ class LoopConfig:
         os.getenv("BNBHACK_REGIME_BLOCK_STRENGTH", "0.5"))
     interval: float = float(os.getenv("BNBHACK_LOOP_INTERVAL", "60"))
     reveal_after: float = float(os.getenv("BNBHACK_REVEAL_AFTER", "90"))
+    # A reveal already stops at reveal_deadline; this caps wasted gas/retries on
+    # a reveal that keeps reverting before the deadline. After the cap the row is
+    # closed as 'revealed-paper' (the commit stands; only the reveal is waived).
+    reveal_max_attempts: int = int(os.getenv("BNBHACK_REVEAL_MAX_ATTEMPTS", "4"))
+    # Finished pending rows older than this are pruned so the store stays bounded
+    # over the multi-day live window. Un-revealed commitments are never pruned.
+    pending_retention_days: float = float(
+        os.getenv("BNBHACK_PENDING_RETENTION_DAYS", "14"))
     include_cmc: bool = os.getenv("BNBHACK_INCLUDE_CMC", "1") == "1"
     execute_trades: bool = os.getenv("BNBHACK_EXECUTE_TRADES", "") == "1"
     execute_chain: bool = os.getenv("BNBHACK_EXECUTE_CHAIN", "") == "1"
@@ -193,7 +202,7 @@ class PendingStore:
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self._path = str(path)
-        with self._conn() as db:
+        with closing(self._conn()) as db, db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS pending ("
                 " local_id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -201,15 +210,35 @@ class PendingStore:
                 " confidence INTEGER, entry INTEGER, target INTEGER, stop INTEGER,"
                 " expires_at INTEGER, reveal_deadline INTEGER, salt BLOB,"
                 " commit_id INTEGER, committed_ts INTEGER, revealed INTEGER DEFAULT 0,"
-                " prediction_id INTEGER, status TEXT, commit_tx TEXT, reveal_tx TEXT)")
+                " prediction_id INTEGER, status TEXT, commit_tx TEXT, reveal_tx TEXT,"
+                " reveal_attempts INTEGER DEFAULT 0)")
+            # Migrate a DB that predates the bounded-reveal-attempt counter. A
+            # second run finds the column already present and ignores the error.
+            try:
+                db.execute("ALTER TABLE pending ADD COLUMN "
+                           "reveal_attempts INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass
 
     def _conn(self) -> sqlite3.Connection:
         c = sqlite3.connect(self._path, timeout=5)
         c.row_factory = sqlite3.Row
+        # WAL keeps the salt-bearing commitment durable across an abrupt restart
+        # (a half-written rollback journal cannot strand the store), lets the
+        # state publisher read while the loop writes, and synchronous=NORMAL is
+        # the safe-with-WAL durability point. busy_timeout absorbs the brief
+        # writer overlap instead of raising. Best-effort: a PRAGMA failure must
+        # not stop the store from opening.
+        try:
+            c.execute("PRAGMA journal_mode=WAL")
+            c.execute("PRAGMA synchronous=NORMAL")
+            c.execute("PRAGMA busy_timeout=5000")
+        except sqlite3.Error:
+            pass
         return c
 
     def add(self, rec: Dict[str, Any]) -> int:
-        with self._conn() as db:
+        with closing(self._conn()) as db, db:
             cur = db.execute(
                 "INSERT INTO pending (agent_id,symbol,timeframe,signal,confidence,"
                 "entry,target,stop,expires_at,reveal_deadline,salt,commit_id,"
@@ -223,7 +252,7 @@ class PendingStore:
             return int(cur.lastrowid)
 
     def due_reveals(self, now: int, reveal_after: float) -> List[sqlite3.Row]:
-        with self._conn() as db:
+        with closing(self._conn()) as db, db:
             return db.execute(
                 "SELECT * FROM pending WHERE revealed=0 AND status!='expired' "
                 "AND committed_ts + ? <= ? AND reveal_deadline >= ? "
@@ -231,21 +260,61 @@ class PendingStore:
                 (int(reveal_after), now, now)).fetchall()
 
     def expire_stale(self, now: int) -> None:
-        with self._conn() as db:
+        with closing(self._conn()) as db, db:
             db.execute(
                 "UPDATE pending SET status='expired' WHERE revealed=0 "
                 "AND reveal_deadline < ?", (now,))
 
+    def mark_committed(self, local_id: int, commit_id: Optional[int],
+                       commit_tx: str, status: str) -> None:
+        """Upgrade a row to its post-send state once the chain commit outcome is
+        known. The salt was already persisted by add(), so this only records the
+        commit_id / tx / status the reveal path needs."""
+        with closing(self._conn()) as db, db:
+            db.execute(
+                "UPDATE pending SET commit_id=?, commit_tx=?, status=? "
+                "WHERE local_id=?", (commit_id, commit_tx, status, local_id))
+
+    def bump_attempt(self, local_id: int) -> int:
+        """Count one chain-reveal attempt and return the running total, so the
+        loop can stop re-sending after a bounded number of failures."""
+        with closing(self._conn()) as db, db:
+            db.execute("UPDATE pending SET reveal_attempts = reveal_attempts + 1 "
+                       "WHERE local_id=?", (local_id,))
+            row = db.execute("SELECT reveal_attempts FROM pending WHERE local_id=?",
+                             (local_id,)).fetchone()
+            return int(row["reveal_attempts"]) if row else 0
+
     def mark_revealed(self, local_id: int, prediction_id: Optional[int],
                       reveal_tx: str, status: str = "revealed") -> None:
-        with self._conn() as db:
+        with closing(self._conn()) as db, db:
             db.execute(
                 "UPDATE pending SET revealed=1, prediction_id=?, reveal_tx=?, "
                 "status=? WHERE local_id=?",
                 (prediction_id, reveal_tx, status, local_id))
 
+    def prune(self, before_ts: int) -> int:
+        """Drop terminal rows (revealed or expired) committed before before_ts so
+        the store cannot grow without bound over a multi-day live window. A row
+        that is still pending (unrevealed and not expired) is always kept so an
+        outstanding commitment can never be lost to pruning. Returns rows removed."""
+        with closing(self._conn()) as db, db:
+            cur = db.execute(
+                "DELETE FROM pending WHERE committed_ts < ? AND "
+                "(revealed=1 OR status='expired')", (before_ts,))
+            n = cur.rowcount
+            # Commit the delete before the checkpoint: TRUNCATE cannot run inside
+            # the open write transaction (it would raise "database is locked").
+            db.commit()
+            # Reclaim the WAL after a bulk delete so the file does not creep.
+            try:
+                db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except sqlite3.Error:
+                pass
+            return max(0, int(n or 0))
+
     def recent(self, limit: int = 12) -> List[sqlite3.Row]:
-        with self._conn() as db:
+        with closing(self._conn()) as db, db:
             return db.execute(
                 "SELECT * FROM pending ORDER BY local_id DESC LIMIT ?",
                 (limit,)).fetchall()
@@ -626,6 +695,25 @@ class AgentLoop:
         s_s = chain_writer.to_scaled_price(d.stop)
         salt = chain_writer.new_salt()
 
+        # Persist the salt-bearing commitment BEFORE signing. A crash in the
+        # window between the chain send landing and the local write would
+        # otherwise orphan an on-chain commit whose salt is gone (un-revealable
+        # forever). The row starts as an honest 'dry' (we never claim a chain
+        # proof we cannot yet back) and is upgraded to 'committed' only after the
+        # send is confirmed. If the process dies mid-send the row survives with
+        # its salt and settles as a paper reveal rather than vanishing.
+        local_id: Optional[int] = None
+        try:
+            local_id = self.store.add({
+                "agent_id": agent_id, "symbol": d.symbol,
+                "timeframe": d.timeframe, "signal": sig_enum, "confidence": conf,
+                "entry": e_s, "target": t_s, "stop": s_s,
+                "expires_at": expires_at, "reveal_deadline": reveal_deadline,
+                "salt": salt, "commit_id": None, "committed_ts": now,
+                "status": "dry", "commit_tx": ""})
+        except Exception as exc:
+            logger.warning("pending store add failed: %s", exc)
+
         commit_id = None
         commit_tx = ""
         status = "dry"
@@ -646,17 +734,13 @@ class AgentLoop:
                 logger.warning("commit failed for %s: %s", d.symbol, exc)
                 d.proof["commit"] = "commit error"
 
-        # Persist the pending commitment so a later reveal can recompute the seal.
-        try:
-            self.store.add({
-                "agent_id": agent_id, "symbol": d.symbol,
-                "timeframe": d.timeframe, "signal": sig_enum, "confidence": conf,
-                "entry": e_s, "target": t_s, "stop": s_s,
-                "expires_at": expires_at, "reveal_deadline": reveal_deadline,
-                "salt": salt, "commit_id": commit_id, "committed_ts": now,
-                "status": status, "commit_tx": commit_tx})
-        except Exception as exc:
-            logger.warning("pending store add failed: %s", exc)
+        # Upgrade the persisted row with the send outcome (commit_id + tx). The
+        # salt is already safe on disk; this only records what the reveal needs.
+        if local_id is not None and status != "dry":
+            try:
+                self.store.mark_committed(local_id, commit_id, commit_tx, status)
+            except Exception as exc:
+                logger.warning("pending store mark_committed failed: %s", exc)
 
         # Trade leg: a LONG is expressed directly on PancakeSwap spot. A SHORT
         # cannot be expressed on spot (no borrow), so a live short would need a
@@ -791,6 +875,11 @@ class AgentLoop:
                 # on chain; a dry (paper) commit reveals only as a paper record.
                 want_chain = (self.cfg.execute_chain
                               and r["commit_id"] is not None)
+                # Count the attempt before signing so a reveal that lands but is
+                # never acknowledged (process died before mark) cannot re-send
+                # indefinitely: after the cap it settles as a paper reveal.
+                attempts = (self.store.bump_attempt(r["local_id"])
+                            if want_chain else 0)
                 out = await asyncio.to_thread(
                     self.writer.reveal,
                     r["commit_id"] if r["commit_id"] is not None else 0,
@@ -801,8 +890,15 @@ class AgentLoop:
                 pid = out.extra.get("prediction_id")
                 tx = chain_writer.ChainWriter.tx_url(out.tx_hash) if out.tx_hash else ""
                 if want_chain and not (out.executed and out.ok):
-                    # Chain reveal attempt failed; leave the row pending so it
-                    # retries on the next cycle until its reveal deadline.
+                    # Chain reveal attempt failed. Retry on the next cycle until
+                    # the reveal deadline, but stop re-sending once the bounded
+                    # attempt budget is spent so a permanently reverting reveal
+                    # cannot keep burning gas; settle it as a paper reveal. A cap
+                    # of <= 0 means unlimited (retry until the deadline only).
+                    if (self.cfg.reveal_max_attempts > 0
+                            and attempts >= self.cfg.reveal_max_attempts):
+                        self.store.mark_revealed(r["local_id"], pid, out.tx_hash,
+                                                 status="revealed-paper")
                     revealed.append({"symbol": r["symbol"], "detail": out.detail,
                                      "tx": tx})
                     continue
@@ -821,6 +917,19 @@ class AgentLoop:
         now = _now()
 
         reveals = await self._process_reveals()
+
+        # Keep the pending store bounded over the multi-day live window. Runs
+        # roughly hourly (every 60 cycles) and only ever drops finished rows
+        # past the retention horizon, never a live commitment. Offloaded so the
+        # DELETE + WAL checkpoint never blocks the event loop.
+        if self.cfg.pending_retention_days > 0 and self.cycle % 60 == 1:
+            try:
+                cutoff = now - int(self.cfg.pending_retention_days * 86400)
+                pruned = await asyncio.to_thread(self.store.prune, cutoff)
+                if pruned:
+                    logger.info("pruned %d finished pending rows", pruned)
+            except Exception as exc:
+                logger.warning("pending prune failed: %s", exc)
 
         try:
             sigs = _signals_now(self.cfg.watchlist, self.cfg.timeframe)

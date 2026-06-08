@@ -392,8 +392,12 @@ class ChainWriter:
                         w3 = self._w3
                         continue
                     logger.warning("chain send failed: %s", last_err)
-                    return TxOutcome(True, ok=False, detail=f"send failed: {last_err}")
-        return TxOutcome(True, ok=False, detail=f"send failed: {last_err}")
+                    # Keep the raw web3 error in the server log only; the returned
+                    # detail can surface in the public /loop/state, and a web3
+                    # exception string can embed the RPC endpoint host. Return a
+                    # generic message so no node/endpoint detail leaks to readers.
+                    return TxOutcome(True, ok=False, detail="send failed")
+        return TxOutcome(True, ok=False, detail="send failed")
 
     def _event_arg(self, receipt, event_name: str, arg: str) -> Optional[int]:
         try:

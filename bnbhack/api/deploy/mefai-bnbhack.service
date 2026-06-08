@@ -1,5 +1,7 @@
 # MEFAI BNB HACK agent backend (FastAPI / uvicorn).
 # Reference template. Install with:
+#   useradd --system --no-create-home --shell /usr/sbin/nologin mefai-agent
+#   chown -R mefai-agent:mefai-agent /opt/mefai-agent
 #   cp deploy/mefai-bnbhack.service /etc/systemd/system/
 #   systemctl daemon-reload && systemctl enable --now mefai-bnbhack
 # Secrets and deployer settings come only from the EnvironmentFile below; nothing
@@ -14,14 +16,32 @@ StartLimitBurst=10
 
 [Service]
 Type=simple
-User=root
+# Runs as a dedicated unprivileged service account, never root: this process is
+# internet-reachable (behind nginx) and a compromise must not own the host.
+User=mefai-agent
+Group=mefai-agent
 WorkingDirectory=/opt/mefai-agent/bnbhack/api
 EnvironmentFile=/opt/mefai-agent/.env
+# Keep the read-only code tree pristine (no .pyc writes under ProtectSystem).
+Environment=PYTHONDONTWRITEBYTECODE=1
 ExecStartPre=/bin/bash -c '/usr/bin/fuser -k 8401/tcp 2>/dev/null || true; /bin/sleep 1'
 ExecStart=/usr/bin/python3 -m uvicorn backend:app --host 127.0.0.1 --port 8401 --workers 1
 Restart=always
 RestartSec=5
 OOMScoreAdjust=-500
+# Sandbox: the backend only reads the data dir (loop state, labeled record); the
+# rest of the filesystem is read-only and privilege escalation is blocked.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+ReadWritePaths=/opt/mefai-agent/bnbhack/data /opt/mefai-agent/state
 
 [Install]
 WantedBy=multi-user.target

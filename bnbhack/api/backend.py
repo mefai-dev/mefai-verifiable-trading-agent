@@ -30,6 +30,7 @@ read side plus the x402 commerce edge.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -77,12 +78,15 @@ log = logging.getLogger("bnbhack.backend")
 API_KEY = os.getenv("BNBHACK_API_KEY", "").strip()
 
 # CORS origins allowed to call the data endpoints from a browser.
+_DEFAULT_ORIGINS = "https://mefai.io,https://www.mefai.io,https://build.mefai.io"
 _ALLOWED_ORIGINS = [
-    o.strip() for o in os.getenv(
-        "BNBHACK_ALLOWED_ORIGINS",
-        "https://mefai.io,https://www.mefai.io,https://build.mefai.io"
-    ).split(",") if o.strip()
+    o.strip() for o in os.getenv("BNBHACK_ALLOWED_ORIGINS",
+                                 _DEFAULT_ORIGINS).split(",") if o.strip()
 ]
+# An all-blank override would silently drop CORS entirely; fall back to the
+# safe defaults rather than leave the browser surface misconfigured.
+if not _ALLOWED_ORIGINS:
+    _ALLOWED_ORIGINS = [o.strip() for o in _DEFAULT_ORIGINS.split(",") if o.strip()]
 
 # x402 deployer settings (the payment recipient + asset are the deployer's, never
 # the client's). Defaults are inert placeholders so the catalog is browsable; a
@@ -170,6 +174,40 @@ class _RateLimiter:
 
 
 _limiter = _RateLimiter(_RL_MAX, _RL_WINDOW)
+
+
+# --- TTL cache for heavy DB scans -------------------------------------------
+
+# The leaderboard / UVII / TP-SL optimizers each scan the labeled-outcome record
+# synchronously; an unfiltered TP-SL pass can take tens of seconds. Running them
+# inline on the event loop would stall every other request for that whole time.
+# We offload each call to a worker thread and memoize the serialized result for a
+# short TTL so repeated cockpit polls (and x402 buyers) reuse one scan instead of
+# recomputing it. The cache is keyed by the full argument tuple; it never holds
+# request-derived paths and is bounded by sweeping expired entries on each read.
+# Floored at 1s: a <= 0 TTL would make every entry instantly stale (cache off,
+# every poll re-scans) and sweep-evict on each read, defeating the purpose.
+_HEAVY_TTL = max(1.0, float(os.getenv("BNBHACK_HEAVY_TTL", "30")))
+_heavy_cache: Dict[Any, tuple[float, Any]] = {}
+_heavy_lock = Lock()
+
+
+async def _cached_thread(key: Any, fn, *args, **kwargs) -> Any:
+    """Return fn(*args, **kwargs) from cache if fresh, else run it off the event
+    loop in a worker thread and memoize the result for _HEAVY_TTL seconds."""
+    now = time.time()
+    with _heavy_lock:
+        hit = _heavy_cache.get(key)
+        if hit is not None and now - hit[0] < _HEAVY_TTL:
+            return hit[1]
+    result = await asyncio.to_thread(fn, *args, **kwargs)
+    with _heavy_lock:
+        # Sweep expired entries so the map cannot grow without bound, then store.
+        for k in [k for k, (ts, _) in _heavy_cache.items()
+                  if now - ts >= _HEAVY_TTL]:
+            _heavy_cache.pop(k, None)
+        _heavy_cache[key] = (now, result)
+    return result
 
 
 def _client_ip(request: Request) -> str:
@@ -369,9 +407,10 @@ async def leaderboard(
     _validate_choice(group_by, ("symbol", "timeframe", "signal_type"), "group_by")
     _validate_choice(rank_by, ("expectancy", "pnl", "win_rate", "skill"), "rank_by")
     _validate_choice(horizon, HORIZON_CHOICES, "horizon")
-    lb = build_leaderboard(group_by=group_by, rank_by=rank_by, horizon=horizon,
-                           min_samples=min_samples, since_ts=since_ts,
-                           db_path=_DB_PATH)
+    lb = await _cached_thread(
+        ("lb", group_by, rank_by, horizon, min_samples, since_ts),
+        build_leaderboard, group_by=group_by, rank_by=rank_by, horizon=horizon,
+        min_samples=min_samples, since_ts=since_ts, db_path=_DB_PATH)
     return {
         "group_by": lb.group_by, "horizon": lb.horizon, "rank_by": rank_by,
         "since_ts": lb.since_ts, "qualified": len(lb.entries),
@@ -419,9 +458,10 @@ async def uvii(
 ) -> Dict[str, Any]:
     _validate_choice(group_by, ("symbol", "timeframe", "signal_type"), "group_by")
     _validate_choice(horizon, HORIZON_CHOICES, "horizon")
-    idx = build_uvii_index(group_by=group_by, horizon=horizon,
-                           min_samples=min_samples, since_ts=since_ts,
-                           db_path=_DB_PATH)
+    idx = await _cached_thread(
+        ("uvii", group_by, horizon, min_samples, since_ts),
+        build_uvii_index, group_by=group_by, horizon=horizon,
+        min_samples=min_samples, since_ts=since_ts, db_path=_DB_PATH)
     return {
         "group_by": idx.group_by, "horizon": idx.horizon, "since_ts": idx.since_ts,
         "global_index": _ser(idx.global_index),
@@ -443,8 +483,10 @@ async def tp_sl(
         _validate_choice(timeframe, _TF_CHOICES, "timeframe")
     if signal_type is not None:
         _validate_choice(signal_type, _SIDE_CHOICES, "signal_type")
-    res = optimize(symbol=symbol, timeframe=timeframe, signal_type=signal_type,
-                   since_ts=since_ts, min_samples=min_samples, db_path=_DB_PATH)
+    res = await _cached_thread(
+        ("tpsl", symbol, timeframe, signal_type, since_ts, min_samples),
+        optimize, symbol=symbol, timeframe=timeframe, signal_type=signal_type,
+        since_ts=since_ts, min_samples=min_samples, db_path=_DB_PATH)
     out: Dict[str, Any] = {
         "symbol": res.symbol, "timeframe": res.timeframe,
         "signal_type": res.signal_type, "horizon": res.horizon,

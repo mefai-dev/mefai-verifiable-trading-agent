@@ -1,5 +1,8 @@
 # MEFAI BNB HACK autonomous trading loop (Track 1 LIVE driver).
 # Reference template. Install with:
+#   useradd --system --no-create-home --shell /usr/sbin/nologin mefai-agent
+#   chown -R mefai-agent:mefai-agent /opt/mefai-agent
+#   chmod 600 /opt/mefai-agent/secrets/agent-secrets.env
 #   cp deploy/mefai-bnbhack-loop.service /etc/systemd/system/
 #   systemctl daemon-reload && systemctl enable --now mefai-bnbhack-loop
 #
@@ -18,8 +21,12 @@ StartLimitBurst=10
 
 [Service]
 Type=simple
-User=root
+# Dedicated unprivileged account, never root: this process holds trade-signing
+# credentials, so a compromise must stay contained to the agent's own data dir.
+User=mefai-agent
+Group=mefai-agent
 WorkingDirectory=/opt/mefai-agent/bnbhack/agent
+Environment=PYTHONDONTWRITEBYTECODE=1
 EnvironmentFile=/opt/mefai-agent/.env
 # Signing secrets (twak wallet password / HMAC / access id) live here, loaded
 # only by the loop. The public backend (mefai-bnbhack.service) does NOT load this
@@ -29,6 +36,19 @@ ExecStart=/usr/bin/python3 loop.py
 Restart=always
 RestartSec=10
 OOMScoreAdjust=-400
+# Sandbox: only the pending-commit SQLite + published state dirs are writable;
+# the code tree and the rest of the host filesystem are read-only.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+ReadWritePaths=/opt/mefai-agent/bnbhack/agent /opt/mefai-agent/state
 
 [Install]
 WantedBy=multi-user.target
