@@ -169,14 +169,14 @@ function SafetyGate() {
     </div>}
 
     {!verdict && !busy && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginTop: 16 }}>
-      <Stat label={'Checks run'} value="6" tone={TONE} sub={'per transaction'} />
+      <Stat label={'Checks run'} value="6 core" tone={TONE} sub={'+ advisory reads'} />
       <Stat label={'Verdict'} value="GO / BLOCK" tone="var(--c-text)" sub={'before any sign'} />
       <Stat label={'Custody'} value={'Self'} tone="var(--green)" sub={'keys stay with you'} />
       <Stat label={'Chain'} value="BSC 56" tone="var(--gold)" sub={'mainnet'} />
     </div>}
 
     <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 14 }}>
-      {'Honeypot · contract · slippage · approval · preflight · MEV. The agent runs this exact gate and stops on a BLOCK verdict before your wallet is ever asked to sign.'}
+      {'Six core go / no-go checks · honeypot · contract · slippage · approval · preflight · MEV · plus advisory reads such as gas sanity · the standing allowance · and the risk governor. The agent runs this exact gate and stops on a BLOCK verdict before your wallet is ever asked to sign.'}
     </div>
   </Panel>
 }

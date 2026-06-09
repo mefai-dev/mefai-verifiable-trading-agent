@@ -15,7 +15,7 @@ import type {
   TpSl, EntityStats, LoopEnvelope, LoopDecision, RecentSignals, ResolvedSignal,
   LoopPosition, LoopClose,
 } from '../api'
-import { ADDR, AGENT_ID, scan } from '../config'
+import { ADDR, AGENT_ID, scan, TELEGRAM_FEED_URL } from '../config'
 import { IconExternal, IconSend } from '../icons'
 
 const GOLD = 'var(--gold)'
@@ -97,6 +97,22 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
           <span className="mono">{'internal cap'} {st ? Math.round(st.internal_cap * 10000) : 1400} bps</span>
           <span className="mono" style={{ color: 'var(--red)' }}>{'jury DQ line'} {st ? Math.round(st.jury_cap * 10000) : 2000} bps</span>
         </div>
+      </Card>
+    </Reveal>
+
+    {/* live transparency feed · the agent broadcasts every trade leg to a public Telegram */}
+    <Reveal delay={140}>
+      <Card glow="var(--cmc)" style={{ padding: '14px 18px', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span className="dot" style={{ color: 'var(--green)', background: 'var(--green)' }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13.5 }}>{'Live transparency feed'}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>
+              {'The agent posts every trade leg to a public Telegram during the judged window · each message carries a BscScan link · read only.'}
+            </div>
+          </div>
+        </div>
+        <Btn variant="cmc" sm href={TELEGRAM_FEED_URL}>{'Join the feed'}<IconExternal /></Btn>
       </Card>
     </Reveal>
 

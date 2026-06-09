@@ -50,7 +50,7 @@ market data ─▶ signal fusion ─▶ expert council ─▶ net-of-cost edge g
                                                           │
                        drawdown-budgeted Kelly sizing ◀───┘
                                   │
-                       security gate (6 checks) ─▶ commit-reveal proof ─▶ trade
+           security gate (6 core checks + advisory reads) ─▶ commit-reveal proof ─▶ trade
 ```
 
 1. **Signal fusion** blends every source (CoinMarketCap regime, the MEFAI signal
@@ -63,8 +63,10 @@ market data ─▶ signal fusion ─▶ expert council ─▶ net-of-cost edge g
    rather skip a marginal trade than bleed fees on a coin flip.
 4. **Drawdown-budgeted sizing** fits real win rates and payoffs from labeled
    history and never lets exposure breach the equity floor.
-5. **The security gate** runs six go / no-go checks on the exact spend before
-   anything is signed.
+5. **The security gate** runs six core go / no-go checks on the exact spend
+   (honeypot, contract, slippage, approval, preflight, MEV) plus advisory reads
+   such as gas sanity, the standing allowance and the risk governor, before
+   anything is signed. Only a core check can block; the advisory reads warn.
 6. **The commit-reveal proof** seals the prediction on BSC mainnet before the
    move, so the record cannot be backfilled.
 
@@ -96,7 +98,7 @@ expectancy. Its calls are **provable, not backfillable**: each decision is seale
 as a commit-reveal proof on BSC mainnet *before* the move, so the record cannot
 be drawn after the fact. And its risk is **bounded, not promised**: equity is
 anchored to a RiskGovernor contract that halts trading the moment a drawdown
-budget is crossed, with the agent's internal stop sized below the on-chain cap so
+budget is crossed, with the agent's internal stop sized below the RiskGovernor contract cap so
 it brakes before the limit. Measured edge, sealed before the outcome, capped by a
 contract it cannot breach · a record a stranger can audit instead of one they
 must trust.
@@ -248,6 +250,11 @@ MEFAI can move money, so it is built to fail safe. It signs nothing until two
 separate flags are set, clears every spend through a fail-closed security gate,
 talks only to a loopback proxy and an allowlisted set of RPC hosts, and anchors
 its equity to a contract that halts trading when a drawdown budget is breached.
+For transparency during the judged window, the agent also posts every trade leg
+to a public Telegram channel, each message carrying a BscScan link and nothing
+else · the feed is read-only, carries no keys or commands, and is broadcast by
+`bnbhack/agent/notify.py`. Anyone can subscribe and watch the record build in
+real time.
 The full posture, threat model and disclosure process are in
 [`SECURITY.md`](SECURITY.md). Verified contract addresses are in
 [`bnbhack/contracts/DEPLOYMENTS.md`](bnbhack/contracts/DEPLOYMENTS.md).

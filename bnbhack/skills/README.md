@@ -4,8 +4,11 @@ Five composable trading-strategy skills, each conforming to the CMC Agent Skill
 schema (`skill.json` · `cmc-agent-skill/1.0`). Every skill is **read-only,
 network-free in CI, and deterministic**: it reads a pinned labeled-outcome store
 and never trades, signs, or writes. The edge comes from **181k labeled MEFAI
-signal outcomes across 40+ assets and 7 timeframes** in production; a pinned
-synthetic sample DB ships so every number below regenerates byte-for-byte.
+signal outcomes across 40+ assets and 7 timeframes** in production; that book is
+private. A pinned synthetic sample DB ships so every number below regenerates
+byte-for-byte · it covers **20 illustrative symbols (40000 labeled outcomes)** of
+the same shape as the private 40+ asset production base, so the figures here are
+reproducible without it.
 
 > Verify it yourself · no displayed number is one you cannot reproduce.
 

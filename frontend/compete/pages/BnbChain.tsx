@@ -231,7 +231,7 @@ function LiveFeed() {
   const products = data?.products ?? []
   return <Panel title={'X402 VERIFIED SIGNAL FEED'} accent={TONE} right={data ? data.network : error ? 'offline' : 'loading'}>
     <p style={{ fontSize: 12.5, color: 'var(--c-muted)', margin: '0 0 14px', lineHeight: 1.55 }}>
-      {'The verified signal feed is served over HTTP 402. Each product binds its exact BSC price via EIP-3009 so another agent can pay for proven alpha with one settlement. This catalog is read live from the running service.'}
+      {'The verified signal feed is served over HTTP 402. Each product binds its exact BSC price via EIP-3009 so another agent presents a verified payment proof for proven alpha · settlement is deferred to a funded facilitator. This catalog is read live from the running service.'}
     </p>
     {products.length === 0
       ? <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '14px 0' }}>{error ? 'The feed is unreachable right now.' : loading ? <>{'Reading the catalog'}<span className="cp-ellipsis" /></> : 'No products are published right now.'}</div>

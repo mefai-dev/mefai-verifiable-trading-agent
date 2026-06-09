@@ -46,7 +46,7 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
             CMC <span style={{ color: CMC }}>{'Strategy'}</span> {'Skills'}
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 660, marginTop: 10, lineHeight: 1.6, fontSize: 14.5 }}>
-            {'Backtested allocation TP/SL optimization narrative rotation regime governing and edge decay watch. Every skill is grounded on real resolved outcomes and the full CoinMarketCap Agent Hub not guesses.'}
+            {'Backtested allocation · TP/SL optimization · narrative rotation · regime governing · and edge decay watch. Every skill is grounded on real resolved outcomes and the full CoinMarketCap Agent Hub not guesses.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>

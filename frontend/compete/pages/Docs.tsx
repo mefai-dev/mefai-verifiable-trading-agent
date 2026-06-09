@@ -82,6 +82,7 @@ const SECTIONS: Section[] = [
     body: [
       'Before any spend a security solver runs six checks. It probes for a honeypot. It reads the contract. It models slippage. It inspects the approval. It runs a preflight. It checks for MEV exposure.',
       'The verdict is a simple GO or BLOCK. A blocked plan never reaches the chain. This gate is the same one a Trust Wallet user can run on any token before they sign.',
+      'For transparency the agent also posts every trade leg to a public Telegram channel during the judged window. Each message carries a BscScan link and nothing else. The feed is read only and anyone can subscribe and watch the record build in real time.',
     ],
   },
   {

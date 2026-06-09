@@ -35,7 +35,7 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
             {'Verifiable'} <span style={{ color: TRUST }}>{'Protocol'}</span>
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 660, marginTop: 10, lineHeight: 1.6, fontSize: 14.5 }}>
-            {'A commit then reveal prediction registry a chain anchored drawdown circuit breaker one unified verifiable intelligence index and an x402 machine payable feed. Every claim is auditable on BscScan.'}
+            {'A commit then reveal prediction registry · a chain anchored drawdown circuit breaker · one unified verifiable intelligence index · and an x402 machine payable feed. Every claim is auditable on BscScan.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
