@@ -119,7 +119,7 @@ export type LoopDecision = {
 }
 export type LoopProof = { symbol: string; signal: number; confidence: number; status: string; committed_ts: number; commit_tx: string; reveal_tx: string; prediction_id: number | null }
 export type LoopPosition = {
-  symbol: string; entry: number; mark: number; target: number; stop: number
+  symbol: string; side?: 'long' | 'short'; entry: number; mark: number; target: number; stop: number
   size_usd: number; qty: number; unrealized_usd: number; unrealized_pct: number
   tp1_done?: boolean; rungs_filled?: number; rungs_total?: number; realized_partial_usd?: number
   opened_ts: number; open_tx: string
@@ -131,6 +131,7 @@ export type LoopState = {
   ts: number; heartbeat: number; cycle: number; uptime_s: number; mode: string
   agent: { name: string; wallet: string; chain_address: string; agent_id: string }
   equity: number; peak_equity: number; drawdown: number; jury_cap: number; internal_cap: number
+  equity_history?: [number, number][]
   governor: { ok: boolean; dd_bps: number; detail: string; record: string }
   config: { watchlist: string[]; timeframe: string; interval: number; conviction_min: number; include_cmc: boolean; max_positions?: number; ladder_rungs?: number; regime_filter?: boolean; max_hold_sec?: number; roundtrip_cost_pct?: number }
   reveals: { symbol: string; detail: string; tx: string }[]
@@ -138,6 +139,19 @@ export type LoopState = {
   proofs: LoopProof[]
   positions?: LoopPositions
   cycle_closes?: LoopCycleClose[]
+  x402_consumed?: LoopX402Consumed | null
+  perp?: LoopPerpStatus | null
+}
+export type LoopPerpStatus = {
+  enabled: boolean; configured: boolean
+  venue?: string | null; leverage?: number; margin_mode?: string
+}
+export type LoopX402Consumed = {
+  ok: boolean; product_id: string; price_atomic: string; network: string
+  chain_id?: number; asset?: string; pay_to?: string; payer?: string
+  verified: boolean; settled: boolean; settlement_deferred: boolean
+  consumed_cycle?: number; consumed_ts?: number; error?: string
+  feed?: { global_index?: { score?: number; n_resolved?: number; [k: string]: unknown }; entities?: unknown[]; overall?: unknown; qualified?: number; ranked?: unknown[] }
 }
 export type LoopEnvelope = { available: boolean; state?: LoopState; reason?: string }
 
@@ -392,6 +406,29 @@ export type SizingArgs = {
 export async function fetchSizing(args: SizingArgs, signal?: AbortSignal): Promise<SizingResult> {
   return apiPost<SizingResult>('/sizing', { timeframe: '4h', ...args }, signal)
 }
+export type ComposeLeg = {
+  symbol: string; deploy: boolean; reason: string; worst_case_loss: number
+  tp?: number; sl?: number; regime_scale?: number; leverage?: number
+  notional?: number; approved?: boolean
+}
+export type ComposePlan = {
+  skill: string; equity: number; current_drawdown: number; jury_cap: number
+  internal_cap: number; drawdown_room_R: number
+  regime: { direction: number; strength: number }
+  selected: string[]; deployed_legs: number; budget_ceiling: number
+  portfolio_worst_case_loss: number; within_budget: boolean; legs: ComposeLeg[]
+}
+export type ComposeArgs = {
+  equity?: number; current_drawdown?: number; jury_cap?: number
+  regime_direction?: number; regime_strength?: number; timeframe?: string
+  signal_type?: string; top_n?: number; min_samples?: number
+}
+export async function fetchCompose(args: ComposeArgs, signal?: AbortSignal): Promise<ComposePlan> {
+  return apiPost<ComposePlan>('/compose', {
+    equity: 10000, current_drawdown: 0.04, jury_cap: 0.20, regime_direction: 1,
+    regime_strength: 0.7, timeframe: '1h', signal_type: 'buy', top_n: 5, ...args,
+  }, signal)
+}
 export async function fetchTpSl(symbol: string, timeframe = '1h', minSamples = 12, signal?: AbortSignal): Promise<TpSl> {
   // Backend symbol pattern is ^[A-Za-z0-9._]{1,20}$ (no slash), e.g. BNB/USDT -> BNBUSDT.
   const sym = symbol.replace(/\//g, '')
@@ -460,13 +497,8 @@ export type AgentIdentity = {
 export async function fetchAgentIdentity(signal?: AbortSignal): Promise<AgentIdentity> {
   return apiGet<AgentIdentity>('/agent/identity', signal)
 }
-/* allowlisted CMC MCP gate passthrough: global-metrics, derivatives, narratives,
-   marketcap-ta, macro-events. Returns { tool, data } with the raw hub payload. */
-export async function fetchCmcGate(tool: string, signal?: AbortSignal): Promise<CmcGate> {
-  return apiGet<CmcGate>(`/cmc/${encodeURIComponent(tool)}`, signal)
-}
 
-/* ─────────────── reproducible backtest verification ───────────────
+/* ─────────────── reproducible Track 2 backtest artifact ───────────────
    The index + per-skill manifests written by skills/run_backtests.py. The same
    artifact a judge regenerates from the public repo (pinned sample dataset +
    seeded RNG) and compares by content hash. Read-only; carries no secrets. */
@@ -495,6 +527,11 @@ export async function fetchBacktestReports(signal?: AbortSignal): Promise<Backte
 }
 export async function fetchBacktestReport(skill: string, signal?: AbortSignal): Promise<BacktestManifestEnvelope> {
   return apiGet<BacktestManifestEnvelope>(`/backtest/report/${encodeURIComponent(skill)}`, signal)
+}
+/* allowlisted CMC MCP gate passthrough: global-metrics, derivatives, narratives,
+   marketcap-ta, macro-events. Returns { tool, data } with the raw hub payload. */
+export async function fetchCmcGate(tool: string, signal?: AbortSignal): Promise<CmcGate> {
+  return apiGet<CmcGate>(`/cmc/${encodeURIComponent(tool)}`, signal)
 }
 
 /* ─────────────── polling hook ─────────────── */

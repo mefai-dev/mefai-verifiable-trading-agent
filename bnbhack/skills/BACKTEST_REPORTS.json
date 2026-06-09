@@ -9,46 +9,56 @@
     },
     "sha256": "f7202dd2ef0ffd971204828a7f1fc2cd4616bf0dfda267881ae7ee632bb0282d"
   },
-  "generated_at": "2026-06-08T20:46:54Z",
+  "generated_at": "2026-06-09T21:44:58Z",
   "overall": "PASS",
   "platform": "Linux-6.8.0-110-generic-x86_64-with-glibc2.39",
   "python": "3.12.3",
-  "repro_digest": "2b28bc4bf26b8726ce952f6e0cb2d8c80469881a5d94d49d183869a22fb07161",
+  "repro_digest": "792b3b52fd42e140498a1d92062fac890b59f4bfccb1d4873af5bd67ec40fa6d",
   "skills": [
     {
-      "code_sha256": "d281b7b596f12beb2bba7e19750fdf32d287665c771089c399a2ed5f60b1194e",
+      "code_sha256": "f7c4460fe7a5b98a181695bc425d48345eb223e59018b7cacbe9c955a16b9f27",
       "content_hash": "b711607008fbe1fb625406a68fe838dae5f95caea5d33c4ccb75361f116df417",
+      "kind": "invariant-check",
       "manifest": "skills/empirical-tp-sl-optimizer/output/report.manifest.json",
       "result": "PASS",
-      "skill": "empirical-tp-sl-optimizer"
+      "skill": "empirical-tp-sl-optimizer",
+      "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "e533e712faa1e32a77f67042b6f6e582a528c4f457d74b2aa23020f8d626f088",
+      "code_sha256": "4449b88257a3b197a0a35c0ac215c89e168b7abc91c29be39ed8143224769821",
       "content_hash": "dc88562a99c5129c31856c5f56ea9bbdba3f3d37e4983714dc9b6c7234dcbaaf",
+      "kind": "invariant-check",
       "manifest": "skills/meta-strategy-composer/output/report.manifest.json",
       "result": "PASS",
-      "skill": "meta-strategy-composer"
+      "skill": "meta-strategy-composer",
+      "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "5710665150d475e2aa4188c109f49104fb63cf2728aa0ae49fbe60657cd06356",
-      "content_hash": "a26078211dfe284e1189f29d4f26f3d0f7fcebc6827edb39377598ceb1bbba64",
+      "code_sha256": "cc3afb48c0a1f3a5414fabe105abed12ed3a79f82009d21517698c4682eb5b11",
+      "content_hash": "0b3195771f80bfdd94ec0a62415348a2b84837d4768bd74c103ea292b809db25",
+      "kind": "invariant-check",
       "manifest": "skills/narrative-rotation/output/report.manifest.json",
       "result": "PASS",
-      "skill": "narrative-rotation"
+      "skill": "narrative-rotation",
+      "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "f6a099bad71dea70b45c07777c863435e13ce652b6561f4c494ea4dca4003831",
+      "code_sha256": "fc9e08367495559eda228e53bedc8d3c03f66c4df1501de60a41f8abdc0028d7",
       "content_hash": "bb821568cc26cf2a5ad679a68746a1fec2cafce67ab0b9a4866b84cc96850fdb",
+      "kind": "invariant-check",
       "manifest": "skills/regime-risk-governor/output/report.manifest.json",
       "result": "PASS",
-      "skill": "regime-risk-governor"
+      "skill": "regime-risk-governor",
+      "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "a9e3a08747edf14507bd334da58797af3916350a8eb4229845545d0fad6d4cd3",
+      "code_sha256": "1fb13a80f02359987b375ded63c9c1a2aaee8b6a1ded75a37f0ff8ec3bf0bfe4",
       "content_hash": "296e6f269273b23446a6b80759cddcb29cc19027d778cf33c504bb240909ac30",
+      "kind": "walk-forward",
       "manifest": "skills/risk-budgeted-allocator/output/report.manifest.json",
       "result": "PASS",
-      "skill": "risk-budgeted-allocator"
+      "skill": "risk-budgeted-allocator",
+      "walk_forward_content_hash": "eae4ae9d5393554d462d8d4d54d99d2e34f9cf07aec7e98a449e1075fe0d2851"
     }
   ]
 }

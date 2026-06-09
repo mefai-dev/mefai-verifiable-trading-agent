@@ -30,8 +30,8 @@ export function SponsorHero({ tone, eyebrow, title, blurb, go }: {
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 980, margin: '0 auto' }}>
       <Reveal>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <Btn variant="ghost" sm onClick={() => go('/compete')}>Home</Btn>
-          <Btn variant="primary" sm href={GITHUB_URL}>Open source</Btn>
+          <Btn variant="ghost" sm onClick={() => go('/compete')}>{'Home'}</Btn>
+          <Btn variant="primary" sm href={GITHUB_URL}>{'Open source'}</Btn>
         </div>
       </Reveal>
       {eyebrow && <Reveal delay={50}><div style={{ marginTop: 16 }}><Eyebrow tone={tone}>{eyebrow}</Eyebrow></div></Reveal>}
@@ -77,7 +77,7 @@ export function PlainContract({ tone, label, plain, addr, scanUrl, chain }: {
     </span>
     <span style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--c-text-2)' }}>{plain}</span>
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: tone, marginTop: 'auto', paddingTop: 6 }}>
-      View on {testnet ? 'testnet BscScan' : 'BscScan'} <IconExternal size={13} />
+      {'View on'} {testnet ? 'testnet BscScan' : 'BscScan'} <IconExternal size={13} />
     </span>
   </a>
 }

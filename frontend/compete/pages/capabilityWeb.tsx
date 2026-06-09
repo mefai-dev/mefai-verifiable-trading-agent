@@ -142,9 +142,9 @@ export function CapabilityWeb() {
       </svg>
     </div>
     <div className="cp-web-legend">
-      <span className="cp-web-leg"><span className="cp-web-leg-dot" style={{ background: 'var(--c-text-2)' }} /> Live capability</span>
-      <span className="cp-web-leg"><span className="cp-web-leg-dot" style={{ background: 'var(--c-muted-2)' }} /> Available</span>
-      <span className="cp-web-leg-note">Tap any node to open its dossier · follow one trade from CoinMarketCap data to BNB Chain proof.</span>
+      <span className="cp-web-leg"><span className="cp-web-leg-dot" style={{ background: 'var(--c-text-2)' }} /> {'Live capability'}</span>
+      <span className="cp-web-leg"><span className="cp-web-leg-dot" style={{ background: 'var(--c-muted-2)' }} /> {'Available'}</span>
+      <span className="cp-web-leg-note">{'Tap any node to open its dossier · follow one trade from CoinMarketCap data to BNB Chain proof.'}</span>
     </div>
 
     {active && <SkillModal s={active} tone={activeTone} onClose={() => setOpen(null)} onJump={(id) => setOpen(id)} />}

@@ -118,19 +118,17 @@ export default function SkillOrchestra({ go }: { go: (p: string) => void }) {
     <Reveal>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>
-          <div className="cp-roman" style={{ fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>The arena of agents</div>
+          <div className="cp-roman" style={{ fontSize: 12, letterSpacing: 3, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>{'The arena of agents'}</div>
           <h1 style={{ fontSize: 'clamp(30px,4.4vw,50px)', fontWeight: 700, letterSpacing: '.5px', margin: 0 }}>
-            <span className="cp-grad-text">AI Council</span>
+            <span className="cp-grad-text">{'AI Council'}</span>
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 720, marginTop: 12, lineHeight: 1.6, fontSize: 14.5 }}>
-            Convene the council and watch six MEFAI agents take their seats around the table. Each one speaks its case then casts
-            a vote · LONG SHORT or HOLD · and the floor resolves to a single ruling. Every agent is MEFAI built and every answer
-            is grounded only on the council's live outputs never invented prices.
+            {'Convene the council and watch six MEFAI agents take their seats around the table. Each one speaks its case then casts a vote · LONG SHORT or HOLD · and the floor resolves to a single ruling. Every agent is MEFAI built and every answer is grounded only on the council\u2019s live outputs never invented prices.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn variant="ghost" sm onClick={() => go('/compete')}>Home</Btn>
-          <Btn variant="primary" sm href={GITHUB_URL}>Open source</Btn>
+          <Btn variant="ghost" sm onClick={() => go('/compete')}>{'Home'}</Btn>
+          <Btn variant="primary" sm href={GITHUB_URL}>{'Open source'}</Btn>
         </div>
       </div>
     </Reveal>
@@ -148,7 +146,7 @@ export default function SkillOrchestra({ go }: { go: (p: string) => void }) {
     {/* symbol picker + convene */}
     <Reveal delay={120}>
       <div style={{ display: 'flex', gap: 8, marginTop: 26, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>Convene on</span>
+        <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>{'Convene on'}</span>
         {DEBATE_SYMBOLS.map((s) => (
           <button key={s} className={`cp-pill ${symbol === s ? 'on' : ''}`} onClick={() => setSymbol(s)}>{s.replace('/USDT', '')}</button>
         ))}
@@ -183,12 +181,11 @@ function PastRulings({ history, onClear }: { history: Ruling[]; onClear: () => v
   return <Panel
     title="Past rulings"
     accent="var(--gold)"
-    right={history.length ? <button className="cp-pill" onClick={onClear}>Clear</button> : 'the record'}
+    right={history.length ? <button className="cp-pill" onClick={onClear}>{'Clear'}</button> : 'the record'}
   >
     {history.length === 0 ? (
       <div style={{ fontSize: 13, color: 'var(--c-muted)', lineHeight: 1.6, padding: '14px 0' }}>
-        No rulings yet. Convene the council above and each verdict it hands down is recorded here so you can review the
-        debate history later.
+        {'No rulings yet. Convene the council above and each verdict it hands down is recorded here so you can review the debate history later.'}
       </div>
     ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 10 }}>
@@ -282,10 +279,10 @@ function RoundTable({ symbol, experts, consensus, exchanges, learning, loading, 
 
   const allShown = reveal > ROSTER.length
   const centerLabel = !convened ? 'Awaiting' : (loading || (ready && !allShown)) ? 'Deliberating' : err ? 'Busy' : (consensus?.signal?.toUpperCase() || '-')
-  const centerSub = !convened ? 'convene to begin' : err ? 'retry shortly' : !allShown ? `weighing ${sym}` : `${sym} consensus`
+  const centerSub = !convened ? 'convene to begin' : err ? 'retry shortly' : !allShown ? `${'weighing'} ${sym}` : `${sym} ${'consensus'}`
   const deliberating = loading || (ready && !allShown)
 
-  return <Panel title="The council table" accent="var(--gold)" right={`${sym} · MEFAI agents`}>
+  return <Panel title="The council table" accent="var(--gold)" right={`${sym} · ${'MEFAI agents'}`}>
     {/* the senate floor · a sand-lit arena under the table */}
     <div className="cp-floor" style={{ padding: 'clamp(10px,3vw,22px)', marginBottom: 6 }}>
       <svg className="cp-floor-rings" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
@@ -381,7 +378,7 @@ function RoundTable({ symbol, experts, consensus, exchanges, learning, loading, 
             title={`Open ${r.name}`} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5, flexDirection: side === 'right' ? 'row-reverse' : 'row' }}>
               <span className="cp-roman" style={{ fontWeight: 700, fontSize: 13.5, letterSpacing: .3 }}>{r.name}</span>
-              <span className="cp-mefai-tag">MEFAI agent</span>
+              <span className="cp-mefai-tag">{'MEFAI agent'}</span>
               <Chip tone={t} solid>{(ex.signal || '-').toUpperCase()}</Chip>
               <span className="mono" style={{ fontSize: 11, color: 'var(--c-muted)' }}>{conf}%</span>
             </div>
@@ -396,7 +393,7 @@ function RoundTable({ symbol, experts, consensus, exchanges, learning, loading, 
                 </div>
               })}
             </div>}
-            <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-muted-2)', textAlign: align }}>Tap for this agent’s record</div>
+            <div style={{ marginTop: 8, fontSize: 10.5, color: 'var(--c-muted-2)', textAlign: align }}>{'Tap for this agent\u2019s record'}</div>
           </div>
         </div>
       })}
@@ -404,29 +401,29 @@ function RoundTable({ symbol, experts, consensus, exchanges, learning, loading, 
 
     {/* the ruling · the verdict the table resolves to, laurel-plated */}
     {allShown && consensus && <div className="cp-verdict" style={{ marginTop: 16 }}>
-      <div className="cp-roman" style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 6 }}>The table rules</div>
+      <div className="cp-roman" style={{ fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 6 }}>{'The table rules'}</div>
       <div style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 800, color: cTone, letterSpacing: .3 }} className="cp-roman">
         {(consensus.signal || '-').toUpperCase()} · {fmtNum((consensus.confidence ?? 0) * 100, 0)}%
       </div>
-      {consensus.agreement_pct != null && <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>{fmtNum(consensus.agreement_pct, 0)}% of the table agreed</div>}
+      {consensus.agreement_pct != null && <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>{fmtNum(consensus.agreement_pct, 0)}% {'of the table agreed'}</div>}
       {(consensus.summary || consensus.reason) && <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--c-text-2)', margin: '8px auto 10px', maxWidth: 500 }}>{consensus.summary || consensus.reason}</p>}
       {(consensus.entry || consensus.price_target || consensus.stop_loss) && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {consensus.entry != null && <Chip tone="var(--c-primary)">Entry {fmtPrice(consensus.entry)}</Chip>}
-          {consensus.price_target != null && <Chip tone="var(--green)">Target {fmtPrice(consensus.price_target)}</Chip>}
-          {consensus.stop_loss != null && <Chip tone="var(--red)">Stop {fmtPrice(consensus.stop_loss)}</Chip>}
+          {consensus.entry != null && <Chip tone="var(--c-primary)">{'Entry'} {fmtPrice(consensus.entry)}</Chip>}
+          {consensus.price_target != null && <Chip tone="var(--green)">{'Target'} {fmtPrice(consensus.price_target)}</Chip>}
+          {consensus.stop_loss != null && <Chip tone="var(--red)">{'Stop'} {fmtPrice(consensus.stop_loss)}</Chip>}
         </div>
       )}
       {(consensus.risk_note || consensus.learning_note) && <div style={{ display: 'grid', gap: 8, marginTop: 12, textAlign: 'left', maxWidth: 540, marginInline: 'auto' }}>
-        {consensus.risk_note && <div className="cp-note"><span className="cp-note-tag" style={{ color: 'var(--red)' }}>Risk watch</span>{consensus.risk_note}</div>}
-        {consensus.learning_note && <div className="cp-note"><span className="cp-note-tag" style={{ color: 'var(--trust)' }}>What the table learned</span>{consensus.learning_note}</div>}
+        {consensus.risk_note && <div className="cp-note"><span className="cp-note-tag" style={{ color: 'var(--red)' }}>{'Risk watch'}</span>{consensus.risk_note}</div>}
+        {consensus.learning_note && <div className="cp-note"><span className="cp-note-tag" style={{ color: 'var(--trust)' }}>{'What the table learned'}</span>{consensus.learning_note}</div>}
       </div>}
     </div>}
 
     {!convened && <div style={{ marginTop: 14, textAlign: 'center' }}>
-      <Btn variant="primary" sm onClick={onConvene}><IconBot size={15} /> Convene on {sym}</Btn>
+      <Btn variant="primary" sm onClick={onConvene}><IconBot size={15} /> {'Convene on'} {sym}</Btn>
     </div>}
-    {err && convened && <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--red)', textAlign: 'center' }}>The council is busy. Convene again shortly.</div>}
+    {err && convened && <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--red)', textAlign: 'center' }}>{'The council is busy. Convene again shortly.'}</div>}
 
     {open != null && seated[open] && <AgentDetail
       seat={ROSTER[open]} ex={seated[open]!} learn={learning[ROSTER[open].bid]}
@@ -469,25 +466,25 @@ function AgentDetail({ seat, ex, learn, exchange, onClose }: {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span className="cp-roman" style={{ fontSize: 21, fontWeight: 700, letterSpacing: .4 }}>{seat.name}</span>
-            <span className="cp-mefai-tag">MEFAI agent</span>
+            <span className="cp-mefai-tag">{'MEFAI agent'}</span>
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--c-muted)', marginTop: 2 }}>{seat.role} · engine id <span className="mono">{seat.bid}</span></div>
+          <div style={{ fontSize: 12.5, color: 'var(--c-muted)', marginTop: 2 }}>{seat.role} · {'engine id'} <span className="mono">{seat.bid}</span></div>
         </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 14 }}>
         <Chip tone={t} solid>{(ex.signal || '-').toUpperCase()}</Chip>
-        <span className="mono" style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{fmtNum((ex.confidence ?? 0) * 100, 0)}% confidence</span>
-        {ex.score != null && <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>composite {fmtNum(Number(ex.score), 0)}</span>}
+        <span className="mono" style={{ fontSize: 13, fontWeight: 800, color: 'var(--c-text)' }}>{fmtNum((ex.confidence ?? 0) * 100, 0)}% {'confidence'}</span>
+        {ex.score != null && <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>{'composite'} {fmtNum(Number(ex.score), 0)}</span>}
       </div>
 
       {/* what it is */}
-      <div className="cp-dossier-h">What it is</div>
+      <div className="cp-dossier-h">{'What it is'}</div>
       <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--c-text-2)' }}>{seat.desc}</p>
 
       {/* training record */}
       {learn && <>
-        <div className="cp-dossier-h">Training record</div>
+        <div className="cp-dossier-h">{'Training record'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 8 }}>
           {acc != null && stat('Accuracy', `${fmtNum(acc, 1)}%`, acc >= 50 ? 'var(--green)' : 'var(--red)')}
           {stat('Predictions', fmtNum(learn.total_predictions, 0))}
@@ -496,26 +493,26 @@ function AgentDetail({ seat, ex, learn, exchange, onClose }: {
           {stat('Streak', fmtNum(learn.streak, 0))}
           {stat('Vote weight', `${fmtNum(learn.weight, 2)}x`, 'var(--gold)')}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 7, lineHeight: 1.5 }}>The engine reweights every seat from its verified outcomes so a sharper record earns a heavier vote.</div>
+        <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 7, lineHeight: 1.5 }}>{'The engine reweights every seat from its verified outcomes so a sharper record earns a heavier vote.'}</div>
       </>}
 
       {/* current read */}
       {said && <>
-        <div className="cp-dossier-h">Its case on this market</div>
+        <div className="cp-dossier-h">{'Its case on this market'}</div>
         <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--c-text-2)' }}>{said}</p>
       </>}
       {(kd.entry || kd.target || kd.stoploss || kd.risk_reward) && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-          {kd.entry != null && <Chip tone="var(--c-primary)">Entry {fmtPrice(Number(kd.entry))}</Chip>}
-          {kd.target != null && <Chip tone="var(--green)">Target {fmtPrice(Number(kd.target))}</Chip>}
-          {kd.stoploss != null && <Chip tone="var(--red)">Stop {fmtPrice(Number(kd.stoploss))}</Chip>}
+          {kd.entry != null && <Chip tone="var(--c-primary)">{'Entry'} {fmtPrice(Number(kd.entry))}</Chip>}
+          {kd.target != null && <Chip tone="var(--green)">{'Target'} {fmtPrice(Number(kd.target))}</Chip>}
+          {kd.stoploss != null && <Chip tone="var(--red)">{'Stop'} {fmtPrice(Number(kd.stoploss))}</Chip>}
           {kd.risk_reward != null && <Chip tone="var(--gold)">R:R 1:{fmtNum(Number(kd.risk_reward), 1)}</Chip>}
         </div>
       )}
 
       {/* what it told the others */}
       {replies.length > 0 && <>
-        <div className="cp-dossier-h">What it told the table</div>
+        <div className="cp-dossier-h">{'What it told the table'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {replies.map((p, k) => {
             const st = stanceLabel(p.stance)
@@ -580,17 +577,16 @@ function CouncilChat({ symbol, consensus, convened }: { symbol: string; consensu
   const SUGGEST = ['Why this verdict?', 'What is the biggest risk?', 'Where would the thesis be wrong?']
   const ready = convened && !!consensus
 
-  return <Panel title="Petition the council" accent="var(--gold)" right="MEFAI answers">
+  return <Panel title="Petition the council" accent="var(--gold)" right={'MEFAI answers'}>
     <div ref={scrollRef} style={{ minHeight: 240, maxHeight: 440, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
       {!ready && (
         <div style={{ color: 'var(--c-muted)', fontSize: 13.5, lineHeight: 1.6, padding: '20px 0' }}>
-          Convene the council on {sym} first. Once the table resolves a consensus you can question the verdict here and the
-          assistant will answer grounded on the council's live reading.
+          {'Convene the council on'} {sym} {'first. Once the table resolves a consensus you can question the verdict here and the assistant will answer grounded on the council\u2019s live reading.'}
         </div>
       )}
       {ready && msgs.length === 0 && (
         <div style={{ color: 'var(--c-muted)', fontSize: 13.5, lineHeight: 1.6 }}>
-          The table has resolved a verdict on {sym}. Ask anything about it.
+          {'The table has resolved a verdict on'} {sym}. {'Ask anything about it.'}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             {SUGGEST.map((s) => <button key={s} className="cp-pill" onClick={() => send(s)}>{s}</button>)}
           </div>
@@ -605,7 +601,7 @@ function CouncilChat({ symbol, consensus, convened }: { symbol: string; consensu
             border: m.role === 'user' ? 'none' : '1px solid var(--c-line)',
             borderBottomRightRadius: m.role === 'user' ? 4 : 12, borderBottomLeftRadius: m.role === 'user' ? 12 : 4,
           }}>
-            {m.content || (busy && i === msgs.length - 1 ? <span style={{ color: 'var(--c-muted)' }}>Thinking<span className="cp-ellipsis" /></span> : '')}
+            {m.content || (busy && i === msgs.length - 1 ? <span style={{ color: 'var(--c-muted)' }}>{'Thinking'}<span className="cp-ellipsis" /></span> : '')}
           </div>
         </div>
       ))}
@@ -615,7 +611,7 @@ function CouncilChat({ symbol, consensus, convened }: { symbol: string; consensu
     <form onSubmit={(e) => { e.preventDefault(); send(input) }} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
       <input
         value={input} onChange={(e) => setInput(e.target.value)} disabled={busy || !ready}
-        placeholder={ready ? `Ask about ${sym}…` : 'Convene the council to begin…'}
+        placeholder={ready ? `${'Ask about'} ${sym}…` : 'Convene the council to begin…'}
         style={{ flex: 1, padding: '11px 14px', borderRadius: 9, border: '1px solid var(--c-line-2)', background: 'var(--c-panel)', color: 'var(--c-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none' }}
       />
       <button type="submit" className="btn btn-primary" disabled={busy || !ready || !input.trim()} aria-label="Send"><IconSend size={17} /></button>
@@ -647,10 +643,9 @@ function ArenaScene() {
           ))}
         </svg>
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 'clamp(24px,3.4vw,38px)', fontWeight: 900, letterSpacing: '-.7px', margin: 0 }}>Step into the arena</h2>
+          <h2 style={{ fontSize: 'clamp(24px,3.4vw,38px)', fontWeight: 900, letterSpacing: '-.7px', margin: 0 }}>{'Step into the arena'}</h2>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 700, margin: '12px auto 0', lineHeight: 1.6, fontSize: 14.5 }}>
-            The MEFAI agents that debate at the table also descend into a public arena where the full roster competes head to head.
-            Every call is sealed before the outcome and settled to the BSC ledger so the roster carries a record you can audit.
+            {'The MEFAI agents that debate at the table also descend into a public arena where the full roster competes head to head. Every call is sealed before the outcome and settled to the BSC ledger so the roster carries a record you can audit.'}
           </p>
         </div>
 
@@ -662,22 +657,22 @@ function ArenaScene() {
             const pnlTone = a.total_pnl_pct >= 0 ? 'var(--green)' : 'var(--red)'
             return <div key={a.agent_id || a.name} className="cp-podium-step" style={{ minHeight: stepMin[idx], boxShadow: `inset 0 3px 0 0 ${m}` }}>
               <span style={{ width: 46, height: 46, borderRadius: 13, background: `color-mix(in srgb, ${m} 20%, transparent)`, border: `1.5px solid ${m}`, color: m, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><IconBot size={24} /></span>
-              <span style={{ fontSize: 11, fontWeight: 900, color: m, letterSpacing: .5 }}>RANK {podiumRank[idx]}</span>
+              <span style={{ fontSize: 11, fontWeight: 900, color: m, letterSpacing: .5 }}>{'RANK'} {podiumRank[idx]}</span>
               <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: .2 }}>{a.name}</span>
               <span className="mono" style={{ fontSize: 15, fontWeight: 800, color: pnlTone }}>{a.total_pnl_pct >= 0 ? '+' : ''}{fmtNum(a.total_pnl_pct, 1)}%</span>
-              <span style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>{fmtNum(a.accuracy_pct, 0)}% acc · {a.correct}/{a.total_predictions}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>{fmtNum(a.accuracy_pct, 0)}% {'acc'} · {a.correct}/{a.total_predictions}</span>
             </div>
           })}
         </div>}
-        {top3.length === 0 && <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', fontSize: 13, color: 'var(--c-muted)' }}>The arena is filling its roster<span className="cp-ellipsis" /></div>}
+        {top3.length === 0 && <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', fontSize: 13, color: 'var(--c-muted)' }}>{'The arena is filling its roster'}<span className="cp-ellipsis" /></div>}
       </div>
     </Reveal>
 
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.05fr) minmax(0,1fr)', gap: 16, alignItems: 'start', marginTop: 16 }} className="cp-grid-2">
       {/* arena standings (ranks 4+) */}
       <Reveal delay={60}>
-        <Panel title="Arena standings" accent="var(--trust)" right={`${agents.length} agents`}>
-          {agents.length === 0 && <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '16px 0' }}>Loading the roster<span className="cp-ellipsis" /></div>}
+        <Panel title="Arena standings" accent="var(--trust)" right={`${agents.length} ${'agents'}`}>
+          {agents.length === 0 && <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '16px 0' }}>{'Loading the roster'}<span className="cp-ellipsis" /></div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {rest.map((a) => {
               const pnlTone = a.total_pnl_pct >= 0 ? 'var(--green)' : 'var(--red)'
@@ -686,23 +681,23 @@ function ArenaScene() {
                 <span style={{ width: 30, height: 30, borderRadius: 9, background: 'color-mix(in srgb, var(--trust) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--trust)', flexShrink: 0 }}><IconBot size={16} /></span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 13, letterSpacing: .3 }}>{a.name}</div>
-                  <Bar label="" value={Math.max(0, Math.min(100, a.accuracy_pct))} tone="var(--trust)" fmt={(v) => `${v.toFixed(0)}% acc`} />
+                  <Bar label="" value={Math.max(0, Math.min(100, a.accuracy_pct))} tone="var(--trust)" fmt={(v) => `${v.toFixed(0)}% ${'acc'}`} />
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div className="mono" style={{ fontSize: 13, fontWeight: 800, color: pnlTone }}>{a.total_pnl_pct >= 0 ? '+' : ''}{fmtNum(a.total_pnl_pct, 1)}%</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>{a.correct}/{a.total_predictions} · streak {a.streak}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>{a.correct}/{a.total_predictions} · {'streak'} {a.streak}</div>
                 </div>
               </div>
             })}
-            {rest.length === 0 && agents.length > 0 && <div style={{ fontSize: 12.5, color: 'var(--c-muted)', padding: '8px 0' }}>The full roster is on the podium above.</div>}
+            {rest.length === 0 && agents.length > 0 && <div style={{ fontSize: 12.5, color: 'var(--c-muted)', padding: '8px 0' }}>{'The full roster is on the podium above.'}</div>}
           </div>
         </Panel>
       </Reveal>
 
       {/* live duels */}
       <Reveal delay={120}>
-        <Panel title="Live duels" accent="var(--trust)" right="pending">
-          {live.length === 0 && <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '16px 0' }}>No open calls right now. The arena settles in cycles.</div>}
+        <Panel title="Live duels" accent="var(--trust)" right={'pending'}>
+          {live.length === 0 && <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '16px 0' }}>{'No open calls right now. The arena settles in cycles.'}</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {live.map((p, i) => {
               const t = sigTone(p.signal)
@@ -718,10 +713,10 @@ function ArenaScene() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                  {p.entry_price > 0 && <Chip tone="var(--c-primary)">Entry {fmtPrice(p.entry_price)}</Chip>}
-                  {p.target_price > 0 && <Chip tone="var(--green)">Target {fmtPrice(p.target_price)}</Chip>}
-                  {p.stop_loss > 0 && <Chip tone="var(--red)">Stop {fmtPrice(p.stop_loss)}</Chip>}
-                  {p.bscscan_url && <a className="cp-a" href={p.bscscan_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--trust)', display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>proof <IconExternal size={12} /></a>}
+                  {p.entry_price > 0 && <Chip tone="var(--c-primary)">{'Entry'} {fmtPrice(p.entry_price)}</Chip>}
+                  {p.target_price > 0 && <Chip tone="var(--green)">{'Target'} {fmtPrice(p.target_price)}</Chip>}
+                  {p.stop_loss > 0 && <Chip tone="var(--red)">{'Stop'} {fmtPrice(p.stop_loss)}</Chip>}
+                  {p.bscscan_url && <a className="cp-a" href={p.bscscan_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--trust)', display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>{'proof'} <IconExternal size={12} /></a>}
                 </div>
               </div>
             })}
@@ -732,14 +727,13 @@ function ArenaScene() {
 
     <Reveal delay={80}>
       <Card glow="var(--trust)" style={{ padding: 24, marginTop: 22, textAlign: 'center' }}>
-        <span className="cp-roman" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--trust)', fontWeight: 700, fontSize: 14, letterSpacing: .6 }}>Verifiable by design</span>
+        <span className="cp-roman" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--trust)', fontWeight: 700, fontSize: 14, letterSpacing: .6 }}>{'Verifiable by design'}</span>
         <p style={{ color: 'var(--c-text-2)', maxWidth: 620, margin: '10px auto 16px', fontSize: 13.5, lineHeight: 1.6 }}>
-          The debate the consensus and the arena calls all resolve to the same audited registry. Read the source or open
-          the registry on BscScan and check the sealed proofs yourself.
+          {'The debate the consensus and the arena calls all resolve to the same audited registry. Read the source or open the registry on BscScan and check the sealed proofs yourself.'}
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Btn variant="trust" href={scan(ADDR.registry)}>Open the registry</Btn>
-          <Btn variant="ghost" href={GITHUB_URL}>Read the source</Btn>
+          <Btn variant="trust" href={scan(ADDR.registry)}>{'Open the registry'}</Btn>
+          <Btn variant="ghost" href={GITHUB_URL}>{'Read the source'}</Btn>
         </div>
       </Card>
     </Reveal>

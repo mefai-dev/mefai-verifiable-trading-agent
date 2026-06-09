@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="600" viewBox="0 0 920 600" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="920" height="600" fill="#0b0e11"/>
+  <text x="460" y="34" fill="#F0B90B" font-size="20" font-weight="700" text-anchor="middle">MEFAI · The Verifiable Trading Agent</text>
+  <text x="460" y="56" fill="#848e9c" font-size="12" text-anchor="middle">prove the call before the outcome · size under a cap it cannot breach · publish a record a stranger can audit</text>
+
+  <!-- Layer 1: data sources -->
+  <text x="40" y="92" fill="#848e9c" font-size="11" font-weight="600">1 · DATA SOURCES</text>
+  <g fill="#161a1e" stroke="#2b3139">
+    <rect x="40" y="100" width="200" height="46" rx="8"/>
+    <rect x="256" y="100" width="200" height="46" rx="8"/>
+    <rect x="472" y="100" width="186" height="46" rx="8"/>
+    <rect x="674" y="100" width="206" height="46" rx="8"/>
+  </g>
+  <g fill="#e6e8ea" font-size="12" text-anchor="middle">
+    <text x="140" y="121">CoinMarketCap Agent Hub</text>
+    <text x="356" y="121">MEFAI signal feed</text>
+    <text x="565" y="121">ML ensemble</text>
+    <text x="777" y="121">Technical composite</text>
+  </g>
+  <g fill="#848e9c" font-size="10" text-anchor="middle">
+    <text x="140" y="137">12 MCP tools</text>
+    <text x="356" y="137">181k labeled outcomes</text>
+    <text x="565" y="137">self-learning</text>
+    <text x="777" y="137">multi-timeframe</text>
+  </g>
+
+  <!-- arrow down -->
+  <path d="M460 146 L460 168" stroke="#F0B90B" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Layer 2: decision -->
+  <text x="40" y="190" fill="#848e9c" font-size="11" font-weight="600">2 · DECISION LOOP</text>
+  <g fill="#161a1e" stroke="#2b3139">
+    <rect x="40" y="198" width="190" height="48" rx="8"/>
+    <rect x="250" y="198" width="190" height="48" rx="8"/>
+    <rect x="460" y="198" width="190" height="48" rx="8"/>
+    <rect x="670" y="198" width="210" height="48" rx="8"/>
+  </g>
+  <g fill="#e6e8ea" font-size="12" text-anchor="middle">
+    <text x="135" y="220">Signal fusion</text>
+    <text x="345" y="220">Expert council</text>
+    <text x="555" y="220">Net-of-cost edge gate</text>
+    <text x="775" y="220">Drawdown-budget Kelly</text>
+  </g>
+  <g fill="#848e9c" font-size="10" text-anchor="middle">
+    <text x="135" y="236">one conviction</text>
+    <text x="345" y="236">six lenses → consensus</text>
+    <text x="555" y="236">edge &gt; cost + 1 sigma</text>
+    <text x="775" y="236">size capped by room R</text>
+  </g>
+  <path d="M230 222 L250 222" stroke="#2b3139" stroke-width="2" marker-end="url(#b)"/>
+  <path d="M440 222 L460 222" stroke="#2b3139" stroke-width="2" marker-end="url(#b)"/>
+  <path d="M650 222 L670 222" stroke="#2b3139" stroke-width="2" marker-end="url(#b)"/>
+
+  <path d="M460 246 L460 268" stroke="#F0B90B" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Layer 3: safety gate -->
+  <text x="40" y="290" fill="#848e9c" font-size="11" font-weight="600">3 · FAIL-CLOSED SAFETY</text>
+  <g fill="#161a1e" stroke="#2b3139">
+    <rect x="40" y="298" width="840" height="48" rx="8"/>
+  </g>
+  <text x="460" y="320" fill="#e6e8ea" font-size="12" text-anchor="middle">Security gate · six go / no-go checks on the exact spend before anything is signed</text>
+  <text x="460" y="336" fill="#848e9c" font-size="10" text-anchor="middle">honeypot · contract risk · slippage · approval guard · preflight · MEV · (Trust Wallet Agent Kit)</text>
+
+  <path d="M460 346 L460 368" stroke="#F0B90B" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Layer 4: proof layer -->
+  <text x="40" y="390" fill="#848e9c" font-size="11" font-weight="600">4 · VERIFIABLE PROOF LAYER · BSC MAINNET</text>
+  <g fill="#12161a" stroke="#F0B90B" stroke-opacity="0.5">
+    <rect x="40" y="398" width="158" height="56" rx="8"/>
+    <rect x="214" y="398" width="158" height="56" rx="8"/>
+    <rect x="388" y="398" width="158" height="56" rx="8"/>
+    <rect x="562" y="398" width="158" height="56" rx="8"/>
+    <rect x="736" y="398" width="144" height="56" rx="8"/>
+  </g>
+  <g fill="#e6e8ea" font-size="12" text-anchor="middle">
+    <text x="119" y="422">Commit-reveal</text>
+    <text x="293" y="422">RiskGovernor</text>
+    <text x="467" y="422">Result ledger</text>
+    <text x="641" y="422">ERC-8004</text>
+    <text x="808" y="422">x402 feed</text>
+  </g>
+  <g fill="#848e9c" font-size="10" text-anchor="middle">
+    <text x="119" y="438">sealed prediction</text>
+    <text x="119" y="450">before the move</text>
+    <text x="293" y="438">drawdown circuit</text>
+    <text x="293" y="450">breaker (1400 bps)</text>
+    <text x="467" y="438">public equity</text>
+    <text x="467" y="450">record</text>
+    <text x="641" y="438">portable agent</text>
+    <text x="641" y="450">identity</text>
+    <text x="808" y="438">machine-payable</text>
+    <text x="808" y="450">alpha</text>
+  </g>
+
+  <path d="M460 454 L460 476" stroke="#F0B90B" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Layer 5: execution -->
+  <text x="40" y="498" fill="#848e9c" font-size="11" font-weight="600">5 · DIRECTION-AWARE EXECUTION</text>
+  <g fill="#161a1e" stroke="#2b3139">
+    <rect x="40" y="506" width="410" height="46" rx="8"/>
+    <rect x="470" y="506" width="410" height="46" rx="8"/>
+  </g>
+  <g fill="#e6e8ea" font-size="12" text-anchor="middle">
+    <text x="245" y="528">Long · PancakeSwap (DEX swap)</text>
+    <text x="675" y="528">Short · perpetual venue</text>
+  </g>
+  <g fill="#848e9c" font-size="10" text-anchor="middle">
+    <text x="245" y="544">expressed directly</text>
+    <text x="675" y="544">paper book + perp route</text>
+  </g>
+
+  <text x="460" y="582" fill="#5b636b" font-size="10" text-anchor="middle">Ships in paper mode · signs nothing until BNBHACK_EXECUTE_TRADES and BNBHACK_EXECUTE_CHAIN are both set</text>
+
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#F0B90B"/></marker>
+    <marker id="b" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#2b3139"/></marker>
+  </defs>
+</svg>

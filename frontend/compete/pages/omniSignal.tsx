@@ -18,7 +18,6 @@ import type {
   FusionResult, SizingResult, TpSl, SecurityVerdict, DebateResult, SourceContribution,
 } from '../api'
 import { Chip, Gauge, fmtUsd, fmtNum, fmtPct, clamp01, CoinLogo } from '../ui'
-import { useTx } from '../i18n'
 import { CmcHubBand } from './cmcHub'
 
 const TONE = 'var(--gold)'
@@ -64,7 +63,7 @@ function Step({ n, title, source, status, children }: {
     <div className="cp-omni-step-b">{children}</div>
   </div>
 }
-function Loading() { const tx = useTx(); return <span className="cp-omni-load">{tx('reading')}<span className="cp-ellipsis" /></span> }
+function Loading() { return <span className="cp-omni-load">{'reading'}<span className="cp-ellipsis" /></span> }
 function MiniStat({ label, value, tone, sub }: { label: string; value: ReactNode; tone?: string; sub?: string }) {
   return <div className="cp-omni-ms">
     <div className="cp-omni-ms-l">{label}</div>
@@ -75,20 +74,19 @@ function MiniStat({ label, value, tone, sub }: { label: string; value: ReactNode
 
 /* ─────────────── stage renderers ─────────────── */
 function FusionStage({ s }: { s: Stage<FusionResult> }) {
-  const tx = useTx()
   if (s.loading) return <Loading />
-  if (s.error || !s.data) return <Note>{tx('The fusion service did not answer for this asset. The chain still runs on the stages below.')}</Note>
+  if (s.error || !s.data) return <Note>{'The fusion service did not answer for this asset. The chain still runs on the stages below.'}</Note>
   const f = s.data
   const d = dirLabel(f.direction)
   const sources = (f.sources || []).filter((x) => x.available)
   return <>
     <div className="cp-omni-headline">
       <div>
-        <div className="cp-omni-dir" style={{ color: d.c }}>{tx(d.t)}</div>
-        <div className="cp-omni-sub">{tx('blended conviction across')} {f.n_sources} {tx('sources')}</div>
+        <div className="cp-omni-dir" style={{ color: d.c }}>{d.t}</div>
+        <div className="cp-omni-sub">{'blended conviction across'} {f.n_sources} {'sources'}</div>
       </div>
-      <Gauge value={clamp01(f.agreement) * 100} max={100} label={tx('agreement')} tone={TONE} size={104}
-        sub={`${tx('coverage')} ${fmtPct(f.coverage * 100, 0)}`} />
+      <Gauge value={clamp01(f.agreement) * 100} max={100} label={'agreement'} tone={TONE} size={104}
+        sub={`${'coverage'} ${fmtPct(f.coverage * 100, 0)}`} />
     </div>
     <div className="cp-omni-src-grid">
       {sources.map((x) => <SourceRow key={x.name} x={x} />)}
@@ -96,12 +94,11 @@ function FusionStage({ s }: { s: Stage<FusionResult> }) {
   </>
 }
 function SourceRow({ x }: { x: SourceContribution }) {
-  const tx = useTx()
   const d = dirLabel(x.direction)
   return <div className="cp-omni-src">
     <div className="cp-omni-src-top">
       <span className="cp-omni-src-n">{x.name}</span>
-      <Chip tone={d.c}>{tx(d.t)}</Chip>
+      <Chip tone={d.c}>{d.t}</Chip>
     </div>
     {x.detail && <div className="cp-omni-src-d">{x.detail}</div>}
     <div className="cp-omni-src-bar">
@@ -110,21 +107,20 @@ function SourceRow({ x }: { x: SourceContribution }) {
         background: `linear-gradient(90deg, ${d.c}, color-mix(in srgb, ${d.c} 55%, transparent))`,
       }} />
     </div>
-    <div className="cp-omni-src-w mono">{tx('weight')} {fmtPct(x.weight_pct * 100, 0)}{x.hit_rate != null ? ` · ${tx('hit')} ${fmtPct(x.hit_rate * 100, 0)}` : ''}</div>
+    <div className="cp-omni-src-w mono">{'weight'} {fmtPct(x.weight_pct * 100, 0)}{x.hit_rate != null ? ` · ${'hit'} ${fmtPct(x.hit_rate * 100, 0)}` : ''}</div>
   </div>
 }
 
 function CouncilStage({ s }: { s: Stage<DebateResult> }) {
-  const tx = useTx()
   if (s.loading) return <Loading />
-  if (s.error || !s.data?.consensus) return <Note>{tx('The council is not reachable for this asset right now.')}</Note>
+  if (s.error || !s.data?.consensus) return <Note>{'The council is not reachable for this asset right now.'}</Note>
   const c = s.data.consensus
   const experts = s.data.experts || []
   return <>
     <div className="cp-omni-row">
       <Chip tone={sigTone(c.signal)} solid>{c.signal}</Chip>
-      <span className="cp-omni-agree mono">{(() => { const a = c.agreement_pct ?? c.confidence * 100; return Number.isFinite(a) ? `${fmtPct(a, 0)} ${tx('agreement')}` : tx('agreement reading pending') })()}</span>
-      <span className="cp-omni-sub">{experts.length} {tx('expert agents at the table')}</span>
+      <span className="cp-omni-agree mono">{(() => { const a = c.agreement_pct ?? c.confidence * 100; return Number.isFinite(a) ? `${fmtPct(a, 0)} ${'agreement'}` : 'agreement reading pending' })()}</span>
+      <span className="cp-omni-sub">{experts.length} {'expert agents at the table'}</span>
     </div>
     {c.summary && <p className="cp-omni-p">{c.summary}</p>}
     <div className="cp-omni-votes">
@@ -138,49 +134,46 @@ function CouncilStage({ s }: { s: Stage<DebateResult> }) {
 }
 
 function BracketStage({ s }: { s: Stage<TpSl> }) {
-  const tx = useTx()
   if (s.loading) return <Loading />
-  if (s.error || !s.data) return <Note>{tx('The optimizer is not reachable right now.')}</Note>
+  if (s.error || !s.data) return <Note>{'The optimizer is not reachable right now.'}</Note>
   const t = s.data
   const cell = t.best_per_risk || t.best
-  if (!cell || !t.recommend) return <Note>{t.note || tx('No bracket reached the minimum sample threshold for this asset so the agent would not commit a bracket here.')}</Note>
+  if (!cell || !t.recommend) return <Note>{t.note || 'No bracket reached the minimum sample threshold for this asset so the agent would not commit a bracket here.'}</Note>
   return <div className="cp-omni-grid4">
-    <MiniStat label={tx('Take profit')} value={fmtPct(cell.tp, 2)} tone="var(--green)" />
-    <MiniStat label={tx('Stop loss')} value={fmtPct(cell.sl, 2)} tone="var(--red)" />
-    <MiniStat label={tx('R:R')} value={fmtNum(cell.rr, 2)} tone={TONE} sub={tx('reward to risk')} />
-    <MiniStat label={tx('Sample')} value={fmtNum(cell.n, 0)} sub={tx('labeled outcomes')} />
+    <MiniStat label={'Take profit'} value={fmtPct(cell.tp, 2)} tone="var(--green)" />
+    <MiniStat label={'Stop loss'} value={fmtPct(cell.sl, 2)} tone="var(--red)" />
+    <MiniStat label={'R:R'} value={fmtNum(cell.rr, 2)} tone={TONE} sub={'reward to risk'} />
+    <MiniStat label={'Sample'} value={fmtNum(cell.n, 0)} sub={'labeled outcomes'} />
   </div>
 }
 
 function SizingStage({ s }: { s: Stage<SizingResult> }) {
-  const tx = useTx()
   if (s.loading) return <Loading />
-  if (s.error || !s.data) return <Note>{tx('The sizing service is not reachable right now.')}</Note>
+  if (s.error || !s.data) return <Note>{'The sizing service is not reachable right now.'}</Note>
   const z = s.data
   return <>
     <div className="cp-omni-row">
-      <Chip tone={z.approved ? 'var(--green)' : 'var(--gold)'} solid>{z.approved ? tx('SIZED') : tx('NO BET')}</Chip>
-      <span className="cp-omni-sub">{tx('drawdown budgeted Kelly')}</span>
+      <Chip tone={z.approved ? 'var(--green)' : 'var(--gold)'} solid>{z.approved ? 'SIZED' : 'NO BET'}</Chip>
+      <span className="cp-omni-sub">{'drawdown budgeted Kelly'}</span>
     </div>
     <div className="cp-omni-grid4">
-      <MiniStat label={tx('Notional')} value={fmtUsd(z.notional)} tone={TONE} />
-      <MiniStat label={tx('Leverage')} value={`${fmtNum(z.leverage, 1)}x`} />
-      <MiniStat label={tx('Worst case')} value={fmtUsd(z.worst_case_loss)} tone="var(--red)" sub={tx('if the stop hits')} />
-      <MiniStat label={tx('Equity')} value={fmtUsd(z.equity)} sub={tx('paper book')} />
+      <MiniStat label={'Notional'} value={fmtUsd(z.notional)} tone={TONE} />
+      <MiniStat label={'Leverage'} value={`${fmtNum(z.leverage, 1)}x`} />
+      <MiniStat label={'Worst case'} value={fmtUsd(z.worst_case_loss)} tone="var(--red)" sub={'if the stop hits'} />
+      <MiniStat label={'Equity'} value={fmtUsd(z.equity)} sub={'paper book'} />
     </div>
     {z.reasons?.length > 0 && <p className="cp-omni-p">{z.reasons[0]}</p>}
   </>
 }
 
 function SecurityStage({ s }: { s: Stage<SecurityVerdict> }) {
-  const tx = useTx()
   if (s.loading) return <Loading />
-  if (s.error || !s.data) return <Note>{tx('The security gate is not reachable right now.')}</Note>
+  if (s.error || !s.data) return <Note>{'The security gate is not reachable right now.'}</Note>
   const v = s.data
   return <>
     <div className="cp-omni-row">
-      <Chip tone={v.go ? 'var(--green)' : 'var(--red)'} solid>{v.go ? tx('CLEARED') : tx('BLOCKED')}</Chip>
-      <span className="cp-omni-agree mono">{tx('score')} {fmtNum(v.score, 0)}</span>
+      <Chip tone={v.go ? 'var(--green)' : 'var(--red)'} solid>{v.go ? 'CLEARED' : 'BLOCKED'}</Chip>
+      <span className="cp-omni-agree mono">{'score'} {fmtNum(v.score, 0)}</span>
     </div>
     <div className="cp-omni-checks">
       {(v.checks || []).map((c, i) => (
@@ -202,7 +195,6 @@ function Verdict({ fusion, council, bracket, sizing, security }: {
   fusion: FusionResult | null; council: DebateResult | null
   bracket: TpSl | null; sizing: SizingResult | null; security: SecurityVerdict | null
 }) {
-  const tx = useTx()
   const dir = fusion ? dirLabel(fusion.direction) : { t: 'PENDING', c: 'var(--c-muted)' }
   const cell = bracket?.best_per_risk || bracket?.best
   const cleared = !!security?.go
@@ -210,26 +202,26 @@ function Verdict({ fusion, council, bracket, sizing, security }: {
   const directional = !!fusion && fusion.direction !== 0
   const go = directional && cleared && sized
   const reason = !directional
-    ? tx('Fusion is neutral so the agent stands aside.')
+    ? 'Fusion is neutral so the agent stands aside.'
     : !cleared
-      ? tx('The execution safety gate blocked this plan so the agent will not act.')
+      ? 'The execution safety gate blocked this plan so the agent will not act.'
       : !sized
-        ? (sizing?.reasons?.[0] || tx('The drawdown budget sized this to no bet so the agent stands aside.'))
-        : tx('All stages agree and the safety gate cleared so the agent would commit this trade.')
+        ? (sizing?.reasons?.[0] || 'The drawdown budget sized this to no bet so the agent stands aside.')
+        : 'All stages agree and the safety gate cleared so the agent would commit this trade.'
   return <div className="cp-omni-verdict" style={{ ['--vt' as string]: go ? 'var(--green)' : 'var(--c-muted)' }}>
     <div className="cp-omni-v-head">
-      <span className="cp-omni-v-tag">{tx('Agent verdict')}</span>
+      <span className="cp-omni-v-tag">{'Agent verdict'}</span>
       <span className="cp-omni-v-state" style={{ color: go ? 'var(--green)' : 'var(--c-muted)' }}>
         <span className="cp-omni-v-glyph" aria-hidden>{go ? '\u25CF' : '\u25CB'}</span>
-        {go ? tx('COMMIT') : tx('STAND ASIDE')}
+        {go ? 'COMMIT' : 'STAND ASIDE'}
       </span>
     </div>
     <div className="cp-omni-v-grid">
-      <MiniStat label={tx('Direction')} value={tx(dir.t)} tone={dir.c} />
-      <MiniStat label={tx('Council')} value={council?.consensus?.signal || '-'} tone={sigTone(council?.consensus?.signal)} />
-      <MiniStat label={tx('R:R')} value={cell ? fmtNum(cell.rr, 2) : '-'} tone={TONE} />
-      <MiniStat label={tx('Size')} value={sizing ? fmtUsd(sizing.notional) : '-'} />
-      <MiniStat label={tx('Safety')} value={security ? (security.go ? tx('cleared') : tx('blocked')) : '-'} tone={cleared ? 'var(--green)' : 'var(--red)'} />
+      <MiniStat label={'Direction'} value={dir.t} tone={dir.c} />
+      <MiniStat label={'Council'} value={council?.consensus?.signal || '·'} tone={sigTone(council?.consensus?.signal)} />
+      <MiniStat label={'R:R'} value={cell ? fmtNum(cell.rr, 2) : '·'} tone={TONE} />
+      <MiniStat label={'Size'} value={sizing ? fmtUsd(sizing.notional) : '·'} />
+      <MiniStat label={'Safety'} value={security ? (security.go ? 'cleared' : 'blocked') : '·'} tone={cleared ? 'var(--green)' : 'var(--red)'} />
     </div>
     <p className="cp-omni-v-reason">{reason}</p>
   </div>
@@ -237,7 +229,6 @@ function Verdict({ fusion, council, bracket, sizing, security }: {
 
 /* ─────────────── the panel ─────────────── */
 export function OmniSignalPanel() {
-  const tx = useTx()
   const [asset, setAsset] = useState(ASSETS[2]) // BNB
   const [tf, setTf] = useState(DEFAULT_TF)
   const [fusion, setFusion] = useState<Stage<FusionResult>>(idle)
@@ -312,23 +303,23 @@ export function OmniSignalPanel() {
     </div>
 
     <div className="cp-omni-flow">
-      <Step n={1} title={tx('Signal fusion')} source={tx('CMC hub + signal engine')}
+      <Step n={1} title={'Signal fusion'} source={'CMC hub + signal engine'}
         status={<StageBadge s={fusion} />}>
         <FusionStage s={fusion} />
       </Step>
-      <Step n={2} title={tx('AI council')} source={tx('expert council')}
+      <Step n={2} title={'AI council'} source={'expert council'}
         status={<StageBadge s={council} />}>
         <CouncilStage s={council} />
       </Step>
-      <Step n={3} title={tx('TP/SL bracket')} source={tx('labeled outcome history')}
+      <Step n={3} title={'TP/SL bracket'} source={'labeled outcome history'}
         status={<StageBadge s={bracket} />}>
         <BracketStage s={bracket} />
       </Step>
-      <Step n={4} title={tx('Position sizing')} source={tx('drawdown budget Kelly')}
+      <Step n={4} title={'Position sizing'} source={'drawdown budget Kelly'}
         status={<StageBadge s={sizing} />}>
         <SizingStage s={sizing} />
       </Step>
-      <Step n={5} title={tx('Execution safety gate')} source={tx('Trust Wallet pre trade')}
+      <Step n={5} title={'Execution safety gate'} source={'Trust Wallet pre trade'}
         status={<StageBadge s={security} />}>
         <SecurityStage s={security} />
       </Step>
@@ -338,14 +329,13 @@ export function OmniSignalPanel() {
       sizing={sizing.data} security={security.data} />
 
     <p className="cp-omni-foot">
-      {tx('Every stage above is a live call to the audited backend the same chain the autonomous agent runs on each cycle. Where a feed is down the stage says so; nothing here is mocked.')}
+      {'Every stage above is a live call to the audited backend the same chain the autonomous agent runs on each cycle. Where a feed is down the stage says so; nothing here is mocked.'}
     </p>
   </div>
 }
 
 function StageBadge<T>({ s }: { s: Stage<T> }) {
-  const tx = useTx()
-  if (s.loading) return <span className="cp-omni-badge wait">{tx('sync')}</span>
-  if (s.error || !s.data) return <span className="cp-omni-badge off">{tx('down')}</span>
-  return <span className="cp-omni-badge ok">{tx('live')}</span>
+  if (s.loading) return <span className="cp-omni-badge wait">{'sync'}</span>
+  if (s.error || !s.data) return <span className="cp-omni-badge off">{'down'}</span>
+  return <span className="cp-omni-badge ok">{'live'}</span>
 }

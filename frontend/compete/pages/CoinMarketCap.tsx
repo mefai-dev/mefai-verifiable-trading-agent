@@ -27,9 +27,9 @@ const verdictTone = (v: string) => VERDICT_TONE[(v || '').toLowerCase()] || 'var
 export default function CoinMarketCap({ go }: { go: (p: string) => void }) {
   return <div>
     <SponsorHero
-      tone={TONE} eyebrow="Built with CoinMarketCap" go={go}
-      title={<>The whole market<br />fused into <span style={{ color: TONE }}>one conviction</span></>}
-      blurb="MEFAI wires the full CoinMarketCap Agent Hub into its decision engine. Global metrics derivatives trending narratives marketcap reads and macro events all flow into one conviction score the narrative rotation skill and the regime governor."
+      tone={TONE} eyebrow={'Built with CoinMarketCap'} go={go}
+      title={<>{'The whole market'}<br />{'fused into'} <span style={{ color: TONE }}>{'one conviction'}</span></>}
+      blurb={'MEFAI wires the full CoinMarketCap Agent Hub into its decision engine. Global metrics · derivatives · trending narratives · market cap reads · macro events all flow into one conviction score, the narrative rotation skill and the regime governor.'}
     />
 
     <Reveal>
@@ -38,8 +38,8 @@ export default function CoinMarketCap({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
 
-    <SponsorSectionHead tone={TONE} eyebrow="The live tape" title="Who is buying who is selling"
-      sub="The same order flow read that feeds the agent. Aggressive taker buys versus sells from the real Binance spot tape plus the resting book imbalance. No key no fabrication. The tokenized stocks card shows where this engine extends next on BNB Chain." />
+    <SponsorSectionHead tone={TONE} eyebrow={'The live tape'} title={'Who is buying who is selling'}
+      sub={'The same order flow read that feeds the agent. Aggressive taker buys versus sells from the real Binance spot tape plus the resting book imbalance. No key no fabrication. The tokenized stocks card shows where this engine extends next on BNB Chain.'} />
     <Reveal>
       <div style={{ maxWidth: 1320, margin: '0 auto', padding: '0 22px', display: 'grid', gap: 16 }}>
         <OrderFlowPanel />
@@ -47,7 +47,7 @@ export default function CoinMarketCap({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
 
-    <SponsorSectionHead tone={TONE} eyebrow="What we built" title="Every CMC tool doing real work" />
+    <SponsorSectionHead tone={TONE} eyebrow={'What we built'} title={'Every CMC tool doing real work'} />
     <FeatureGrid tone={TONE} items={[
       { t: 'CMC inside omni signal fusion', d: 'Global market cap dominance and volume become weighted inputs in the same conviction score as our own signals each scaled by its measured hit rate.' },
       { t: 'Narrative rotation skill', d: 'We rank live CMC trending narratives and rotate the book into the strongest but only after the verifiable leaderboard confirms the edge is real.' },
@@ -57,21 +57,21 @@ export default function CoinMarketCap({ go }: { go: (p: string) => void }) {
       { t: 'CMC native tables', d: 'The verifiable leaderboard and skill studio replicate the CMC table language so judges read our proof in a format they already trust.' },
     ]} />
 
-    <SponsorSectionHead tone={TONE} eyebrow="See it running" title="Our live market intelligence embedded"
-      sub="The same CoinMarketCap powered reads the agent uses embedded live from the production terminal. The AI crossover engine the audited top 1000 the deep intelligence read the market regime gauge and the macro dashboard. Pick one watch it pull live data then open it full screen." />
+    <SponsorSectionHead tone={TONE} eyebrow={'See it running'} title={'Our live market intelligence embedded'}
+      sub={'The same CoinMarketCap powered reads the agent uses embedded live from the production terminal. The AI crossover engine the audited top 1000 the deep intelligence read the market regime gauge and the macro dashboard. Pick one watch it pull live data then open it full screen.'} />
     <Reveal>
       <div style={{ maxWidth: 1320, margin: '0 auto', padding: '0 22px' }}>
         <CmcEmbedViewer />
       </div>
     </Reveal>
 
-    <SponsorSectionHead tone={TONE} eyebrow="The full surface" title="Every CoinMarketCap skill catalogued"
-      sub="The whole Agent Hub one card per capability: the 12 MCP tools and the 8 skills. Search filter by kind or show only what the live agent calls today. Tap any card for how MEFAI wires it in and what it connects to." />
+    <SponsorSectionHead tone={TONE} eyebrow={'The full surface'} title={'Every CoinMarketCap skill catalogued'}
+      sub={'The whole Agent Hub one card per capability: the 12 MCP tools and the 8 skills. Search filter by kind or show only what the live agent calls today. Tap any card for how MEFAI wires it in and what it connects to.'} />
     <SkillCatalog group="cmc" tone={TONE} />
 
     <div style={{ textAlign: 'center', padding: '34px 22px 70px', display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-      <Btn variant="cmc" onClick={() => go('/compete/skills')}>Open the strategy skills</Btn>
-      <Btn variant="ghost" href={GITHUB_URL}>Read the source</Btn>
+      <Btn variant="cmc" onClick={() => go('/compete/skills')}>{'Open the strategy skills'}</Btn>
+      <Btn variant="ghost" href={GITHUB_URL}>{'Read the source'}</Btn>
     </div>
   </div>
 }
@@ -91,9 +91,9 @@ const CMC_EMBEDS: { label: string; path: string; note: string }[] = [
 function CmcEmbedViewer() {
   const [active, setActive] = useState(0)
   const cur = CMC_EMBEDS[active]
-  return <Panel title="LIVE MARKET INTELLIGENCE EMBEDDED" accent="#3861FB" right="mefai.io terminal">
+  return <Panel title={'LIVE MARKET INTELLIGENCE EMBEDDED'} accent="#3861FB" right="mefai.io terminal">
     <p style={{ fontSize: 12.5, color: 'var(--c-muted)', margin: '0 0 14px', lineHeight: 1.55 }}>
-      Each tool below reads live as you watch it. Pick one then open it full screen to drive it yourself.
+      {'Each tool below reads live as you watch it. Pick one then open it full screen to drive it yourself.'}
     </p>
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, ['--c-primary' as string]: TONE, ['--c-primary-soft' as string]: 'color-mix(in srgb, var(--cmc) 14%, transparent)' }}>
       {CMC_EMBEDS.map((e, i) => (
@@ -103,7 +103,7 @@ function CmcEmbedViewer() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
       <span style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.55, flex: '1 1 320px' }}>{cur.note}</span>
       <a href={cur.path} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 12, fontWeight: 700, color: TONE, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-        Open full screen <IconExternal size={12} />
+        {'Open full screen'} <IconExternal size={12} />
       </a>
     </div>
     <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--c-line)', background: 'var(--c-panel-2)', height: 'min(72vh, 760px)' }}>
@@ -120,20 +120,20 @@ function LiveMarket() {
 
   return <div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 12, marginTop: 4 }}>
-      <Stat label="Total market cap" value={g ? fmtUsd(g.total_market_cap_usd) : '-'} tone={TONE} sub="all assets" />
-      <Stat label="24h volume" value={g ? fmtUsd(g.total_volume_usd) : '-'} tone="var(--c-text)" sub="spot turnover" />
-      <Stat label="BTC dominance" value={g ? <CountUp value={g.btc_dominance} decimals={1} suffix="%" /> : '-'} tone="var(--gold)" sub="share of cap" />
-      <Stat label="ETH dominance" value={g ? <CountUp value={g.eth_dominance} decimals={1} suffix="%" /> : '-'} tone="var(--trust)" sub="share of cap" />
-      <Stat label="Avg MEFAI score" value={sum ? <CountUp value={sum.avg_score} decimals={1} /> : '-'} tone="var(--green)" sub={`${sum?.total_tokens ?? 0} tokens audited`} />
-      <Stat label="Anomalies" value={sum ? <CountUp value={sum.anomaly_count} /> : '-'} tone={sum && sum.anomaly_count > 0 ? 'var(--red)' : 'var(--c-text)'} sub="flagged by engine" />
+      <Stat label={'Total market cap'} value={g ? fmtUsd(g.total_market_cap_usd) : '-'} tone={TONE} sub={'all assets'} />
+      <Stat label={'24h volume'} value={g ? fmtUsd(g.total_volume_usd) : '-'} tone="var(--c-text)" sub={'spot turnover'} />
+      <Stat label={'BTC dominance'} value={g ? <CountUp value={g.btc_dominance} decimals={1} suffix="%" /> : '-'} tone="var(--gold)" sub={'share of cap'} />
+      <Stat label={'ETH dominance'} value={g ? <CountUp value={g.eth_dominance} decimals={1} suffix="%" /> : '-'} tone="var(--trust)" sub={'share of cap'} />
+      <Stat label={'Avg MEFAI score'} value={sum ? <CountUp value={sum.avg_score} decimals={1} /> : '-'} tone="var(--green)" sub={`${sum?.total_tokens ?? 0} ${'tokens audited'}`} />
+      <Stat label={'Anomalies'} value={sum ? <CountUp value={sum.anomaly_count} /> : '-'} tone={sum && sum.anomaly_count > 0 ? 'var(--red)' : 'var(--c-text)'} sub={'flagged by engine'} />
     </div>
 
     {sum && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginTop: 14 }}>
-      <Chip tone="var(--green)" solid>{sum.strong_buy} strong buy</Chip>
-      <Chip tone="var(--green)">{sum.buy} buy</Chip>
-      <Chip tone="var(--c-muted)">{sum.neutral} neutral</Chip>
-      <Chip tone="var(--gold)">{sum.weak} weak</Chip>
-      <Chip tone="var(--red)">{sum.avoid} avoid</Chip>
+      <Chip tone="var(--green)" solid>{sum.strong_buy} {'strong buy'}</Chip>
+      <Chip tone="var(--green)">{sum.buy} {'buy'}</Chip>
+      <Chip tone="var(--c-muted)">{sum.neutral} {'neutral'}</Chip>
+      <Chip tone="var(--gold)">{sum.weak} {'weak'}</Chip>
+      <Chip tone="var(--red)">{sum.avoid} {'avoid'}</Chip>
     </div>}
 
     <div style={{ marginTop: 16 }}>
@@ -177,7 +177,7 @@ function NarrativeRotation({ intel }: { intel: CmcIntel | null }) {
     { key: 'rotate', header: 'Signal', sortValue: (r) => r.chg, render: (r) => <Chip tone={r.chg > 0 ? 'var(--green)' : 'var(--red)'}>{r.chg > 2 ? 'ROTATE IN' : r.chg < -2 ? 'ROTATE OUT' : 'HOLD'}</Chip> },
   ]
 
-  return <Panel title="NARRATIVE ROTATION" accent="#3861FB" right="CMC ecosystems">
+  return <Panel title={'NARRATIVE ROTATION'} accent="#3861FB" right={'CMC ecosystems'}>
     {rows.length === 0
       ? <div style={{ color: 'var(--c-muted)', padding: 24, textAlign: 'center', fontSize: 13 }}>{intel ? 'Ecosystem grouping needs at least two tokens per narrative.' : 'reading ecosystems…'}</div>
       : <CmcTable columns={cols} rows={rows} maxHeight={440} defaultSort={{ key: 'chg', dir: 'desc' }} />}
@@ -216,15 +216,15 @@ function TokenTable({ intel, error }: { intel: CmcIntel | null; error?: boolean 
     { key: 'verdict', header: 'Verdict', sortValue: (r) => VERDICT_RANK[(r.verdict || '').toLowerCase()] ?? -1, render: (r) => <Chip tone={verdictTone(r.verdict)}>{r.verdict}</Chip> },
   ]
 
-  const right = intel ? `${rows.length} of ${all.length} · ${intel.cache_age_seconds}s` : error ? 'offline' : 'loading'
+  const right = intel ? `${rows.length} ${'of'} ${all.length} · ${intel.cache_age_seconds}s` : error ? 'offline' : 'loading'
   const empty = error
     ? 'The market feed is unreachable right now.'
     : (q || verdict !== 'all') ? 'No token matches that filter.' : 'reading the market…'
 
-  return <Panel title="MARKET · MEFAI AUDIT" accent="#3861FB" right={right}>
+  return <Panel title={'MARKET · MEFAI AUDIT'} accent="#3861FB" right={right}>
     <div className="cp-sk-bar" style={{ marginBottom: 12, ['--sk-tone' as string]: TONE }}>
       <input className="cp-sk-search mono" value={q} onChange={(e) => setQ(e.target.value)}
-        placeholder={`Search ${all.length} tokens`} spellCheck={false} />
+        placeholder={`${'Search'} ${all.length} ${'tokens'}`} spellCheck={false} />
       <div className="cp-sk-filters">
         {VERDICT_FILTERS.map((v) => (
           <button key={v} className={`cp-sk-f ${verdict === v ? 'on' : ''}`} aria-pressed={verdict === v} onClick={() => setVerdict(v)}>

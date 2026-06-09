@@ -210,9 +210,14 @@ class _Acc:
 
 
 def _fetch_rows(conn: sqlite3.Connection, since_ts: Optional[int],
-                group_col: Optional[str]):
+                group_col: Optional[str], until_ts: Optional[int] = None):
     """Yield (group_value, timeframe, pnl_1h, pnl_4h, pnl_24h, result_1h,
-    result_4h, result_24h, max_drawdown_pct, entry_time) for completed rows."""
+    result_4h, result_24h, max_drawdown_pct, entry_time) for completed rows.
+
+    since_ts is an inclusive entry_time floor; until_ts is an exclusive ceiling.
+    Together they bound a half-open [since_ts, until_ts) window, which lets a
+    caller rank on a train window and measure on a disjoint holdout window.
+    """
     cols = ["timeframe", "pnl_1h", "pnl_4h", "pnl_24h",
             "result_1h", "result_4h", "result_24h",
             "max_drawdown_pct", "entry_time"]
@@ -223,6 +228,9 @@ def _fetch_rows(conn: sqlite3.Connection, since_ts: Optional[int],
     if since_ts is not None:
         where.append("entry_time >= ?")
         params.append(int(since_ts))
+    if until_ts is not None:
+        where.append("entry_time < ?")
+        params.append(int(until_ts))
     if where:
         sql += " WHERE " + " AND ".join(where)
     return conn.execute(sql, params)
@@ -252,6 +260,7 @@ class Leaderboard:
     group_by: str
     horizon: str                    # outcome window used (24h / 4h / 1h / auto)
     since_ts: Optional[int]
+    until_ts: Optional[int]         # exclusive entry_time ceiling (None = open)
     min_samples: int
     entries: List[EntityStats]      # ranked, only those meeting min_samples
     below_threshold: int            # entities dropped for too few samples
@@ -270,7 +279,8 @@ _RANK_KEYS = {
 def build_leaderboard(group_by: str = "symbol", since_ts: Optional[int] = None,
                       min_samples: int = MIN_SAMPLES, rank_by: str = "expectancy",
                       horizon: str = DEFAULT_HORIZON_MODE,
-                      db_path: str = DEFAULT_DB_PATH) -> Leaderboard:
+                      db_path: str = DEFAULT_DB_PATH,
+                      until_ts: Optional[int] = None) -> Leaderboard:
     """Rank entities of one kind by their verified outcomes.
 
     group_by: symbol | timeframe | signal_type
@@ -279,6 +289,9 @@ def build_leaderboard(group_by: str = "symbol", since_ts: Optional[int] = None,
               near-fully-resolved outcome window.
     since_ts: only count signals entered at or after this unix second (the live
               forward window the judges watch); None = whole record.
+    until_ts: exclusive entry_time ceiling; with since_ts it bounds a half-open
+              [since_ts, until_ts) window so a caller can rank on a train window
+              and score on a disjoint holdout. None = no ceiling.
     """
     group_col = _GROUP_COLS.get(group_by)
     if group_col is None:
@@ -297,7 +310,7 @@ def build_leaderboard(group_by: str = "symbol", since_ts: Optional[int] = None,
     overall = _Acc()
     conn = _ro_connect(db_path)
     try:
-        for row in _fetch_rows(conn, since_ts, group_col):
+        for row in _fetch_rows(conn, since_ts, group_col, until_ts):
             gval = str(row[0])
             pnl, result, drawdown, entry_ts, _tf = _row_outcome(row, 1, horizon)
             acc = accs.get(gval)
@@ -315,7 +328,7 @@ def build_leaderboard(group_by: str = "symbol", since_ts: Optional[int] = None,
     # ties resolve identically regardless of DB row order or rewrites.
     qualified.sort(key=lambda e: (rank_fn(e), e.n_resolved, e.key), reverse=True)
     return Leaderboard(
-        group_by=group_by, horizon=horizon, since_ts=since_ts,
+        group_by=group_by, horizon=horizon, since_ts=since_ts, until_ts=until_ts,
         min_samples=min_samples, entries=qualified, below_threshold=below,
         overall=overall.finalize("MEFAI", "global"),
     )

@@ -31,12 +31,12 @@ function SkillBody({ s, tone, onJump, lazy }: {
   const demo = SKILL_DEMO[s.id]
   return <>
     {demo && <div className="cp-sk-block">
-      <div className="cp-sk-block-h">Live capability</div>
+      <div className="cp-sk-block-h">{'Live capability'}</div>
       {lazy ? <LazyMount minHeight={120}>{demo(s)}</LazyMount> : demo(s)}
     </div>}
 
     <div className="cp-sk-block">
-      <div className="cp-sk-block-h">How MEFAI uses it</div>
+      <div className="cp-sk-block-h">{'How MEFAI uses it'}</div>
       <p className="cp-sk-block-b">{s.what}</p>
     </div>
 
@@ -46,12 +46,12 @@ function SkillBody({ s, tone, onJump, lazy }: {
     </div>}
 
     {s.invoke && <div className="cp-sk-block">
-      <div className="cp-sk-block-h">Invoke</div>
+      <div className="cp-sk-block-h">{'Invoke'}</div>
       <code className="cp-sk-invoke mono">{s.invoke}</code>
     </div>}
 
     {related.length > 0 && <div className="cp-sk-block">
-      <div className="cp-sk-block-h">Connected to</div>
+      <div className="cp-sk-block-h">{'Connected to'}</div>
       <div className="cp-sk-rel">
         {related.map((r) => <button key={r.id} className="cp-sk-rel-pill" onClick={() => onJump(r.id)}>
           <span className="cp-sk-rel-dot" style={{ background: r.used ? tone : 'var(--c-muted-2)' }} />
@@ -61,7 +61,7 @@ function SkillBody({ s, tone, onJump, lazy }: {
     </div>}
 
     {s.link && <a className="cp-sk-link" href={s.link} target="_blank" rel="noopener noreferrer">
-      Open the source <IconExternal size={13} />
+      {'Open the source'} <IconExternal size={13} />
     </a>}
   </>
 }
@@ -85,7 +85,7 @@ export function SkillModal({ s, tone, onClose, onJump }: {
   return <Portal>
     <div className="cp-modal-overlay" onClick={onClose}>
       <div className="cp-modal" onClick={(e) => e.stopPropagation()} style={{ ['--sk-tone' as string]: tone }}>
-        <button className="cp-modal-x" onClick={onClose} aria-label="close"><IconClose size={18} /></button>
+        <button className="cp-modal-x" onClick={onClose} aria-label={'close'}><IconClose size={18} /></button>
         <div className="cp-sk-modal-head">
           <span className="cp-sk-kind" style={{ color: tone }}>{KIND_LABEL[s.kind]}</span>
         </div>
@@ -145,20 +145,20 @@ export function SkillCatalog({ group, tone, intro }: { group: SkillGroup; tone: 
     {intro}
     <div className="cp-sk-bar">
       <input className="cp-sk-search mono" value={q} onChange={(e) => setQ(e.target.value)}
-        placeholder={`Search ${counts.total} capabilities`} spellCheck={false} />
+        placeholder={`${'Search'} ${counts.total} ${'capabilities'}`} spellCheck={false} />
       <div className="cp-sk-filters">
-        <button className={`cp-sk-f ${kind === 'all' ? 'on' : ''}`} aria-pressed={kind === 'all'} onClick={() => setKind('all')}>All</button>
+        <button className={`cp-sk-f ${kind === 'all' ? 'on' : ''}`} aria-pressed={kind === 'all'} onClick={() => setKind('all')}>{'All'}</button>
         {kinds.map((k) => (
           <button key={k} className={`cp-sk-f ${kind === k ? 'on' : ''}`} aria-pressed={kind === k} onClick={() => setKind(k)}>{KIND_LABEL[k]}</button>
         ))}
         <button className={`cp-sk-f ${usedOnly ? 'on' : ''}`} aria-pressed={usedOnly} onClick={() => setUsedOnly((v) => !v)}>
-          {usedOnly && <IconCheck size={12} strokeWidth={2.6} />} Live only
+          {usedOnly && <IconCheck size={12} strokeWidth={2.6} />} {'Live only'}
         </button>
       </div>
     </div>
 
     <div className="cp-sk-meta">
-      Showing <b>{rows.length}</b> of {counts.total} · <b>{counts.used}</b> wired into the live agent · every capability runs open below
+      {'Showing'} <b>{rows.length}</b> {'of'} {counts.total} · <b>{counts.used}</b> {'wired into the live agent · every capability runs open below'}
     </div>
 
     <div className="cp-sk-list">
@@ -167,7 +167,7 @@ export function SkillCatalog({ group, tone, intro }: { group: SkillGroup; tone: 
           <SkillDossier s={s} tone={tone} onJump={jump} />
         </Reveal>
       ))}
-      {rows.length === 0 && <div className="cp-sk-empty">No capability matches that filter.</div>}
+      {rows.length === 0 && <div className="cp-sk-empty">{'No capability matches that filter.'}</div>}
     </div>
   </section>
 }

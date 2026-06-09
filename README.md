@@ -1,16 +1,21 @@
 # MEFAI · The Verifiable Trading Agent
 
-> An autonomous on-chain trading agent that proves every call **before** the
+![License](https://img.shields.io/badge/license-MIT-green)
+![Network](https://img.shields.io/badge/network-BSC%20mainnet-F0B90B)
+![Backtests](https://img.shields.io/badge/backtests-reproducible%20·%205%2F5%20PASS-blue)
+![Track](https://img.shields.io/badge/BNB%20HACK-AI%20Trading%20Agent-yellow)
+
+> An autonomous trading agent that proves every call **before** the
 > outcome is known, sizes each position against a drawdown budget it cannot
 > breach, and writes its entire record to a public ledger. Built for the
 > **BNB HACK · AI Trading Agent Edition**.
 
 A trading track record is normally something you have to *believe*. A screenshot,
 a Telegram message, a curve that could have been drawn after the fact. MEFAI
-takes the opposite stance: the agent **commits to a sealed prediction on-chain
-before the move happens**, reveals it after, and anchors its equity to a contract
-that halts trading the moment a drawdown limit is crossed. The result is a record
-a stranger can audit instead of one they must trust.
+takes the opposite stance: the agent **commits to a sealed prediction in a BSC
+mainnet contract before the move happens**, reveals it after, and anchors its
+equity to a contract that halts trading the moment a drawdown limit is crossed.
+The result is a record a stranger can audit instead of one they must trust.
 
 ---
 
@@ -60,13 +65,41 @@ market data ─▶ signal fusion ─▶ expert council ─▶ net-of-cost edge g
    history and never lets exposure breach the equity floor.
 5. **The security gate** runs six go / no-go checks on the exact spend before
    anything is signed.
-6. **The commit-reveal proof** seals the prediction on-chain before the move, so
-   the record cannot be backfilled.
+6. **The commit-reveal proof** seals the prediction on BSC mainnet before the
+   move, so the record cannot be backfilled.
 
 The engine is **direction-aware**: a long is expressed directly on a DEX; a short
 is simulated honestly in the paper book and routes through a perpetual venue
 behind the execute flag when live, so the book earns in falling weeks as well as
 rising ones.
+
+---
+
+## Architecture
+
+![Architecture](docs/architecture.svg)
+
+Five layers, top to bottom: data sources fuse into one conviction, the decision
+loop sizes it under a drawdown cap, a fail-closed security gate clears the exact
+spend, the verifiable proof layer seals it on BSC mainnet, and execution is
+direction-aware. Nothing is signed until both execute flags are set.
+
+---
+
+## Why this wins
+
+A trading agent is easy to claim and hard to trust. MEFAI closes that gap on
+three fronts at once. Its edge is **measured, not asserted**: every signal is
+fitted against a base of 181k labeled outcomes, so the sizing engine works from
+real win rates and payoffs and the leaderboard ranks each source by realized
+expectancy. Its calls are **provable, not backfillable**: each decision is sealed
+as a commit-reveal proof on BSC mainnet *before* the move, so the record cannot
+be drawn after the fact. And its risk is **bounded, not promised**: equity is
+anchored to a RiskGovernor contract that halts trading the moment a drawdown
+budget is crossed, with the agent's internal stop sized below the on-chain cap so
+it brakes before the limit. Measured edge, sealed before the outcome, capped by a
+contract it cannot breach · a record a stranger can audit instead of one they
+must trust.
 
 ---
 
@@ -187,7 +220,10 @@ assets**. Every signal the agent reads has been resolved against what the market
 actually did, which is what lets the sizing engine fit real win rates and payoffs
 rather than guesses, and what lets the leaderboard rank each source by realized
 expectancy. A win rate near fifty percent is not weak when the reward-to-risk
-ratio carries positive expectancy.
+ratio carries positive expectancy. The private book covers all forty assets; the
+public sample DB shipped for reproducible backtests ships twenty illustrative
+symbols of the same shape, so every figure in this repo regenerates without the
+private data.
 
 ---
 
@@ -200,7 +236,7 @@ ratio carries positive expectancy.
   regime read.
 - **Trust Wallet Agent Kit** · execution and self-custody safety. The approval
   guard and the security solver run from this kit.
-- **ERC-8004** · the agent's portable on-chain identity.
+- **ERC-8004** · the agent's portable cross-protocol identity contract.
 - **x402** · the machine-payable feed standard that lets agents pay agents for
   proven alpha with no human in the loop.
 

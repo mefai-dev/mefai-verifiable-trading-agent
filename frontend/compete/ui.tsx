@@ -6,7 +6,6 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { IconCaret } from './icons'
-import { useTx } from './i18n'
 
 /* ─────────────── portal ───────────────
    Modal overlays must escape any transformed ancestor (a `.reveal` keeps a
@@ -154,13 +153,12 @@ export function Card({ children, hover, glow, style, className = '' }: { childre
   return <div className={`card ${hover ? 'card-hover' : ''} ${glow ? 'card-glow' : ''} ${className}`} style={{ ...(glow ? { ['--glow' as any]: glow } : {}), ...style }}>{children}</div>
 }
 export function Panel({ title, right, accent, help, children, style }: { title: string; right?: ReactNode; accent?: string; help?: ReactNode; children?: ReactNode; style?: CSSProperties }) {
-  const tx = useTx()
   const glow = accent ? `color-mix(in srgb, ${accent} 20%, transparent)` : undefined
   const [open, setOpen] = useState(false)
   return <Card className="cp-fx" style={{ padding: '15px 16px', ...(glow ? { ['--glow' as any]: glow } : {}), ...style }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingBottom: 10, marginBottom: 12, borderBottom: '1px solid var(--c-line)' }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <span className="panel-title" style={accent ? { color: accent } : undefined}>{tx(title)}</span>
+        <span className="panel-title" style={accent ? { color: accent } : undefined}>{title}</span>
         {help && <button className="cp-help" aria-expanded={open} aria-label="explain this panel" onClick={() => setOpen((o) => !o)}>?</button>}
       </span>
       {right && <span className="mono" style={{ fontSize: 11, color: 'var(--c-muted)' }}>{right}</span>}
@@ -172,11 +170,10 @@ export function Panel({ title, right, accent, help, children, style }: { title: 
 
 /* ─────────────── stat tile ─────────────── */
 export function Stat({ label, value, sub, tone, mono = true }: { label: string; value: ReactNode; sub?: string; tone?: string; mono?: boolean }) {
-  const tx = useTx()
   return <div className="stat">
-    <div className="stat-label">{tx(label)}</div>
+    <div className="stat-label">{label}</div>
     <div className={`stat-value ${mono ? 'mono' : ''}`} style={{ color: tone || 'var(--c-text)' }}>{value}</div>
-    {sub && <div style={{ marginTop: 4, fontSize: 11, color: 'var(--c-muted)' }}>{tx(sub)}</div>}
+    {sub && <div style={{ marginTop: 4, fontSize: 11, color: 'var(--c-muted)' }}>{sub}</div>}
   </div>
 }
 
@@ -192,11 +189,10 @@ export function Chip({ children, tone = 'var(--gold)', solid, live }: { children
 
 /* ─────────────── bar ─────────────── */
 export function Bar({ label, value, max = 100, tone = 'var(--gold)', fmt }: { label: ReactNode; value: number; max?: number; tone?: string; fmt?: (v: number) => string }) {
-  const tx = useTx()
   const pct = clamp01(value / (max || 1)) * 100
   return <div style={{ marginBottom: 9 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--c-text-2)', marginBottom: 4 }}>
-      <span>{typeof label === 'string' ? tx(label) : label}</span><span className="mono" style={{ color: tone, fontWeight: 700 }}>{fmt ? fmt(value) : fmtNum(value, 1)}</span>
+      <span>{typeof label === 'string' ? label : label}</span><span className="mono" style={{ color: tone, fontWeight: 700 }}>{fmt ? fmt(value) : fmtNum(value, 1)}</span>
     </div>
     <div style={{ height: 7, borderRadius: 999, background: 'var(--c-fill-2)', overflow: 'hidden' }}>
       <div style={{ height: '100%', width: `${pct}%`, borderRadius: 999, background: `linear-gradient(90deg, ${tone}, color-mix(in srgb, ${tone} 62%, transparent))`, transition: 'width .6s cubic-bezier(.2,.7,.2,1)' }} />
@@ -206,10 +202,9 @@ export function Bar({ label, value, max = 100, tone = 'var(--gold)', fmt }: { la
 
 /* ─────────────── radial gauge ─────────────── */
 export function Gauge({ value, label, tone, max = 100, size = 130, sub }: { value: number; label: string; tone: string; max?: number; size?: number; sub?: string }) {
-  const tx = useTx()
   const r = size / 2 - 11, c = 2 * Math.PI * r, frac = clamp01(value / max)
   const cx = size / 2
-  const aria = `${tx(label)}: ${fmtNum(value, value < 10 ? 1 : 0)} of ${max}${sub ? `, ${tx(sub)}` : ''}`
+  const aria = `${label}: ${fmtNum(value, value < 10 ? 1 : 0)} of ${max}${sub ? `, ${sub}` : ''}`
   return <div role="img" aria-label={aria} style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
     <svg width={size} height={size} aria-hidden="true" style={{ transform: 'rotate(-90deg)' }}>
       <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--c-fill-2)" strokeWidth={10} />
@@ -218,8 +213,8 @@ export function Gauge({ value, label, tone, max = 100, size = 130, sub }: { valu
     </svg>
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <div className="mono" style={{ fontSize: size * 0.22, fontWeight: 800, color: tone }}>{fmtNum(value, value < 10 ? 1 : 0)}</div>
-      <div style={{ fontSize: 10, letterSpacing: 1.2, color: 'var(--c-muted)', textTransform: 'uppercase' }}>{tx(label)}</div>
-      {sub && <div style={{ fontSize: 9.5, color: 'var(--c-muted-2)', marginTop: 2 }}>{tx(sub)}</div>}
+      <div style={{ fontSize: 10, letterSpacing: 1.2, color: 'var(--c-muted)', textTransform: 'uppercase' }}>{label}</div>
+      {sub && <div style={{ fontSize: 9.5, color: 'var(--c-muted-2)', marginTop: 2 }}>{sub}</div>}
     </div>
   </div>
 }
@@ -295,7 +290,6 @@ type SortState = { key: string; dir: 'asc' | 'desc' }
 export function CmcTable<R>({ columns, rows, empty = 'no data', maxHeight, defaultSort }: {
   columns: CmcColumn<R>[]; rows: R[]; empty?: string; maxHeight?: number; defaultSort?: SortState
 }) {
-  const tx = useTx()
   const [sort, setSort] = useState<SortState | null>(defaultSort ?? null)
   const sorted = useMemo(() => {
     if (!sort) return rows
@@ -322,13 +316,13 @@ export function CmcTable<R>({ columns, rows, empty = 'no data', maxHeight, defau
           return <th key={c.key}
             className={`${c.align === 'l' ? 'l' : ''}${c.sticky ? ' sticky-name' : ''}${c.sortValue ? ' cmc-sortable' : ''}${c.hideSm ? ' cmc-hide-sm' : ''}${on ? ' on' : ''}`}
             onClick={c.sortValue ? () => onSort(c) : undefined}>
-            <span className="cmc-th-in">{tx(c.header)}{c.sortValue && <IconCaret dir={on ? (sort!.dir === 'asc' ? 'up' : 'down') : 'down'} size={10} strokeWidth={2.4} />}</span>
+            <span className="cmc-th-in">{c.header}{c.sortValue && <IconCaret dir={on ? (sort!.dir === 'asc' ? 'up' : 'down') : 'down'} size={10} strokeWidth={2.4} />}</span>
           </th>
         })}
       </tr></thead>
       <tbody>
         {sorted.length === 0
-          ? <tr><td className="l" colSpan={columns.length} style={{ textAlign: 'center', color: 'var(--c-muted)', padding: 34 }}>{tx(empty)}</td></tr>
+          ? <tr><td className="l" colSpan={columns.length} style={{ textAlign: 'center', color: 'var(--c-muted)', padding: 34 }}>{empty}</td></tr>
           : sorted.map((row, i) => <tr key={i}>
               {columns.map((c) => <td key={c.key} className={`${c.align === 'l' ? 'l' : ''}${c.hideSm ? ' cmc-hide-sm' : ''}`}>{c.render(row, i)}</td>)}
             </tr>)}

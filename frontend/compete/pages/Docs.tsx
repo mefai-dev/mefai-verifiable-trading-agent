@@ -197,18 +197,17 @@ export default function Docs({ go }: { go: (p: string) => void }) {
     <Reveal>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 14 }}>
         <div>
-          <div className="mono" style={{ fontSize: 12, letterSpacing: 2, color: 'var(--c-primary)', textTransform: 'uppercase', marginBottom: 12 }}>Whitepaper · v1.0</div>
+          <div className="mono" style={{ fontSize: 12, letterSpacing: 2, color: 'var(--c-primary)', textTransform: 'uppercase', marginBottom: 12 }}>{'Whitepaper · v1.0'}</div>
           <h1 style={{ fontSize: 'clamp(30px,4.4vw,50px)', fontWeight: 900, letterSpacing: '-1.2px', margin: 0, lineHeight: 1.05 }}>
-            MEFAI · the <span className="cp-grad-text">verifiable</span><br />trading agent
+            MEFAI · <span className="cp-grad-text">{'the verifiable trading agent'}</span>
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 680, marginTop: 14, lineHeight: 1.7, fontSize: 15.5 }}>
-            An autonomous agent that proves every trade before it happens and cannot breach its own risk cap. This paper
-            walks the full system from the decision loop to the contracts that make the whole record auditable on BNB Chain.
+            {'An autonomous agent that proves every trade before it happens and cannot breach its own risk cap. This paper walks the full system from the decision loop to the contracts that make the whole record auditable on BNB Chain.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn variant="ghost" sm onClick={() => go('/compete')}>Home</Btn>
-          <Btn variant="primary" sm href={GITHUB_URL}>Source</Btn>
+          <Btn variant="ghost" sm onClick={() => go('/compete')}>{'Home'}</Btn>
+          <Btn variant="primary" sm href={GITHUB_URL}>{'Source'}</Btn>
         </div>
       </div>
     </Reveal>
@@ -220,13 +219,14 @@ export default function Docs({ go }: { go: (p: string) => void }) {
         <Stat label="Labeled outcomes" value={<CountUp value={181000} />} tone="var(--cmc)" sub="training base" />
         <Stat label="Resolved signals" value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--green)" sub="verified" />
         <Stat label="Chain" value="BNB Chain" tone="var(--trust)" sub="BSC mainnet" />
+        {/* Stat label/sub translate centrally via ui.tsx */}
       </div>
     </Reveal>
 
     {/* table of contents */}
     <Reveal delay={120}>
       <Card style={{ padding: 22, marginTop: 30 }}>
-        <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, color: 'var(--c-muted)', textTransform: 'uppercase', marginBottom: 14 }}>Contents</div>
+        <div className="mono" style={{ fontSize: 11, letterSpacing: 1.5, color: 'var(--c-muted)', textTransform: 'uppercase', marginBottom: 14 }}>{'Contents'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 4 }}>
           {SECTIONS.map((s, i) => (
             <button key={s.id} onClick={() => jump(s.id)} className="cp-toc-row"
@@ -297,10 +297,10 @@ export default function Docs({ go }: { go: (p: string) => void }) {
           <Reveal delay={80}>
             <Card style={{ padding: 22, marginTop: 8 }}>
               <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.9, color: 'var(--c-text-2)' }}>
-                <li>Open the contracts below on the matching explorer and confirm they are verified.</li>
-                <li>Watch the live agent commit a prediction hash then reveal the preimage after the window.</li>
-                <li>Confirm the RiskGovernor cap sits below the hard floor so <span className="mono" style={{ color: 'var(--trust)' }}>canTrade()</span> halts first.</li>
-                <li>Cross check the leaderboard expectancy against the result ledger.</li>
+                <li>{'Open the contracts below on the matching explorer and confirm they are verified.'}</li>
+                <li>{'Watch the live agent commit a prediction hash then reveal the preimage after the window.'}</li>
+                <li>{'Confirm the RiskGovernor cap sits below the hard floor so'} <span className="mono" style={{ color: 'var(--trust)' }}>canTrade()</span> {'halts first.'}</li>
+                <li>{'Cross check the leaderboard expectancy against the result ledger.'}</li>
               </ol>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))', gap: 12, marginTop: 18 }}>
                 {[
@@ -319,7 +319,7 @@ export default function Docs({ go }: { go: (p: string) => void }) {
                   </a>
                 })}
               </div>
-              <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · mainnet identity</div>
+              <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · {'mainnet identity'}</div>
             </Card>
           </Reveal>
         )}
@@ -329,13 +329,13 @@ export default function Docs({ go }: { go: (p: string) => void }) {
     {/* closing call to action */}
     <Reveal delay={80}>
       <Card glow="var(--c-primary)" style={{ padding: 28, marginTop: 48, textAlign: 'center' }}>
-        <h3 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>Explore the system</h3>
-        <p style={{ color: 'var(--c-text-2)', marginTop: 8, fontSize: 14 }}>Registered for {COMPETITION}. Open source · live terminal and the verifiable BNB Chain proofs.</p>
+        <h3 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>{'Explore the system'}</h3>
+        <p style={{ color: 'var(--c-text-2)', marginTop: 8, fontSize: 14 }}>{'Registered for'} {COMPETITION}. {'Open source · live terminal and the verifiable BNB Chain proofs.'}</p>
         <div className="cp-cta-btns" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 18 }}>
-          <Btn variant="primary" href={GITHUB_URL}>Open source</Btn>
-          <Btn variant="primary" href={TERMINAL_URL}>Live terminal</Btn>
-          <Btn variant="primary" onClick={() => go('/compete/orchestra')}>AI Council</Btn>
-          <Btn variant="primary" href={AGENT_CARD_URL}>Agent card</Btn>
+          <Btn variant="primary" href={GITHUB_URL}>{'Open source'}</Btn>
+          <Btn variant="primary" href={TERMINAL_URL}>{'Live terminal'}</Btn>
+          <Btn variant="primary" onClick={() => go('/compete/orchestra')}>{'AI Council'}</Btn>
+          <Btn variant="primary" href={AGENT_CARD_URL}>{'Agent card'}</Btn>
         </div>
       </Card>
     </Reveal>

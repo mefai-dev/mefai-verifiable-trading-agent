@@ -13,7 +13,6 @@ import type { ReactNode } from 'react'
 import { fetchCmcGate } from '../api'
 import type { CmcGate } from '../api'
 import { Gauge, Chip, fmtPct } from '../ui'
-import { useTx } from '../i18n'
 
 type Stage = { data: CmcGate | null; error: boolean; loading: boolean }
 const idle = (): Stage => ({ data: null, error: false, loading: true })
@@ -185,45 +184,41 @@ function Tile({ title, gate, status, children }: { title: string; gate: string; 
   </div>
 }
 function GateBadge({ s }: { s: Stage }) {
-  const tx = useTx()
-  if (s.loading) return <span className="cp-omni-badge wait">{tx('sync')}</span>
-  if (s.error || !s.data) return <span className="cp-omni-badge off">{tx('down')}</span>
-  return <span className="cp-omni-badge ok">{tx('live')}</span>
+  if (s.loading) return <span className="cp-omni-badge wait">{'sync'}</span>
+  if (s.error || !s.data) return <span className="cp-omni-badge off">{'down'}</span>
+  return <span className="cp-omni-badge ok">{'live'}</span>
 }
-function Down() { const tx = useTx(); return <p className="cp-cmc-down">{tx('This gate did not answer. The other gates and the composite still read.')}</p> }
-function Wait() { const tx = useTx(); return <p className="cp-cmc-wait">{tx('reading')}<span className="cp-ellipsis" /></p> }
+function Down() { return <p className="cp-cmc-down">{'This gate did not answer. The other gates and the composite still read.'}</p> }
+function Wait() { return <p className="cp-cmc-wait">{'reading'}<span className="cp-ellipsis" /></p> }
 function KV({ k, v, tone }: { k: string; v: ReactNode; tone?: string }) {
   return <div className="cp-cmc-kv"><span>{k}</span><b style={tone ? { color: tone } : undefined}>{v}</b></div>
 }
 const chgTone = (n: number) => (!has(n) ? 'var(--c-text)' : n > 0 ? 'var(--green)' : n < 0 ? 'var(--red)' : 'var(--c-muted)')
 
 function SentimentTile({ s }: { s: Stage }) {
-  const tx = useTx()
   if (s.loading) return <Wait />
   const d = parseSentiment(s.data)
   if (s.error || !d) return <Down />
   return <>
-    <KV k={tx('Fear and Greed')} v={`${d.fgLabel || '-'} · ${has(d.fgIndex) ? d.fgIndex : '-'}`}
+    <KV k={'Fear and Greed'} v={`${d.fgLabel || '-'} · ${has(d.fgIndex) ? d.fgIndex : '-'}`}
       tone={has(d.fgIndex) ? (d.fgIndex < 25 ? 'var(--red)' : d.fgIndex > 70 ? 'var(--green)' : 'var(--gold)') : undefined} />
-    <KV k={tx('Altcoin season')} v={has(d.altIndex) ? `${d.altIndex} / 100` : '-'} />
-    <KV k={tx('BTC dominance')} v={has(d.btcDom) ? `${d.btcDom.toFixed(2)}%` : '-'} />
-    <KV k={tx('Total market cap')} v={d.mcap || '-'} tone={chgTone(d.mcap24)} />
+    <KV k={'Altcoin season'} v={has(d.altIndex) ? `${d.altIndex} / 100` : '-'} />
+    <KV k={'BTC dominance'} v={has(d.btcDom) ? `${d.btcDom.toFixed(2)}%` : '-'} />
+    <KV k={'Total market cap'} v={d.mcap || '-'} tone={chgTone(d.mcap24)} />
   </>
 }
 function DerivsTile({ s }: { s: Stage }) {
-  const tx = useTx()
   if (s.loading) return <Wait />
   const d = parseDerivs(s.data)
   if (s.error || !d) return <Down />
   return <>
-    <KV k={tx('Open interest')} v={d.oi || '-'} tone={chgTone(d.oi24)} />
-    <KV k={tx('OI 24h')} v={has(d.oi24) ? fmtPct(d.oi24, 2, true) : '-'} tone={chgTone(d.oi24)} />
-    <KV k={tx('Funding rate')} v={has(d.funding) ? d.funding.toFixed(6) : '-'} tone={chgTone(d.funding)} />
-    <KV k={tx('Perp volume 24h')} v={d.perpVol || '-'} />
+    <KV k={'Open interest'} v={d.oi || '-'} tone={chgTone(d.oi24)} />
+    <KV k={'OI 24h'} v={has(d.oi24) ? fmtPct(d.oi24, 2, true) : '-'} tone={chgTone(d.oi24)} />
+    <KV k={'Funding rate'} v={has(d.funding) ? d.funding.toFixed(6) : '-'} tone={chgTone(d.funding)} />
+    <KV k={'Perp volume 24h'} v={d.perpVol || '-'} />
   </>
 }
 function NarrativesTile({ s }: { s: Stage }) {
-  const tx = useTx()
   if (s.loading) return <Wait />
   const rows = parseNarratives(s.data)
   if (s.error || !rows) return <Down />
@@ -233,24 +228,22 @@ function NarrativesTile({ s }: { s: Stage }) {
       <span className="cp-cmc-narr-c mono" style={{ color: chgTone(n.chg24) }}>{has(n.chg24) ? fmtPct(n.chg24, 2, true) : ''}</span>
       {n.coins.length > 0 && <span className="cp-cmc-narr-x mono">{n.coins.join(' ')}</span>}
     </div>)}
-    <div className="cp-cmc-narr-cap">{tx('trending categories by capital rotation')}</div>
+    <div className="cp-cmc-narr-cap">{'trending categories by capital rotation'}</div>
   </div>
 }
 function TaTile({ s }: { s: Stage }) {
-  const tx = useTx()
   if (s.loading) return <Wait />
   const d = parseTa(s.data)
   if (s.error || !d) return <Down />
   const rsiTone = has(d.rsi14) ? (d.rsi14 < 30 ? 'var(--green)' : d.rsi14 > 70 ? 'var(--red)' : 'var(--gold)') : undefined
   return <>
-    <KV k={tx('Market RSI 14')} v={has(d.rsi14) ? d.rsi14.toFixed(1) : '-'} tone={rsiTone} />
-    <KV k={tx('Market RSI 7')} v={has(d.rsi7) ? d.rsi7.toFixed(1) : '-'} />
-    <KV k={tx('MACD histogram')} v={has(d.macdHist) ? (d.macdHist > 0 ? tx('positive') : tx('negative')) : '-'} tone={chgTone(d.macdHist)} />
-    <KV k={tx('Pivot')} v={d.pivot || '-'} />
+    <KV k={'Market RSI 14'} v={has(d.rsi14) ? d.rsi14.toFixed(1) : '-'} tone={rsiTone} />
+    <KV k={'Market RSI 7'} v={has(d.rsi7) ? d.rsi7.toFixed(1) : '-'} />
+    <KV k={'MACD histogram'} v={has(d.macdHist) ? (d.macdHist > 0 ? 'positive' : 'negative') : '-'} tone={chgTone(d.macdHist)} />
+    <KV k={'Pivot'} v={d.pivot || '-'} />
   </>
 }
 function MacroTile({ s }: { s: Stage }) {
-  const tx = useTx()
   if (s.loading) return <Wait />
   const rows = parseMacro(s.data)
   if (s.error || !rows) return <Down />
@@ -259,11 +252,10 @@ function MacroTile({ s }: { s: Stage }) {
       <span className="cp-cmc-feed-d mono">{e.date}</span>
       <span className="cp-cmc-feed-t">{e.title}</span>
     </div>)}
-    <div className="cp-cmc-narr-cap">{tx('upcoming market moving events')}</div>
+    <div className="cp-cmc-narr-cap">{'upcoming market moving events'}</div>
   </div>
 }
 function NewsTile({ s }: { s: Stage }) {
-  const tx = useTx()
   if (s.loading) return <Wait />
   const rows = parseNews(s.data)
   if (s.error || !rows) return <Down />
@@ -271,7 +263,7 @@ function NewsTile({ s }: { s: Stage }) {
     {rows.map((n, i) => <div key={i} className="cp-cmc-feed-r">
       <span className="cp-cmc-feed-t">{n.title}</span>
     </div>)}
-    <div className="cp-cmc-narr-cap">{tx('latest market news')}</div>
+    <div className="cp-cmc-narr-cap">{'latest market news'}</div>
   </div>
 }
 
@@ -279,7 +271,6 @@ function NewsTile({ s }: { s: Stage }) {
 const GATES = ['global-metrics', 'derivatives', 'narratives', 'marketcap-ta', 'macro-events', 'news'] as const
 
 export function CmcHubBand() {
-  const tx = useTx()
   const [g, setG] = useState<Record<string, Stage>>(() =>
     Object.fromEntries(GATES.map((k) => [k, idle()])))
   const runId = useRef(0)
@@ -305,37 +296,37 @@ export function CmcHubBand() {
   return <div className="cp-cmc">
     <div className="cp-cmc-head">
       <div className="cp-cmc-head-l">
-        <div className="cp-cmc-title">{tx('CoinMarketCap intelligence')}</div>
-        <div className="cp-cmc-sub">{tx('The whole hub read at once, distilled into one market context the agent trades inside.')}</div>
+        <div className="cp-cmc-title">{'CoinMarketCap intelligence'}</div>
+        <div className="cp-cmc-sub">{'The whole hub read at once, distilled into one market context the agent trades inside.'}</div>
         {subs.length > 0 && <div className="cp-cmc-subs">
           {subs.map((su) => <span key={su.key} className="cp-cmc-subchip"
             style={{ ['--l' as string]: su.lean >= 58 ? 'var(--green)' : su.lean <= 42 ? 'var(--red)' : 'var(--gold)' }}>
-            <em>{tx(su.label)}</em><b>{su.reading}</b>
+            <em>{su.label}</em><b>{su.reading}</b>
           </span>)}
         </div>}
-        <div className="cp-cmc-method">{tx('Composite blends the live CMC regime signals shown above · Fear and Greed and market RSI read contrarian, MACD with the trend, dominance for rotation, perp funding for positioning. Every input is the gate\u2019s own value.')}</div>
+        <div className="cp-cmc-method">{'Composite blends the live CMC regime signals shown above · Fear and Greed and market RSI read contrarian, MACD with the trend, dominance for rotation, perp funding for positioning. Every input is the gate\u2019s own value.'}</div>
       </div>
       <div className="cp-cmc-dial">
         {hasContext
-          ? <Gauge value={score} max={100} label={tx('market context')} tone={lean.c} size={132}
-              sub={tx('0 risk off · 100 risk on')} />
-          : <div className="cp-cmc-dial-wait">{anyLive ? tx('waiting on regime signals') : tx('reading the hub')}<span className="cp-ellipsis" /></div>}
-        {hasContext && <Chip tone={lean.c} solid>{tx(lean.t)}</Chip>}
+          ? <Gauge value={score} max={100} label={'market context'} tone={lean.c} size={132}
+              sub={'0 risk off · 100 risk on'} />
+          : <div className="cp-cmc-dial-wait">{anyLive ? 'waiting on regime signals' : 'reading the hub'}<span className="cp-ellipsis" /></div>}
+        {hasContext && <Chip tone={lean.c} solid>{lean.t}</Chip>}
       </div>
     </div>
 
     <div className="cp-cmc-grid">
-      <Tile title={tx('Sentiment')} gate="global-metrics" status={<GateBadge s={g['global-metrics']} />}>
+      <Tile title={'Sentiment'} gate="global-metrics" status={<GateBadge s={g['global-metrics']} />}>
         <SentimentTile s={g['global-metrics']} /></Tile>
-      <Tile title={tx('Derivatives')} gate="derivatives" status={<GateBadge s={g['derivatives']} />}>
+      <Tile title={'Derivatives'} gate="derivatives" status={<GateBadge s={g['derivatives']} />}>
         <DerivsTile s={g['derivatives']} /></Tile>
-      <Tile title={tx('Trending narratives')} gate="narratives" status={<GateBadge s={g['narratives']} />}>
+      <Tile title={'Trending narratives'} gate="narratives" status={<GateBadge s={g['narratives']} />}>
         <NarrativesTile s={g['narratives']} /></Tile>
-      <Tile title={tx('Market technicals')} gate="marketcap-ta" status={<GateBadge s={g['marketcap-ta']} />}>
+      <Tile title={'Market technicals'} gate="marketcap-ta" status={<GateBadge s={g['marketcap-ta']} />}>
         <TaTile s={g['marketcap-ta']} /></Tile>
-      <Tile title={tx('Macro events')} gate="macro-events" status={<GateBadge s={g['macro-events']} />}>
+      <Tile title={'Macro events'} gate="macro-events" status={<GateBadge s={g['macro-events']} />}>
         <MacroTile s={g['macro-events']} /></Tile>
-      <Tile title={tx('Latest news')} gate="news" status={<GateBadge s={g['news']} />}>
+      <Tile title={'Latest news'} gate="news" status={<GateBadge s={g['news']} />}>
         <NewsTile s={g['news']} /></Tile>
     </div>
   </div>

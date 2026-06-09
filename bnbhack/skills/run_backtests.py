@@ -109,6 +109,9 @@ def _code_fingerprint(skill_dir: str) -> dict:
     bt = os.path.join(skill_dir, "backtest", "backtest.py")
     if os.path.exists(bt):
         files["backtest/backtest.py"] = _sha256_file(bt)
+    wf = os.path.join(skill_dir, "backtest", "walk_forward.py")
+    if os.path.exists(wf):
+        files["backtest/walk_forward.py"] = _sha256_file(wf)
     for m in ENGINE_MODULES:
         p = os.path.join(AGENT, m)
         if os.path.exists(p):
@@ -143,6 +146,36 @@ def _run_skill(skill: str, db_path: str) -> dict:
     content_hash = _sha256_bytes(_canonical(report)) if report is not None else None
     tail = "\n".join(proc.stdout.strip().splitlines()[-3:])
 
+    # Optional walk-forward out-of-sample equity engine. When a skill ships one
+    # (the allocator's headline edge), it is run and fingerprinted under the SAME
+    # guard as the invariant backtest, so the equity curve is a reproducible,
+    # hash-pinned artifact rather than a loose file a judge cannot regenerate.
+    walk_forward = None
+    wf = os.path.join(skill_dir, "backtest", "walk_forward.py")
+    if os.path.exists(wf):
+        wf_proc = subprocess.run(
+            [sys.executable, wf], env=env, cwd=skill_dir,
+            capture_output=True, text=True, timeout=600)
+        wf_report = None
+        wf_path = os.path.join(out_dir, "equity_report.json")
+        if os.path.exists(wf_path):
+            try:
+                with open(wf_path) as fh:
+                    wf_report = json.load(fh)
+            except (OSError, json.JSONDecodeError):
+                wf_report = None
+        walk_forward = {
+            "kind": "walk-forward",
+            "result": "PASS" if wf_proc.returncode == 0 else "FAIL",
+            "exit_code": wf_proc.returncode,
+            "report_relpath": "output/equity_report.json",
+            "content_hash": (_sha256_bytes(_canonical(wf_report))
+                             if wf_report is not None else None),
+            "stdout_tail": "\n".join(wf_proc.stdout.strip().splitlines()[-4:]),
+            "report": wf_report,
+        }
+        passed = passed and wf_proc.returncode == 0
+
     manifest = {
         "skill": skill,
         "result": "PASS" if passed else "FAIL",
@@ -155,6 +188,8 @@ def _run_skill(skill: str, db_path: str) -> dict:
         "stdout_tail": tail,
         "report": report,
     }
+    if walk_forward is not None:
+        manifest["walk_forward"] = walk_forward
     with open(os.path.join(out_dir, "report.manifest.json"), "w") as fh:
         json.dump(manifest, fh, indent=2, sort_keys=True)
     return manifest
@@ -194,6 +229,8 @@ def main(argv: list) -> int:
         "skills": [{
             "skill": m["skill"], "result": m["result"],
             "content_hash": m["content_hash"], "code_sha256": m["code"]["sha256"],
+            "kind": "walk-forward" if "walk_forward" in m else "invariant-check",
+            "walk_forward_content_hash": (m.get("walk_forward") or {}).get("content_hash"),
             "manifest": f"skills/{m['skill']}/output/report.manifest.json",
         } for m in results],
     }
@@ -202,7 +239,8 @@ def main(argv: list) -> int:
     index["repro_digest"] = _sha256_bytes(_canonical({
         "dataset_sha256": index["dataset"].get("sha256"),
         "skills": [{"skill": s["skill"], "content_hash": s["content_hash"],
-                    "code_sha256": s["code_sha256"], "result": s["result"]}
+                    "code_sha256": s["code_sha256"], "result": s["result"],
+                    "walk_forward_content_hash": s["walk_forward_content_hash"]}
                    for s in index["skills"]],
     }))
     with open(os.path.join(SKILLS_DIR, "BACKTEST_REPORTS.json"), "w") as fh:

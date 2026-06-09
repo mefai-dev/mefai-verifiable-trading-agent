@@ -110,9 +110,9 @@ const CMC_TOOLS: SkillDef[] = [
   },
   {
     id: 'cmc-narratives', name: 'trending_crypto_narratives', group: 'cmc', kind: 'mcp-tool',
-    summary: 'Ranked live narratives and their momentum.',
-    what: 'The narrative rotation skill ranks these and rotates the book into the strongest but only after the verifiable leaderboard confirms the edge is real.',
-    inputs: 'none', outputs: 'ranked narratives · constituents · momentum',
+    summary: 'Live ecosystem narratives ranked by their own 24h momentum.',
+    what: 'The raw trending tool feeds the CMC hub narratives tile directly. The rotation skill then groups the live CMC token universe into ecosystem narratives and ranks them by momentum, rotating the book into the strongest but only after the verifiable leaderboard confirms the edge is real. The raw trending feed often returns market-wide regulatory baskets, so the rotation skill works from differentiated ecosystem narratives instead.',
+    inputs: 'none', outputs: 'ranked ecosystem narratives · constituent count · momentum',
     invoke: 'mcp__cmc__trending_crypto_narratives', tags: ['narrative', 'rotation'],
     related: ['bnb-leaderboard', 'cmc-info'], used: true, link: CMC_REPO,
   },
@@ -175,7 +175,7 @@ const CMC_SKILLS: SkillDef[] = [
   {
     id: 'cmc-skill-x402', name: 'cmc-x402', group: 'cmc', kind: 'skill',
     summary: 'Pay per call hub access over x402.',
-    what: 'Proves the same machine payable pattern MEFAI ships on its own feed: an agent settles 0.01 USDC on Base to call a tool no key handoff.',
+    what: 'Proves the same machine payable pattern MEFAI ships on its own feed: an agent signs a real EIP-3009 authorization for 0.01 USDC on Base to call a tool, with settlement deferred to a funded facilitator so no key is handed off.',
     inputs: '/x402/mcp · 0.01 USDC on Base', outputs: 'metered tool access',
     tags: ['x402', 'payment'], related: ['bnb-x402', 'tw-x402'], used: true, link: CMC_REPO,
   },

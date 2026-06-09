@@ -74,9 +74,17 @@ edge.
 python3 bnbhack/skills/narrative-rotation/backtest/backtest.py
 ```
 
-Builds the verified ranking, forms an equal-weight top-N rotation basket, and
-compares its realized expectancy against the global baseline and against a
-bottom-N basket, to show the ranking carries signal rather than noise.
+Splits the labeled record by time: it ranks symbols on a TRAIN window, picks the
+top-N and bottom-N there, then measures those baskets' realized expectancy on a
+disjoint TEST holdout. Because selection never sees the window it is scored on,
+a top basket that still beats both the test baseline and the bottom basket is
+genuine out-of-sample signal, not the tautology of ranking and scoring on the
+same record. The naive in-sample numbers are reported alongside, clearly labeled.
+
+The CMC Agent Hub tools declared in `skill.json` (`trending_crypto_narratives`,
+`get_crypto_quotes_latest`, `get_global_metrics_latest`) are `usage: live-only`:
+the narrative tilt fetches them only in live mode. The deterministic backtest
+above never makes a network call, so a no-key judge reproduces identical hashes.
 
 ## Limitations
 

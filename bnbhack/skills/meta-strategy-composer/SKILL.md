@@ -82,6 +82,11 @@ budget ceiling) and the per-leg bound (each deployed leg <= its equal split of t
 budget). A run that deploys nothing in every scenario is reported as not-passing,
 since an empty plan proves nothing.
 
+The CMC Agent Hub tools declared in `skill.json` (inherited from the narrative
+and regime legs) are `usage: live-only`: they are consulted only when the
+pipeline runs live. The backtest above is fully offline and deterministic, so a
+no-key judge reproduces identical hashes.
+
 ## Limitations
 
 - It inherits every component limitation: in-sample selection bias, the regime

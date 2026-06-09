@@ -22,9 +22,11 @@ python3 bnbhack/data/make_sample_db.py            # default 400 rows per bucket
 python3 bnbhack/data/make_sample_db.py --rows 800 # larger sample
 ```
 
-The sample is seeded and reproducible. Its numbers are drawn from fixed
-per-symbol parameters purely to exercise the engine. **They are illustrative
-only and must never be read as results.**
+The sample is seeded and reproducible. It ships **twenty illustrative symbols**
+of the same shape as the private book's forty assets, which is enough to exercise
+every engine path and reproduce every figure in this repo. Its numbers are drawn
+from fixed per-symbol parameters purely to exercise the engine. **They are
+illustrative only and must never be read as results.**
 
 ## Schema
 

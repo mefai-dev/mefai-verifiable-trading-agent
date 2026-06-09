@@ -7,7 +7,7 @@ committed to this repository: it is real account data and is excluded by
 .gitignore. So that anyone can still run the agent, the sizing engine, the
 TP/SL optimizer, the leaderboard and the walk-forward backtests end to end,
 this script writes a CLEARLY SYNTHETIC database of the exact same shape (see
-schema.sql) into data/signal.db.
+schema.sql) into bnbhack/data/signal.db.
 
 Every row is generated from fixed per-symbol parameters with a seeded RNG, then
 each trade is simulated as a coherent price path: a favorable excursion (MFE)
@@ -17,7 +17,7 @@ to sweep. The numbers are illustrative ONLY. They are not a track record and
 must never be read as one.
 
 Usage:
-    python3 bnbhack/data/make_sample_db.py            # writes data/signal.db
+    python3 bnbhack/data/make_sample_db.py            # writes bnbhack/data/signal.db
     python3 bnbhack/data/make_sample_db.py --rows 800 # rows per (symbol, tf)
 """
 

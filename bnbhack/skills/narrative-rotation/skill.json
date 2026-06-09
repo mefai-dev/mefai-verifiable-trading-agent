@@ -34,11 +34,12 @@
       "tables": ["signal_performance"],
       "description": "Realized per-symbol expectancy and skill from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
     },
-    "cmc_agent_hub_tools": ["trending_crypto_narratives", "get_crypto_quotes_latest", "get_global_metrics_latest"]
+    "cmc_agent_hub_tools": ["trending_crypto_narratives", "get_crypto_quotes_latest", "get_global_metrics_latest"],
+    "cmc_agent_hub_tools_usage": "live-only"
   },
   "backtest": {
     "runner": "backtest/backtest.py",
-    "command": "python3 skills/narrative-rotation/backtest/backtest.py",
+    "command": "python3 bnbhack/skills/narrative-rotation/backtest/backtest.py",
     "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
     "deterministic": true,
     "report": "output/report.json",
@@ -46,7 +47,8 @@
     "pass_criteria": "The ranking forms a clean disjoint top vs bottom partition where the top basket beats both the global baseline and the bottom basket on realized expectancy."
   },
   "verification": {
-    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py narrative-rotation",
+    "kind": "invariant-check",
+    "repro_command": "python3 bnbhack/data/make_sample_db.py && python3 bnbhack/skills/run_backtests.py narrative-rotation",
     "content_hash_artifact": "output/report.manifest.json",
     "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
   }

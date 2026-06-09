@@ -204,7 +204,7 @@ async def open_short(symbol: str, notional_usd: float,
             result={"venue": ad.venue, "order_id": order.get("id"),
                     "side": "short"} if isinstance(order, dict) else None,
             price=px, qty=qty, notional_usd=qty * px)
-    except Exception as exc:  # noqa: BLE001 — never raise into the loop
+    except Exception as exc:  # noqa: BLE001 · never raise into the loop
         # The adapter scrubs venue text; keep the loop-side message generic.
         logger.warning("perp open_short failed for %s: %s", symbol, exc)
         return PerpOutcome(go=False, executed=False,

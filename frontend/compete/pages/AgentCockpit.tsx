@@ -54,18 +54,15 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, letterSpacing: '-1px', margin: 0 }}>
-            <span style={{ color: GOLD }}>Autonomous</span> Trading Agent
+            <span style={{ color: GOLD }}>{'Autonomous'}</span> {'Trading Agent'}
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 660, marginTop: 10, lineHeight: 1.6, fontSize: 14.5 }}>
-            One conviction engine and a drawdown budget the agent cannot breach. It reads the same MEFAI
-            signals shown below sizes each by its own payoff and writes a sealed proof before every entry.
-            The edge is not a high hit rate. It is positive expectancy compounded under a hard risk cap, so
-            the agent keeps growing while it physically cannot blow up.
+            {'One conviction engine and a drawdown budget the agent cannot breach. It reads the same MEFAI signals shown below sizes each by its own payoff and writes a sealed proof before every entry. The edge is not a high hit rate. It is positive expectancy compounded under a hard risk cap, so the agent keeps growing while it physically cannot blow up.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <Btn variant="ghost" sm onClick={() => go('/compete')}>Home</Btn>
-          <Btn variant="gold" sm href={scan(ADDR.agent)}>Agent wallet</Btn>
+          <Btn variant="ghost" sm onClick={() => go('/compete')}>{'Home'}</Btn>
+          <Btn variant="gold" sm href={scan(ADDR.agent)}>{'Agent wallet'}</Btn>
         </div>
       </div>
     </Reveal>
@@ -86,7 +83,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
     <Reveal delay={120}>
       <Card glow="var(--gold)" style={{ padding: '18px 20px', marginTop: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span className="panel-title" style={{ color: GOLD }}>DRAWDOWN BUDGET · RISK GOVERNOR</span>
+          <span className="panel-title" style={{ color: GOLD }}>{'DRAWDOWN BUDGET · RISK GOVERNOR'}</span>
           <Chip tone={st?.governor?.ok === false ? 'var(--red)' : 'var(--green)'}>
             {st?.governor?.ok === false ? 'halted' : 'can trade'}
           </Chip>
@@ -96,9 +93,9 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
           <div style={{ position: 'absolute', top: -2, bottom: -2, left: '100%', width: 2, background: 'var(--red)' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11.5, color: 'var(--c-muted)' }}>
-          <span className="mono">used {ddBps} bps</span>
-          <span className="mono">internal cap {st ? Math.round(st.internal_cap * 10000) : 1400} bps</span>
-          <span className="mono" style={{ color: 'var(--red)' }}>hard floor {st ? Math.round(st.jury_cap * 10000) : 2000} bps</span>
+          <span className="mono">{'used'} {ddBps} bps</span>
+          <span className="mono">{'internal cap'} {st ? Math.round(st.internal_cap * 10000) : 1400} bps</span>
+          <span className="mono" style={{ color: 'var(--red)' }}>{'jury DQ line'} {st ? Math.round(st.jury_cap * 10000) : 2000} bps</span>
         </div>
       </Card>
     </Reveal>
@@ -135,6 +132,13 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
         <WhyThisTrade symbol={symbol} fusion={fusion} sizing={sizing} active={active} />
       </Reveal>
     </div>
+
+    {/* live equity curve · real per-cycle equity from the published snapshot ring */}
+    <Reveal delay={80}>
+      <div style={{ marginTop: 28 }}>
+        <EquityCurve st={st} />
+      </div>
+    </Reveal>
 
     {/* live managed positions · open + closed (open/close lifecycle) */}
     <Reveal delay={80}>
@@ -177,6 +181,13 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
         <ProofsPanel st={st} />
       </div>
     </Reveal>
+
+    {/* native x402 consumption */}
+    <Reveal delay={100}>
+      <div style={{ marginTop: 28 }}>
+        <X402ConsumePanel st={st} />
+      </div>
+    </Reveal>
   </div>
 }
 
@@ -192,9 +203,9 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
   const tone = dir > 0 ? 'var(--green)' : dir < 0 ? 'var(--red)' : 'var(--c-muted)'
   const conv = fusion?.conviction ?? 0
   const [why, setWhy] = useState(false)
-  return <Panel title="OMNI SIGNAL FUSION" accent="#F0B90B" right={fusion ? `${fusion.n_sources} sources` : ''}>
+  return <Panel title="OMNI SIGNAL FUSION" accent="#F0B90B" right={fusion ? `${fusion.n_sources} ${'sources'}` : ''}>
     <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
-      <Gauge value={conv} max={100} label={fusion?.label || 'NEUTRAL'} tone={tone} size={138} sub={`agree ${fmtPct((fusion?.agreement ?? 0) * 100, 0)}`} />
+      <Gauge value={conv} max={100} label={fusion?.label || 'NEUTRAL'} tone={tone} size={138} sub={`${'agree'} ${fmtPct((fusion?.agreement ?? 0) * 100, 0)}`} />
       <div style={{ flex: 1, minWidth: 180 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <CoinLogo symbol={symbol} size={30} />
@@ -208,7 +219,7 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
         <Bar label="Coverage" value={(fusion?.coverage ?? 0) * 100} tone="var(--cmc)" fmt={(v) => v.toFixed(0) + '%'} />
         {active && <div style={{ marginTop: 8 }}>
           <Chip tone={active.action.includes('LONG') ? 'var(--green)' : active.action.includes('SHORT') ? 'var(--red)' : 'var(--c-muted)'}>
-            DECISION · {active.action}
+            {'DECISION'} · {active.action}
           </Chip>
         </div>}
       </div>
@@ -216,14 +227,14 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
     {/* source contributions */}
     <div style={{ marginTop: 16, borderTop: '1px solid var(--c-line)', paddingTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span className="panel-title">SIGNAL SOURCES</span>
+        <span className="panel-title">{'SIGNAL SOURCES'}</span>
         <button type="button" className="cp-help" aria-expanded={why}
-          aria-label="Why some sources show 0% weight" onClick={() => setWhy((v) => !v)}>?</button>
+          aria-label={'Why some sources show 0% weight'} onClick={() => setWhy((v) => !v)}>?</button>
         <span style={{ flex: 1 }} />
-        <span className="mono" style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>weight · strength · contrib</span>
+        <span className="mono" style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>{'weight · strength · contrib'}</span>
       </div>
       {why && <div style={{ background: 'var(--c-fill)', border: '1px solid var(--c-line)', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-        <div className="panel-title" style={{ color: GOLD, marginBottom: 8 }}>WHY SOME SOURCES SHOW 0%</div>
+        <div className="panel-title" style={{ color: GOLD, marginBottom: 8 }}>{'WHY SOME SOURCES SHOW 0%'}</div>
         {FUSION_WHY.map((t, i) => <p key={i} style={{ margin: i ? '8px 0 0' : 0, fontSize: 12.5, lineHeight: 1.6, color: 'var(--c-text-2)' }}>{t}</p>)}
       </div>}
       {(fusion?.sources ?? []).filter((s) => s.available).slice(0, 8).map((s) => {
@@ -237,7 +248,7 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
           <span className="mono" style={{ width: 48, textAlign: 'right', color: stone, fontWeight: 700 }}>{s.direction > 0 ? '+' : s.direction < 0 ? '-' : '·'}{fmtNum(Math.abs(s.contribution), 1)}</span>
         </div>
       })}
-      {(!fusion || fusion.sources.filter((s) => s.available).length === 0) && <div style={{ color: 'var(--c-muted)', fontSize: 12, padding: 10 }}>fusing signals…</div>}
+      {(!fusion || fusion.sources.filter((s) => s.available).length === 0) && <div style={{ color: 'var(--c-muted)', fontSize: 12, padding: 10 }}>{'fusing signals…'}</div>}
     </div>
   </Panel>
 }
@@ -261,7 +272,7 @@ function SizingPanel({ sizing, tpsl }: { sizing: SizingResult | null; tpsl: TpSl
       <Bar label="Payoff (R:R)" value={(sizing?.payoff ?? 0) * 20} tone="var(--cmc)" fmt={() => fmtNum(sizing?.payoff, 2)} />
     </div>
     {best && <div style={{ marginTop: 12, borderTop: '1px solid var(--c-line)', paddingTop: 12 }}>
-      <div className="panel-title" style={{ color: 'var(--c-muted)', marginBottom: 8 }}>OPTIMAL BRACKET · {tpsl?.n_total ?? 0} OUTCOMES</div>
+      <div className="panel-title" style={{ color: 'var(--c-muted)', marginBottom: 8 }}>{'OPTIMAL BRACKET'} · {tpsl?.n_total ?? 0} {'OUTCOMES'}</div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <Chip tone="var(--green)">TP {fmtPct(best.tp, 1)}</Chip>
         <Chip tone="var(--red)">SL {fmtPct(best.sl, 1)}</Chip>
@@ -335,13 +346,13 @@ function WhyThisTrade({ symbol, fusion, sizing, active }: {
     }
   }, [busy, msgs, grounding])
 
-  const SUGGEST = [`Why this ${sym} decision?`, 'What is the biggest risk?', 'Why this size and leverage?']
+  const SUGGEST = [`${'Why this'} ${sym} ${'decision?'}`, 'What is the biggest risk?', 'Why this size and leverage?']
 
-  return <Panel title="WHY THIS TRADE · AI DESK" accent="#F0B90B" right="AI desk">
+  return <Panel title="WHY THIS TRADE · AI DESK" accent="#F0B90B" right={'AI desk'}>
     <div ref={scrollRef} style={{ minHeight: 150, maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
       {msgs.length === 0 && (
         <div style={{ color: 'var(--c-muted)', fontSize: 13, lineHeight: 1.6 }}>
-          Ask the agent to reason about its {sym} stance. It answers grounded only on the live conviction sizing and security numbers above never hallucinated prices.
+          {'Ask the agent to reason about its'} {sym} {'stance. It answers grounded only on the live conviction sizing and security numbers above never hallucinated prices.'}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             {SUGGEST.map((s, i) => <button key={s} className="cp-pill cp-pulse" style={{ animationDelay: `${i * 0.32}s` }} onClick={() => send(s)}>{s}</button>)}
           </div>
@@ -356,7 +367,7 @@ function WhyThisTrade({ symbol, fusion, sizing, active }: {
             border: m.role === 'user' ? 'none' : '1px solid var(--c-line)',
             borderBottomRightRadius: m.role === 'user' ? 4 : 12, borderBottomLeftRadius: m.role === 'user' ? 12 : 4,
           }}>
-            {m.content || (busy && i === msgs.length - 1 ? <span style={{ color: 'var(--c-muted)' }}>Reasoning<span className="cp-ellipsis" /></span> : '')}
+            {m.content || (busy && i === msgs.length - 1 ? <span style={{ color: 'var(--c-muted)' }}>{'Reasoning'}<span className="cp-ellipsis" /></span> : '')}
           </div>
         </div>
       ))}
@@ -366,7 +377,7 @@ function WhyThisTrade({ symbol, fusion, sizing, active }: {
     <form onSubmit={(e) => { e.preventDefault(); send(input) }} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
       <input
         value={input} onChange={(e) => setInput(e.target.value)} disabled={busy}
-        placeholder={`Ask the agent about ${sym}…`}
+        placeholder={`${'Ask the agent about'} ${sym}…`}
         style={{ flex: 1, padding: '11px 14px', borderRadius: 9, border: '1px solid var(--c-line-2)', background: 'var(--c-panel)', color: 'var(--c-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none' }}
       />
       <button type="submit" className="btn btn-gold" disabled={busy || !input.trim()} aria-label="Send"><IconSend size={17} /></button>
@@ -396,9 +407,73 @@ function DecisionsTable({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     { key: 'lev', header: 'Lev', sortValue: (r) => r.leverage, render: (r) => <span className="mono">{fmtNum(r.leverage, 2)}x</span> },
     { key: 'wr', header: 'Win rate', sortValue: (r) => r.win_rate, render: (r) => <PctCell value={r.win_rate * 100} d={0} /> },
   ]
-  return <Panel title="AGENT DECISIONS" accent="#F0B90B" right={st ? `cycle ${st.cycle}` : 'standby'}>
+  return <Panel title="AGENT DECISIONS" accent="#F0B90B" right={st ? `${'cycle'} ${st.cycle}` : 'standby'}>
     <CmcTable columns={cols} rows={rows} empty={st ? 'agent is holding · no qualifying setups' : 'agent on standby'} defaultSort={{ key: 'conv', dir: 'desc' }} />
   </Panel>
+}
+
+/* ─────────────── live equity curve (real per-cycle equity) ─────────────── */
+function EquityCurve({ st }: { st?: LoopEnvelope['state'] }) {
+  const hist = st?.equity_history ?? []
+  const peak = st?.peak_equity ?? 0
+  if (hist.length < 2) {
+    return (
+      <Card glow={GOLD} style={{ padding: '18px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span className="panel-title" style={{ color: GOLD }}>{'EQUITY CURVE · LIVE'}</span>
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-muted-2)', padding: '10px 2px', lineHeight: 1.5 }}>
+          {'Building the live equity curve · a point is recorded each cycle.'}
+        </div>
+      </Card>
+    )
+  }
+  const vals = hist.map((p) => p[1])
+  const first = vals[0]
+  const last = vals[vals.length - 1]
+  const lo = Math.min(...vals)
+  const hi = Math.max(...vals, peak || last)
+  const span = hi - lo || 1
+  const padv = span * 0.08
+  const dLo = lo - padv
+  const dom = (hi + padv) - dLo || 1
+  const n = vals.length
+  const X = (i: number) => (i / (n - 1)) * 100
+  const Y = (v: number) => 3 + (1 - (v - dLo) / dom) * 38
+  const line = vals.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(2)} ${Y(v).toFixed(2)}`).join(' ')
+  const area = `${line} L100 41 L0 41 Z`
+  const peakY = peak ? Y(peak) : null
+  const net = last - first
+  const netPct = first ? (net / first) * 100 : 0
+  const up = net >= 0
+  const tone = up ? 'var(--green)' : 'var(--red)'
+  const spanH = Math.max(0, (hist[n - 1][0] - hist[0][0]) / 3600)
+  const spanLabel = spanH >= 1 ? `${spanH.toFixed(0)}h` : `${Math.round(spanH * 60)}m`
+  return (
+    <Card glow={GOLD} style={{ padding: '18px 20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <span className="panel-title" style={{ color: GOLD }}>{'EQUITY CURVE · LIVE'}</span>
+        <Chip tone={tone}>{up ? '+' : ''}{fmtUsd(net)} · {up ? '+' : ''}{fmtNum(netPct, 2)}%</Chip>
+      </div>
+      <svg viewBox="0 0 100 44" preserveAspectRatio="none" style={{ width: '100%', height: 150, display: 'block' }} aria-label={'Live equity curve'}>
+        <defs>
+          <linearGradient id="cp-eqfill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={tone} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={tone} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {peakY !== null && <line x1="0" y1={peakY} x2="100" y2={peakY} stroke="var(--c-muted-2)" strokeWidth="0.5" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />}
+        <path d={area} fill="url(#cp-eqfill)" />
+        <path d={line} fill="none" stroke={tone} strokeWidth="1.6" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--c-muted)', flexWrap: 'wrap', gap: 6 }}>
+        <span className="mono">{'start'} {fmtUsd(first)}</span>
+        <span className="mono" style={{ color: 'var(--c-text)' }}>{'now'} {fmtUsd(last)}</span>
+        <span className="mono">{'peak'} {fmtUsd(peak)}</span>
+        <span className="mono">{'span'} {spanLabel} · {n} {'points'}</span>
+      </div>
+    </Card>
+  )
 }
 
 /* ─────────────── live managed positions · open + close lifecycle ─────────────── */
@@ -418,13 +493,15 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
   const regimeOn = st?.config?.regime_filter ?? false
   const maxHoldH = (st?.config?.max_hold_sec ?? 0) / 3600
   const costPct = st?.config?.roundtrip_cost_pct ?? 0
+  const perp = st?.perp
   const cols: CmcColumn<LoopPosition>[] = [
-    { key: 'name', header: 'Market', align: 'l', sticky: true, sortValue: (r) => r.symbol, render: (r) => (
-      <button className="cmc-name" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => onPick(r.symbol)}>
+    { key: 'name', header: 'Market', align: 'l', sticky: true, sortValue: (r) => r.symbol, render: (r) => {
+      const isShort = r.side === 'short'
+      return <button className="cmc-name" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => onPick(r.symbol)}>
         <CoinLogo symbol={r.symbol} />
-        <span><span className="cmc-name-main">{r.symbol.replace('USDT', '')}</span><span className="cmc-name-sym">LONG</span></span>
+        <span><span className="cmc-name-main">{r.symbol.replace('USDT', '')}</span><span className="cmc-name-sym" style={{ color: isShort ? 'var(--red)' : undefined }}>{isShort ? 'SHORT' : 'LONG'}</span></span>
       </button>
-    )},
+    }},
     { key: 'entry', header: 'Entry', sortValue: (r) => r.entry, render: (r) => <span className="mono">{fmtPrice(r.entry)}</span> },
     { key: 'mark', header: 'Mark', sortValue: (r) => r.mark, render: (r) => <span className="mono">{fmtPrice(r.mark)}</span> },
     { key: 'pnl', header: 'Unrealized', sortValue: (r) => r.unrealized_pct, render: (r) => (
@@ -438,35 +515,36 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     { key: 'build', header: 'Build', align: 'l', sortValue: (r) => (r.tp1_done ? 9 : (r.rungs_filled ?? 1)), render: (r) => {
       const filled = r.rungs_filled ?? 1, total = r.rungs_total ?? 1
       return <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-        {total > 1 && <span className="mono" style={{ fontSize: 11, color: filled >= total ? 'var(--green)' : 'var(--gold)' }} title="entry rungs filled">rung {filled}/{total}</span>}
-        {r.tp1_done && <Chip tone="var(--green)">TP1 booked</Chip>}
+        {total > 1 && <span className="mono" style={{ fontSize: 11, color: filled >= total ? 'var(--green)' : 'var(--gold)' }} title={'entry rungs filled'}>{'rung'} {filled}/{total}</span>}
+        {r.tp1_done && <Chip tone="var(--green)">{'TP1 booked'}</Chip>}
       </span>
     }},
   ]
   return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="#F0B90B"
-    right={st ? `${open.length}/${maxPos} open${paper ? ' · simulated' : ' · live'}` : 'standby'}>
+    right={st ? `${open.length}/${maxPos} ${'open'}${paper ? ` · ${'simulated'}` : ` · ${'live'}`}` : 'standby'}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 14 }}>
       <Stat label="Open positions" value={`${open.length} / ${maxPos}`} tone={GOLD} sub="one per market" />
       <Stat label="Unrealized PnL" value={open.length ? `${unreal >= 0 ? '+' : ''}${fmtUsd(unreal)}` : '-'} tone={unreal >= 0 ? 'var(--green)' : 'var(--red)'} sub="open book" />
       <Stat label="Realized PnL" value={fmtUsd(realized)} tone={realized >= 0 ? 'var(--green)' : 'var(--red)'} sub="closed trades" />
-      <Stat label="Scale out" value="TP1 · lock · TP2" tone="var(--green)" sub="partial + profit lock" />
-      <Stat label="Scale in" value={rungs > 1 ? `${rungs} rungs` : 'single'} tone="var(--cmc)" sub={rungs > 1 ? 'laddered entry' : 'one-shot entry'} />
+      <Stat label="Scale out" value={'TP1 · lock · TP2'} tone="var(--green)" sub="partial + profit lock" />
+      <Stat label="Scale in" value={rungs > 1 ? `${rungs} ${'rungs'}` : 'single'} tone="var(--cmc)" sub={rungs > 1 ? 'laddered entry' : 'one-shot entry'} />
       <Stat label="Time stop" value={maxHoldH > 0 ? `${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h` : 'off'} tone={GOLD} sub="bank the edge beat decay" />
-      <Stat label="Risk gate" value={regimeOn ? 'regime + cost' : `cost ${fmtNum(costPct, 1)}%`} tone="var(--cmc)" sub={regimeOn ? 'flat in risk-off' : 'fee-modelled'} />
+      <Stat label="Risk gate" value={regimeOn ? 'regime + cost' : `${'cost'} ${fmtNum(costPct, 1)}%`} tone="var(--cmc)" sub={regimeOn ? 'flat in risk-off' : 'fee-modelled'} />
+      <Stat label="Two-sided" value={perp?.enabled ? 'long + short live' : 'long live · short paper'} tone={perp?.enabled ? 'var(--green)' : GOLD} sub={perp?.enabled ? `short · ${perp.venue ?? 'perp'} ${perp.leverage ?? 1}x` : 'long spot · short perp venue'} />
     </div>
     <CmcTable columns={cols} rows={open}
       empty={st ? 'flat · no open position · agent waiting for a qualifying buy signal' : 'agent on standby'}
       defaultSort={{ key: 'pnl', dir: 'desc' }} />
     {closes.length > 0 && <div style={{ marginTop: 16, borderTop: '1px solid var(--c-line)', paddingTop: 14 }}>
-      <div className="panel-title" style={{ color: 'var(--c-muted)', marginBottom: 10 }}>RECENT CLOSES</div>
+      <div className="panel-title" style={{ color: 'var(--c-muted)', marginBottom: 10 }}>{'RECENT CLOSES'}</div>
       <div className="cp-cards cp-cards-wide">
         {closes.map((c, i) => <CloseCard key={i} c={c} />)}
       </div>
     </div>}
     <p style={{ color: 'var(--c-muted-2)', fontSize: 11, lineHeight: 1.6, margin: '12px 0 0' }}>
       {paper
-        ? `Paper mode · positions are simulated off the live mark price against real entries (no signing), with a ${fmtNum(costPct, 1)}% round-trip swap cost charged to every close so the paper book is honest against the live venue. Entries scale in over rungs on persistent buy signals; at the first target the agent books a TP1 partial (only when the move clears the cost), pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip${maxHoldH > 0 ? `, and a ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h time stop that banks the edge before it decays` : ''}.${regimeOn ? ' New longs stand aside while the CMC regime reads risk-off.' : ''}`
-        : `Live mode · each leg routes through the security gate. Entries scale in over rungs on persistent buy signals; at the first target the agent sells a TP1 partial back to USDT, pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip${maxHoldH > 0 ? `, and a ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h time stop that banks the edge before it decays` : ''}.${regimeOn ? ' New longs stand aside while the CMC regime reads risk-off.' : ''}`}
+        ? `${'Paper mode · positions are simulated off the live mark price against real entries (no signing), with a'} ${fmtNum(costPct, 1)}% ${'round-trip swap cost charged to every close so the paper book is honest against the live venue. Entries scale in over rungs on persistent buy signals; at the first target the agent books a TP1 partial (only when the move clears the cost), pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`
+        : `${'Live mode · each leg routes through the security gate. Entries scale in over rungs on persistent buy signals; at the first target the agent sells a TP1 partial back to USDT, pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`}
     </p>
   </Panel>
 }
@@ -484,7 +562,7 @@ function CloseCard({ c }: { c: LoopClose }) {
       <span className="mono" style={{ fontSize: 12, color: rcol }}>{fmtUsd(c.pnl_usd)}</span>
     </div>
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--c-muted)' }}>
-      <span>exit {fmtPrice(c.exit)}</span>
+      <span>{'exit'} {fmtPrice(c.exit)}</span>
       <span>{ago(c.closed_ts)}</span>
     </div>
   </div>
@@ -528,9 +606,9 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
   ]
 
   return <Panel title="PERFORMANCE ATTRIBUTION · WHERE PNL COMES FROM" accent="#F0B90B"
-    right={st ? `${n} closed trades` : 'standby'}>
+    right={st ? `${n} ${'closed trades'}` : 'standby'}>
     {n === 0
-      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>no closed trades yet · attribution builds as the agent banks results</div>
+      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'no closed trades yet · attribution builds as the agent banks results'}</div>
       : <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
           <Stat label="Closed trades" value={`${n}`} tone={GOLD} sub="banked results" />
@@ -538,7 +616,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
           <Stat label="Realized PnL" value={`${net >= 0 ? '+' : ''}${fmtUsd(net)}`} tone={net >= 0 ? 'var(--green)' : 'var(--red)'} sub="across all closes" />
           <Stat label="Profit factor" value={pf === Infinity ? '∞' : fmtNum(pf, 2)} tone={pf >= 1 ? 'var(--green)' : 'var(--red)'} sub="gross win / gross loss" />
         </div>
-        <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>By exit reason</div>
+        <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>{'By exit reason'}</div>
         <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>
           {byReason.map((a) => {
             const tone = CLOSE_TONE[a.key] ?? 'var(--c-muted)'
@@ -554,7 +632,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
             </div>
           })}
         </div>
-        <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>By market</div>
+        <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>{'By market'}</div>
         <CmcTable columns={symCols} rows={bySymbol} defaultSort={{ key: 'pnl', dir: 'desc' }} />
       </>}
   </Panel>
@@ -576,10 +654,9 @@ function SignalResults({ recent }: { recent: RecentSignals | null }) {
   const avg = resolved ? rows.reduce((a, r) => a + r.pnl, 0) / resolved : 0
   const best = resolved ? Math.max(...rows.map((r) => r.pnl)) : 0
   return <Panel title="ENTERED TRADES · VERIFIED RESULTS" accent="#F0B90B"
-    right={recent ? `${resolved} signals · ${recent.horizon}` : ''}>
+    right={recent ? `${resolved} ${'signals'} · ${recent.horizon}` : ''}>
     <p style={{ color: 'var(--c-muted)', fontSize: 12.5, lineHeight: 1.6, margin: '0 0 14px' }}>
-      The exact MEFAI signals the agent reads each paired with the outcome that was recorded after the
-      fact. Direction entry and result are the verified record not a backtest replay.
+      {'The exact MEFAI signals the agent reads each paired with the outcome that was recorded after the fact. Direction entry and result are the verified record not a backtest replay.'}
     </p>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
       <Stat label="Recent win rate" value={resolved ? fmtPct(wr, 1) : '-'} tone={wr >= 50 ? 'var(--green)' : 'var(--gold)'} sub={`${wins}/${resolved} won`} />
@@ -588,7 +665,7 @@ function SignalResults({ recent }: { recent: RecentSignals | null }) {
       <Stat label="Window" value={recent?.horizon ?? '24h'} tone="var(--c-text)" sub="resolution horizon" />
     </div>
     {resolved === 0
-      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>loading verified signals…</div>
+      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'loading verified signals…'}</div>
       : <div className="cp-cards">
         {rows.map((r, i) => <SignalCard key={i} r={r} />)}
       </div>}
@@ -610,7 +687,7 @@ function SignalCard({ r }: { r: ResolvedSignal }) {
     </div>
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
       <span className="mono" style={{ fontSize: 22, fontWeight: 900, color: rcol }}>{r.pnl >= 0 ? '+' : ''}{fmtNum(r.pnl, 2)}%</span>
-      <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>realized</span>
+      <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{'realized'}</span>
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 10px', fontSize: 11.5 }}>
       <Row k="entry" v={fmtPrice(r.entry_price)} />
@@ -641,7 +718,7 @@ function LeaderboardTable({ lb }: { lb: Leaderboard | null }) {
     { key: 'dd', header: 'Worst DD', sortValue: (r) => r.worst_drawdown, render: (r) => <span className="mono" style={{ color: 'var(--red)' }}>{fmtNum(r.worst_drawdown, 2)}R</span> },
     { key: 'n', header: 'Resolved', sortValue: (r) => r.n_resolved, render: (r) => <span className="mono">{r.n_resolved}</span> },
   ]
-  return <Panel title="VERIFIED SIGNAL LEADERBOARD" accent="#F0B90B" right={lb ? `${lb.qualified} qualified · rank by ${lb.rank_by}` : ''}>
+  return <Panel title="VERIFIED SIGNAL LEADERBOARD" accent="#F0B90B" right={lb ? `${lb.qualified} ${'qualified'} · ${'rank by'} ${lb.rank_by}` : ''}>
     <CmcTable columns={cols} rows={rows} empty="loading leaderboard…" maxHeight={420} defaultSort={{ key: 'exp', dir: 'desc' }} />
   </Panel>
 }
@@ -649,9 +726,9 @@ function LeaderboardTable({ lb }: { lb: Leaderboard | null }) {
 /* ─────────────── proofs ─────────────── */
 function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
   const rows = st?.proofs ?? []
-  return <Panel title="COMMIT REVEAL PROOFS" accent="#F0B90B" right="BSC mainnet">
+  return <Panel title="COMMIT REVEAL PROOFS" accent="#F0B90B" right={'BSC mainnet'}>
     {rows.length === 0
-      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>No proofs this cycle · registry {shortAddr(ADDR.registry)}</div>
+      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'No proofs this cycle · registry'} {shortAddr(ADDR.registry)}</div>
       : <div className="cp-cards cp-cards-wide">
         {rows.map((p, i) => <div key={i} style={{ padding: 14, borderRadius: 12, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -659,13 +736,46 @@ function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
             <Chip tone={p.status === 'revealed' ? 'var(--green)' : 'var(--gold)'}>{p.status}</Chip>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-            <span style={{ color: 'var(--c-muted)' }}>signal · conf</span>
+            <span style={{ color: 'var(--c-muted)' }}>{'signal · conf'}</span>
             <span className="mono">{fmtNum(p.signal, 0)} · {fmtPct(p.confidence * 100, 0)}</span>
           </div>
-          {p.commit_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>commit {shortAddr(p.commit_tx)} <IconExternal size={12} /></a>}
-          {p.reveal_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>reveal {shortAddr(p.reveal_tx)} <IconExternal size={12} /></a>}
+          {p.commit_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>{'commit'} {shortAddr(p.commit_tx)} <IconExternal size={12} /></a>}
+          {p.reveal_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>{'reveal'} {shortAddr(p.reveal_tx)} <IconExternal size={12} /></a>}
         </div>)}
       </div>}
     <div className="mono" style={{ marginTop: 12, fontSize: 11, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · registry {shortAddr(ADDR.registry)}</div>
+  </Panel>
+}
+
+/* ─────────────── native x402 consumption ─────────────── */
+function X402ConsumePanel({ st }: { st?: LoopEnvelope['state'] }) {
+  const x = st?.x402_consumed
+  const ok = !!x?.ok
+  // Price is atomic units of an 18-decimal stablecoin; show the human value.
+  const price = x ? Number(x.price_atomic) / 1e18 : 0
+  const gi = x?.feed?.global_index
+  const score = typeof gi?.score === 'number' ? gi.score : undefined
+  return <Panel title="NATIVE x402 CONSUMPTION · AGENT AS BUYER" accent="#F0B90B"
+    right={x ? <Chip tone={ok ? 'var(--green)' : 'var(--c-muted)'}>{ok ? 'verified' : 'standby'}</Chip> : ''}>
+    {!x
+      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'No feed bought yet this run · runs on a low cadence'}</div>
+      : <>
+        <div style={{ color: 'var(--c-muted)', fontSize: 12.5, marginBottom: 14, lineHeight: 1.6 }}>
+          {'The agent itself buys a premium verified-record feed over the x402 micropayment protocol · full 402 challenge, EIP-3009 signed authorization, server-side signature recovery, then 200 verified feed. Settlement is deferred to a facilitator, so no funds move and no key is held.'}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
+          <Stat label={'product'} value={x.product_id} tone={GOLD} />
+          <Stat label={'price'} value={`${price} USD`} tone="var(--c-text)" />
+          <Stat label={'network'} value={`${x.network}${x.chain_id ? ` · ${x.chain_id}` : ''}`} tone="var(--cmc)" />
+          <Stat label={'settlement'} value={x.settlement_deferred ? 'deferred' : (x.settled ? 'settled' : '-')} tone="var(--trust)" />
+          {typeof score === 'number' && <Stat label={'UVII index'} value={fmtNum(score, 1)} tone="var(--green)" />}
+          {typeof gi?.n_resolved === 'number' && <Stat label={'resolved outcomes'} value={fmtNum(gi.n_resolved as number, 0)} tone="var(--c-text)" />}
+        </div>
+        <div className="mono" style={{ marginTop: 12, fontSize: 11, color: 'var(--c-muted)', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {x.payer && <span>{'payer'} {shortAddr(x.payer)}</span>}
+          {x.asset && <a className="cp-a" href={`https://bscscan.com/address/${x.asset}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>{'asset'} {shortAddr(x.asset)} <IconExternal size={12} /></a>}
+          {typeof x.consumed_cycle === 'number' && <span>{'cycle'} {x.consumed_cycle}</span>}
+        </div>
+      </>}
   </Panel>
 }

@@ -43,34 +43,32 @@ export default function Landing({ go }: { go: (p: string) => void }) {
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1040, margin: '0 auto', textAlign: 'center' }}>
         <Reveal>
           <h1 style={{ fontSize: 'clamp(38px, 6vw, 72px)', lineHeight: 1.04, fontWeight: 900, letterSpacing: '-1.6px', margin: 0 }}>
-            <span className="cp-grad-text">MEFAI Verifiable</span><br />
-            <span style={{ color: 'var(--c-text)' }}>Autonomous Trader</span>
+            <span className="cp-grad-text">{'MEFAI Verifiable'}</span><br />
+            <span style={{ color: 'var(--c-text)' }}>{'Autonomous Trader'}</span>
           </h1>
         </Reveal>
         <Reveal delay={120}>
           <p style={{ maxWidth: 680, margin: '22px auto 0', fontSize: 'clamp(15px,1.5vw,18px)', lineHeight: 1.65, color: 'var(--c-text-2)' }}>
-            An agent that <b style={{ color: 'var(--c-text)' }}>proves every trade before it happens</b> and
-            <b style={{ color: 'var(--c-text)' }}> cannot breach its own risk cap</b>. One conviction engine fuses every
-            MEFAI signal sizes with a drawdown budget and writes a commit then reveal proof to the BSC ledger.
+            {'An agent that proves every trade before it happens and cannot breach its own risk cap. One conviction engine fuses every MEFAI signal, sizes with a drawdown budget and writes a commit then reveal proof to the BSC ledger.'}
           </p>
         </Reveal>
         <Reveal delay={210}>
           <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap', justifyContent: 'center', marginTop: 32 }}>
-            <Btn variant="primary" onClick={() => go('/compete/agent')}>Enter the live agent</Btn>
-            <Btn variant="gold" onClick={() => go('/compete/judge')}>Judge mode · verify in 5 min</Btn>
-            <Btn variant="ghost" onClick={() => go('/compete/orchestra')}>Talk to the AI council</Btn>
-            <Btn variant="ghost" href={GITHUB_URL}>Open source</Btn>
+            <Btn variant="primary" onClick={() => go('/compete/agent')}>{'Enter the live agent'}</Btn>
+            <Btn variant="gold" onClick={() => go('/compete/judge')}>{'Judge mode · verify in 5 min'}</Btn>
+            <Btn variant="ghost" onClick={() => go('/compete/orchestra')}>{'Talk to the AI council'}</Btn>
+            <Btn variant="ghost" href={GITHUB_URL}>{'Open source'}</Btn>
           </div>
         </Reveal>
 
         {/* live heartbeat strip · honest headline metrics */}
         <Reveal delay={290}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(155px,1fr))', gap: 12, marginTop: 50, maxWidth: 940, marginLeft: 'auto', marginRight: 'auto' }}>
-            <Stat label="Agent equity" value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `peak $${(st.peak_equity ?? 0).toFixed(0)}` : 'standby'} />
-            <Stat label="Live drawdown" value={`${ddBps} bps`} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={`cap ${capBps} bps`} />
-            <Stat label="Edge per signal" value={ov ? `${exp >= 0 ? '+' : ''}${fmtNum(exp, 2)}%` : '-'} tone={exp >= 0 ? 'var(--green)' : 'var(--red)'} sub="mean realized" />
-            <Stat label="Top strategy edge" value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} resolved` : 'verified'} />
-            <Stat label="Verified results" value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub="recorded outcomes" />
+            <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `${'peak'} $${(st.peak_equity ?? 0).toFixed(0)}` : 'standby'} />
+            <Stat label={'Live drawdown'} value={`${ddBps} bps`} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={`${'cap'} ${capBps} bps`} />
+            <Stat label={'Edge per signal'} value={ov ? `${exp >= 0 ? '+' : ''}${fmtNum(exp, 2)}%` : '-'} tone={exp >= 0 ? 'var(--green)' : 'var(--red)'} sub={'mean realized'} />
+            <Stat label={'Top strategy edge'} value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} ${'resolved'}` : 'verified'} />
+            <Stat label={'Verified results'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'recorded outcomes'} />
           </div>
         </Reveal>
       </div>
@@ -78,7 +76,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ STACK · scrolling brand logos ════════ */}
     <section style={{ padding: '30px 0 34px', borderTop: '1px solid var(--c-line)', borderBottom: '1px solid var(--c-line)', background: 'var(--c-bg-soft)' }}>
-      <div style={{ textAlign: 'center', fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 800, marginBottom: 22 }}>The stack we build on</div>
+      <div style={{ textAlign: 'center', fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 800, marginBottom: 22 }}>{'The stack we build on'}</div>
       <div className="marquee">
         <div className="marquee-track">
           {[...SPONSORS, ...SPONSORS].map((s, i) => {
@@ -100,7 +98,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
     <section style={{ position: 'relative', overflow: 'hidden', padding: '64px 22px 30px' }}>
       <StarField count={34} />
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1080, margin: '0 auto' }}>
-        <Reveal><SectionHead title="One system three surfaces" sub="The same verifiable engine exposed three ways. Open any surface to use it live." /></Reveal>
+        <Reveal><SectionHead title={'One system three surfaces'} sub={'The same verifiable engine exposed three ways. Open any surface to use it live.'} /></Reveal>
         <div className="cp-deck" style={{ marginTop: 34, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
           {TRACKS.map((t, i) => (
             <Reveal key={t.id} delay={i * 80}>
@@ -109,7 +107,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
                 <h3 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 11px', letterSpacing: '-.3px' }}>{t.title}</h3>
                 <p style={{ fontSize: 14.5, lineHeight: 1.62, color: 'var(--c-text-2)', flex: 1, margin: 0 }}>{t.blurb}</p>
                 <div style={{ marginTop: 22 }}>
-                  <Btn variant="ghost" sm onClick={() => go(t.path)}>Open</Btn>
+                  <Btn variant="ghost" sm onClick={() => go(t.path)}>{'Open'}</Btn>
                 </div>
               </Card>
             </Reveal>
@@ -120,7 +118,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ CAPABILITY WEB · cross sponsor flow ════════ */}
     <section style={{ maxWidth: 1180, margin: '0 auto', padding: '52px 22px 16px' }}>
-      <Reveal><SectionHead nowrap title="Three sponsors one trade" sub="The same flow behind every call: CoinMarketCap data converges into MEFAI's decision engine executes through Trust Wallet and settles as proof on BNB Chain. Tap any node to open its dossier." /></Reveal>
+      <Reveal><SectionHead nowrap title={'Three sponsors one trade'} sub={"The same flow behind every call: CoinMarketCap data converges into MEFAI's decision engine, executes through Trust Wallet and settles as proof on BNB Chain. Tap any node to open its dossier."} /></Reveal>
       <Reveal delay={70}>
         <CapabilityWeb />
       </Reveal>
@@ -128,14 +126,14 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ HONEST AND SAFE · no icons ════════ */}
     <section style={{ maxWidth: 1180, margin: '0 auto', padding: '52px 22px 22px' }}>
-      <Reveal><SectionHead nowrap title="Built so it cannot cheat and cannot blow up" sub="Every guarantee below is structural not a promise. You can audit each one yourself." /></Reveal>
+      <Reveal><SectionHead nowrap title={'Built so it cannot cheat and cannot blow up'} sub={'Every guarantee below is structural not a promise. You can audit each one yourself.'} /></Reveal>
       <div className="cp-deck" style={{ marginTop: 30, maxWidth: 1160, marginLeft: 'auto', marginRight: 'auto' }}>
         {[
           { t: 'Commit before reveal', d: 'Each trade is committed as keccak(symbol direction entry target stop expiry salt) to the BSC registry before entry then revealed after. The track record cannot be backfilled by construction.' },
           { t: 'Circuit breaker on the ledger', d: 'A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent physically cannot blow past its own risk limit.' },
           { t: 'Empirical Kelly sizing', d: 'Win rate and optimal TP/SL come from real labeled outcomes not guesses. Size shrinks as the drawdown budget shrinks so the agent maximizes Sharpe while it physically cannot breach the cap.' },
-          { t: 'Omni signal fusion', d: 'One conviction score unions every MEFAI capability: signals expert debate whale tracking smart money accumulation derivatives risk and the full CoinMarketCap regime each weighted by its own hit rate.' },
-          { t: 'Pre trade security gate', d: 'Honeypot contract scan slippage approval preflight and MEV checks run before any spend. A GO or BLOCK verdict gates execution. Every spend is quote bounded and capped.' },
+          { t: 'Omni signal fusion', d: 'One conviction score unions every MEFAI capability: signals, expert debate, whale tracking, smart money, accumulation, derivatives risk and the full CoinMarketCap regime, each weighted by its own hit rate.' },
+          { t: 'Pre trade security gate', d: 'Honeypot, contract scan, slippage, approval, preflight and MEV checks run before any spend. A GO or BLOCK verdict gates execution. Every spend is quote bounded and capped.' },
           { t: 'x402 machine payable', d: 'The verified signal feed is served over HTTP 402 with EIP-3009 signed payment binding the exact token and chain charged. Agents can pay other agents for proven alpha.' },
         ].map((f, i) => (
           <Reveal key={f.t} delay={(i % 3) * 70}>
@@ -150,7 +148,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ THE AGENT'S SEALED CALLS ════════ */}
     <section style={{ maxWidth: 1080, margin: '0 auto', padding: '52px 22px 22px' }}>
-      <Reveal><SectionHead title="The agent's sealed calls" sub="What the agent is acting on right now each one committed to the registry before the outcome is known." /></Reveal>
+      <Reveal><SectionHead title={"The agent's sealed calls"} sub={'What the agent is acting on right now, each one committed to the registry before the outcome is known.'} /></Reveal>
       <Reveal delay={70}>
         {st && st.decisions?.length > 0 ? (
           <div className="cp-grid-4" style={{ marginTop: 30 }}>
@@ -166,22 +164,21 @@ export default function Landing({ go }: { go: (p: string) => void }) {
                   <span style={{ fontSize: 13, fontWeight: 800, color: tone, background: `color-mix(in srgb, ${tone} 14%, transparent)`, padding: '5px 12px', borderRadius: 8 }}>{label}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <span style={{ color: 'var(--c-muted)', fontSize: 13.5 }}>Conviction</span>
+                  <span style={{ color: 'var(--c-muted)', fontSize: 13.5 }}>{'Conviction'}</span>
                   <span className="mono" style={{ fontWeight: 800, fontSize: 18, color: acting ? tone : 'var(--c-text)' }}>{d.conviction.toFixed(0)}</span>
                 </div>
                 {isTx(pf?.commit_tx) ? (
                   <a className="cp-a" href={txUrl(pf!.commit_tx)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--c-primary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    Sealed proof <IconExternal size={14} />
+                    {'Sealed proof'} <IconExternal size={14} />
                   </a>
-                ) : <span style={{ fontSize: 13.5, color: 'var(--c-muted)' }}>{acting ? <>Sealing to registry<span className="cp-ellipsis" /></> : 'Held this cycle'}</span>}
+                ) : <span style={{ fontSize: 13.5, color: 'var(--c-muted)' }}>{acting ? <>{'Sealing to registry'}<span className="cp-ellipsis" /></> : 'Held this cycle'}</span>}
               </Card>
             })}
           </div>
         ) : (
           <Card style={{ padding: 26, marginTop: 30, textAlign: 'center' }}>
             <p style={{ fontSize: 15, color: 'var(--c-text-2)', margin: 0, lineHeight: 1.62 }}>
-              The agent is on standby between cycles. Live calls are written to the registry the moment a cycle opens
-              and the verified record above is the evidence base every decision is sized against.
+              {'The agent is on standby between cycles. Live calls are written to the registry the moment a cycle opens, and the verified record above is the evidence base every decision is sized against.'}
             </p>
           </Card>
         )}
@@ -190,7 +187,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ VERIFIABLE PROOF ════════ */}
     <section style={{ maxWidth: 1080, margin: '0 auto', padding: '52px 22px 30px' }}>
-      <Reveal><SectionHead title="Audit the proof yourself" sub="Every contract and identity below is deployed and verified on BSC mainnet. The result ledger, the identity, the live judged registry and the risk governor all run on chain 56. One tap opens it in the explorer." /></Reveal>
+      <Reveal><SectionHead title={'Audit the proof yourself'} sub={'Every contract and identity below is deployed and verified on BSC mainnet. The result ledger, the identity, the live judged registry and the risk governor all run on chain 56. One tap opens it in the explorer.'} /></Reveal>
       <Reveal delay={70}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14, marginTop: 30 }}>
           {[
@@ -213,12 +210,12 @@ export default function Landing({ go }: { go: (p: string) => void }) {
           })}
         </div>
         <div className="mono" style={{ marginTop: 18, fontSize: 13, color: 'var(--c-muted)', textAlign: 'center' }}>
-          agentId {shortAddr(AGENT_ID)} · mainnet identity · BscScan and Sourcify verified
+          agentId {shortAddr(AGENT_ID)} · {'mainnet identity · BscScan and Sourcify verified'}
         </div>
         <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', fontSize: 13, color: 'var(--c-text-2)' }}>
-          <span>Registered for {COMPETITION}.</span>
+          <span>{'Registered for'} {COMPETITION}.</span>
           <a className="cp-a" href={AGENT_CARD_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, color: 'var(--c-primary)' }}>
-            Read the live ERC-8004 agent card <IconExternal size={14} />
+            {'Read the live ERC-8004 agent card'} <IconExternal size={14} />
           </a>
         </div>
       </Reveal>

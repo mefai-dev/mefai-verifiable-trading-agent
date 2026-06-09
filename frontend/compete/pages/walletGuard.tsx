@@ -56,8 +56,8 @@ export function WalletGuardPanel() {
   const clean = report && report.risky === 0 && report.unlimited === 0
 
   return <Panel title="WALLET APPROVAL GUARD" accent="var(--trust)"
-    right={report ? `${report.scanned} live approvals` : 'self custody'}
-    help={<>Every ERC-20 allowance a wallet has granted is a standing permission for another contract to move that token. Unlimited approvals and approvals to spam tokens are the most common drain vector in self custody. This is the MEFAI wallet check the same scan the terminal runs reading live allowances on BSC and ranking each by the USD it exposes. Revoke runs in the full terminal with your own connected Trust Wallet.</>}>
+    right={report ? `${report.scanned} ${'live approvals'}` : 'self custody'}
+    help={<>{'Every ERC-20 allowance a wallet has granted is a standing permission for another contract to move that token. Unlimited approvals and approvals to spam tokens are the most common drain vector in self custody. This is the MEFAI wallet check the same scan the terminal runs reading live allowances on BSC and ranking each by the USD it exposes. Revoke runs in the full terminal with your own connected Trust Wallet.'}</>}>
 
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {PRESETS.map((p) => (
@@ -83,7 +83,7 @@ export function WalletGuardPanel() {
       </div>
 
       {clean && <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'color-mix(in srgb, var(--green) 10%, transparent)', border: '1px solid var(--green)', fontSize: 13, color: 'var(--green)', fontWeight: 700 }}>
-        Clean surface · no unlimited or spam approvals on this wallet.
+        {'Clean surface · no unlimited or spam approvals on this wallet.'}
       </div>}
 
       {report.approvals.length > 0 && <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
@@ -92,30 +92,30 @@ export function WalletGuardPanel() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, fontWeight: 800 }}>
                 {a.symbol}
-                {a.possibleSpam && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>spam</span>}
-                {a.unlimited && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>unlimited</span>}
+                {a.possibleSpam && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>{'spam'}</span>}
+                {a.unlimited && <span style={{ marginLeft: 7, fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>{'unlimited'}</span>}
               </span>
               <Chip tone={SEV_TONE[a.severity]} solid>{SEV_LABEL[a.severity]}</Chip>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 11.5, color: 'var(--c-muted)' }}>
-              <span>Spender · {a.spenderLabel || short(a.spender)}</span>
-              <span className="mono">{a.unlimited ? 'UNLIMITED' : a.allowanceFormatted}{a.usdAtRisk && a.usdAtRisk > 0 ? ` · ${fmtUsd(a.usdAtRisk)} at risk` : ''}</span>
+              <span>{'Spender'} · {a.spenderLabel || short(a.spender)}</span>
+              <span className="mono">{a.unlimited ? 'UNLIMITED' : a.allowanceFormatted}{a.usdAtRisk && a.usdAtRisk > 0 ? ` · ${fmtUsd(a.usdAtRisk)} ${'at risk'}` : ''}</span>
             </div>
           </div>
         ))}
-        {report.approvals.length > 12 && <div style={{ fontSize: 11.5, color: 'var(--c-muted-2)', textAlign: 'center' }}>+{report.approvals.length - 12} more approvals on this wallet</div>}
+        {report.approvals.length > 12 && <div style={{ fontSize: 11.5, color: 'var(--c-muted-2)', textAlign: 'center' }}>+{report.approvals.length - 12} {'more approvals on this wallet'}</div>}
       </div>}
     </div>}
 
     {!report && !busy && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginTop: 16 }}>
-      <Stat label="Reads" value="Live allowances" tone={TONE} sub="ERC-20 on BSC" />
-      <Stat label="Flags" value="Unlimited · spam" tone="var(--c-text)" sub="ranked by USD" />
-      <Stat label="Custody" value="Self" tone="var(--green)" sub="read only here" />
-      <Stat label="Revoke" value="In terminal" tone="var(--gold)" sub="your Trust Wallet" />
+      <Stat label="Reads" value={'Live allowances'} tone={TONE} sub="ERC-20 on BSC" />
+      <Stat label="Flags" value={'Unlimited · spam'} tone="var(--c-text)" sub="ranked by USD" />
+      <Stat label="Custody" value={'Self'} tone="var(--green)" sub="read only here" />
+      <Stat label="Revoke" value={'In terminal'} tone="var(--gold)" sub="your Trust Wallet" />
     </div>}
 
     <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 14, lineHeight: 1.55 }}>
-      Live ERC-20 allowances on BSC · the same wallet check MEFAI runs in the terminal. Unlimited and spam approvals are the primary self custody drain vector; the agent surfaces them before they can be used. One tap revoke runs in the full terminal with your own connected Trust Wallet.
+      {'Live ERC-20 allowances on BSC · the same wallet check MEFAI runs in the terminal. Unlimited and spam approvals are the primary self custody drain vector; the agent surfaces them before they can be used. One tap revoke runs in the full terminal with your own connected Trust Wallet.'}
     </div>
   </Panel>
 }

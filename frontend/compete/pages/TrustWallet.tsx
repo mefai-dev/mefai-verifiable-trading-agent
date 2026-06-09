@@ -27,35 +27,35 @@ const isAddr = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v.trim())
 export default function TrustWallet({ go }: { go: (p: string) => void }) {
   return <div>
     <SponsorHero
-      tone={TONE} eyebrow="Built with Trust Wallet" go={go}
-      title={<>Self custody trading<br />and a wallet that <span style={{ color: TONE }}>cannot be drained</span></>}
-      blurb="MEFAI never holds your keys. We use Trust Wallet for sign in identity and execution then wrap every move in a safety gate so the same retail users Trust Wallet onboards are protected before they ever sign a malicious transaction."
+      tone={TONE} eyebrow={'Built with Trust Wallet'} go={go}
+      title={<>{'Self custody trading'}<br />{'and a wallet that'} <span style={{ color: TONE }}>{'cannot be drained'}</span></>}
+      blurb={'MEFAI never holds your keys. We use Trust Wallet for sign in identity and execution then wrap every move in a safety gate so the same retail users Trust Wallet onboards are protected before they ever sign a malicious transaction.'}
     />
 
-    <SponsorSectionHead tone={TONE} eyebrow="Try it live" title="The pre trade safety gate" />
+    <SponsorSectionHead tone={TONE} eyebrow={'Try it live'} title={'The pre trade safety gate'} />
     <Reveal>
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 22px' }}>
         <SafetyGate />
       </div>
     </Reveal>
 
-    <SponsorSectionHead tone={TONE} eyebrow="Quote, gate, sign" title="The live execution pipeline"
-      sub="The exact chain the agent runs before any trade. We quote a real PancakeSwap-class route through the Agent Kit, then run the full pre-trade security gate on that quote. The sign and broadcast step is always your own self-custody wallet, so no key is held and no funds move in this preview." />
+    <SponsorSectionHead tone={TONE} eyebrow={'Quote, gate, sign'} title={'The execution pipeline · preview'}
+      sub={'The exact chain the agent runs before any trade. We quote a real PancakeSwap-class route through the Agent Kit, then run the full pre-trade security gate on that quote. The sign and broadcast step is always your own self-custody wallet, so no key is held and no funds move in this preview.'} />
     <Reveal>
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 22px' }}>
         <ExecutionPipeline />
       </div>
     </Reveal>
 
-    <SponsorSectionHead tone={TONE} eyebrow="Scan a live wallet" title="The MEFAI wallet check"
-      sub="The same wallet safety scan the terminal runs. It reads every live ERC-20 allowance a wallet has granted on BSC flags the unlimited and spam approvals that drain self custody wallets and ranks each by the USD it exposes. Real chain data. Revoke runs in the full terminal with your own connected Trust Wallet." />
+    <SponsorSectionHead tone={TONE} eyebrow={'Scan a live wallet'} title={'The MEFAI wallet check'}
+      sub={'The same wallet safety scan the terminal runs. It reads every live ERC-20 allowance a wallet has granted on BSC flags the unlimited and spam approvals that drain self custody wallets and ranks each by the USD it exposes. Real chain data. Revoke runs in the full terminal with your own connected Trust Wallet.'} />
     <Reveal>
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 22px' }}>
         <WalletGuardPanel />
       </div>
     </Reveal>
 
-    <SponsorSectionHead tone={TONE} eyebrow="What we built" title="The wallet is the account" />
+    <SponsorSectionHead tone={TONE} eyebrow={'What we built'} title={'The wallet is the account'} />
     <FeatureGrid tone={TONE} items={[
       { t: 'Wallet sign in no passwords', d: 'You connect Trust Wallet and that address IS your account. No email no password no custody. Tier and history follow the wallet across devices.' },
       { t: 'Signature gated access', d: 'Premium access is unlocked by a time windowed single use signed message. Sessions are stateless HMAC tokens so a leaked link is worthless after minutes.' },
@@ -65,13 +65,13 @@ export default function TrustWallet({ go }: { go: (p: string) => void }) {
       { t: 'Verifiable agent identity', d: 'The trading agent itself is a registered ERC-8004 identity on BSC so the wallet you interact with is provably the audited agent not an impostor.' },
     ]} />
 
-    <SponsorSectionHead tone={TONE} eyebrow="The full surface" title="Every Trust Wallet skill catalogued"
-      sub="The Agent Kit in full: the three skills and the twak command surface the agent drives. Live cards are wired into the trading loop today; available cards are kit capabilities surfaced as options. Tap any card for how it fits." />
+    <SponsorSectionHead tone={TONE} eyebrow={'The full surface'} title={'Every Trust Wallet skill catalogued'}
+      sub={'The Agent Kit in full: the three skills and the Trust Wallet Agent Kit command surface the agent drives. Live cards are wired into the trading loop today; available cards are kit capabilities surfaced as options. Tap any card for how it fits.'} />
     <SkillCatalog group="trust" tone={TONE} />
 
     <div style={{ textAlign: 'center', padding: '34px 22px 70px', display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-      <Btn variant="trust" onClick={() => go('/compete/protocol')}>See the safety gate in the protocol</Btn>
-      <Btn variant="ghost" href={GITHUB_URL}>Read the source</Btn>
+      <Btn variant="trust" onClick={() => go('/compete/protocol')}>{'See the safety gate in the protocol'}</Btn>
+      <Btn variant="ghost" href={GITHUB_URL}>{'Read the source'}</Btn>
     </div>
   </div>
 }
@@ -111,7 +111,7 @@ function SafetyGate() {
   }, [token, amount, slip])
 
   const go = verdict?.go
-  return <Panel title="PRE TRADE SAFETY GATE" accent="#3375BB" right={verdict ? `score ${verdict.score}` : 'self custody'}>
+  return <Panel title={'PRE TRADE SAFETY GATE'} accent="#3375BB" right={verdict ? `${'score'} ${verdict.score}` : 'self custody'}>
     {/* controls */}
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {PRESETS.map((p) => (
@@ -119,14 +119,14 @@ function SafetyGate() {
       ))}
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto', gap: 10, alignItems: 'end' }} className="cp-grid-form">
-      <Field label="BSC token address">
+      <Field label={'BSC token address'}>
         <input value={token} onChange={(e) => setToken(e.target.value)} spellCheck={false}
           placeholder="0x…" className="mono" style={inputStyle} />
       </Field>
-      <Field label="Trade amount (USD)">
+      <Field label={'Trade amount (USD)'}>
         <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" style={inputStyle} />
       </Field>
-      <Field label="Slippage (bps)">
+      <Field label={'Slippage (bps)'}>
         <input value={slip} onChange={(e) => setSlip(e.target.value.replace(/[^\d]/g, ''))} inputMode="numeric" style={inputStyle} />
       </Field>
       <Btn variant="trust" onClick={evaluate} disabled={busy} style={{ width: '100%', justifyContent: 'center' }}>{busy ? 'Checking…' : 'Run the gate'}</Btn>
@@ -161,26 +161,27 @@ function SafetyGate() {
       </div>
 
       {verdict.blockers && verdict.blockers.length > 0 && (
-        <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--red)' }}>Blockers · {verdict.blockers.join(' · ')}</div>
+        <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--red)' }}>{'Blockers'} · {verdict.blockers.join(' · ')}</div>
       )}
       {verdict.warnings && verdict.warnings.length > 0 && (
-        <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--gold)' }}>Warnings · {verdict.warnings.join(' · ')}</div>
+        <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--gold)' }}>{'Warnings'} · {verdict.warnings.join(' · ')}</div>
       )}
     </div>}
 
     {!verdict && !busy && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginTop: 16 }}>
-      <Stat label="Checks run" value="6" tone={TONE} sub="per transaction" />
-      <Stat label="Verdict" value="GO / BLOCK" tone="var(--c-text)" sub="before any sign" />
-      <Stat label="Custody" value="Self" tone="var(--green)" sub="keys stay with you" />
-      <Stat label="Chain" value="BSC 56" tone="var(--gold)" sub="mainnet" />
+      <Stat label={'Checks run'} value="6" tone={TONE} sub={'per transaction'} />
+      <Stat label={'Verdict'} value="GO / BLOCK" tone="var(--c-text)" sub={'before any sign'} />
+      <Stat label={'Custody'} value={'Self'} tone="var(--green)" sub={'keys stay with you'} />
+      <Stat label={'Chain'} value="BSC 56" tone="var(--gold)" sub={'mainnet'} />
     </div>}
 
     <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 14 }}>
-      Honeypot · contract · slippage · approval · preflight · MEV. The agent runs this exact gate and stops on a BLOCK verdict before your wallet is ever asked to sign.
+      {'Honeypot · contract · slippage · approval · preflight · MEV. The agent runs this exact gate and stops on a BLOCK verdict before your wallet is ever asked to sign.'}
     </div>
   </Panel>
 }
 
+/* ─────────────── live execution pipeline (quote → gate → sign boundary) ─────────────── */
 const PAIRS: { label: string; from: string; to: string }[] = [
   { label: 'USDT → WBNB', from: 'USDT', to: 'WBNB' },
   { label: 'USDT → CAKE', from: 'USDT', to: 'CAKE' },
@@ -217,17 +218,17 @@ function ExecutionPipeline() {
   const q = data?.quote
   const v = data?.verdict
   const go = data?.go
-  return <Panel title="LIVE EXECUTION PIPELINE" accent="#3375BB" right={data ? (go ? 'verdict GO' : 'verdict BLOCK') : 'quote · gate · sign'}>
+  return <Panel title={'LIVE EXECUTION PIPELINE'} accent="#3375BB" right={data ? (go ? `${'verdict'} GO` : `${'verdict'} BLOCK`) : 'quote · gate · sign'}>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {PAIRS.map((p, i) => (
         <button key={p.label} className={`cp-pill ${pair === i ? 'on' : ''}`} onClick={() => setPair(i)}>{p.label}</button>
       ))}
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) auto', gap: 10, alignItems: 'end' }} className="cp-grid-form">
-      <Field label="Amount (sell token)">
+      <Field label={'Amount (sell token)'}>
         <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" style={inputStyle} />
       </Field>
-      <Field label="Slippage (percent)">
+      <Field label={'Slippage (percent)'}>
         <input value={slip} onChange={(e) => setSlip(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" style={inputStyle} />
       </Field>
       <Btn variant="trust" onClick={run} disabled={busy} style={{ width: '100%', justifyContent: 'center' }}>{busy ? 'Running…' : 'Run the pipeline'}</Btn>
@@ -236,16 +237,16 @@ function ExecutionPipeline() {
 
     {data && <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
       {/* step 1 · quote */}
-      <PipeStep n={1} title="Quote a live route" tone={TONE}
+      <PipeStep n={1} title={'Quote a live route'} tone={TONE}
         right={q?.provider ? <Chip tone={TONE}>{q.provider}</Chip> : undefined}>
         <div className="mono" style={{ fontSize: 11.5, color: 'var(--c-muted)', lineHeight: 1.7 }}>
-          <div>sell {q?.input || '-'} → receive {q?.output || '-'}</div>
-          <div>min received {q?.minReceived || '-'} · price impact {q?.priceImpact ?? '-'}%</div>
+          <div>{'sell'} {q?.input || '·'} → {'receive'} {q?.output || '·'}</div>
+          <div>{'min received'} {q?.minReceived || '·'} · {'price impact'} {q?.priceImpact != null ? `${q.priceImpact}%` : 'n/a'}</div>
         </div>
       </PipeStep>
       {/* step 2 · security gate */}
-      <PipeStep n={2} title="Run the pre trade security gate" tone={go ? 'var(--green)' : 'var(--red)'}
-        right={v ? <Chip tone={go ? 'var(--green)' : 'var(--red)'} solid>score {v.score}</Chip> : undefined}>
+      <PipeStep n={2} title={'Run the pre trade security gate'} tone={go ? 'var(--green)' : 'var(--red)'}
+        right={v ? <Chip tone={go ? 'var(--green)' : 'var(--red)'} solid>{'score'} {v.score}</Chip> : undefined}>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {(v?.checks ?? []).filter((c) => (c.status || '').toLowerCase() !== 'skip').map((c) => {
             const s = (c.status || '').toLowerCase()
@@ -256,8 +257,8 @@ function ExecutionPipeline() {
         {v?.detail && <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 6, lineHeight: 1.5 }}>{v.detail}</div>}
       </PipeStep>
       {/* step 3 · sign boundary */}
-      <PipeStep n={3} title="Sign and broadcast" tone="var(--gold)"
-        right={<Chip tone="var(--gold)">self custody</Chip>}>
+      <PipeStep n={3} title={'Sign and broadcast'} tone="var(--gold)"
+        right={<Chip tone="var(--gold)">{'self custody'}</Chip>}>
         <div style={{ fontSize: 11.5, color: 'var(--c-muted)', lineHeight: 1.55 }}>
           {go
             ? 'The gate returned GO. The unsigned route is handed to your own Trust Wallet to sign and broadcast. MEFAI never holds the key.'
@@ -269,10 +270,10 @@ function ExecutionPipeline() {
     </div>}
 
     {!data && !busy && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginTop: 16 }}>
-      <Stat label="Step 1" value="Quote" tone={TONE} sub="live DEX route" />
-      <Stat label="Step 2" value="Gate" tone="var(--green)" sub="9 checks" />
-      <Stat label="Step 3" value="Sign" tone="var(--gold)" sub="your wallet" />
-      <Stat label="Funds moved" value="None" tone="var(--c-text)" sub="read only preview" />
+      <Stat label={'Step 1'} value={'Quote'} tone={TONE} sub={'live DEX route'} />
+      <Stat label={'Step 2'} value={'Gate'} tone="var(--green)" sub={'6 checks'} />
+      <Stat label={'Step 3'} value={'Sign'} tone="var(--gold)" sub={'your wallet'} />
+      <Stat label={'Funds moved'} value={'None'} tone="var(--c-text)" sub={'read only preview'} />
     </div>}
   </Panel>
 }

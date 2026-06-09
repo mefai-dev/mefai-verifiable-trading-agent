@@ -39,11 +39,12 @@
       "tables": ["signal_performance"],
       "description": "Selection, brackets and sizing all derive from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
     },
-    "cmc_agent_hub_tools": ["trending_crypto_narratives", "get_crypto_quotes_latest", "get_global_metrics_latest", "get_global_crypto_derivatives_metrics", "get_upcoming_macro_events"]
+    "cmc_agent_hub_tools": ["trending_crypto_narratives", "get_crypto_quotes_latest", "get_global_metrics_latest", "get_global_crypto_derivatives_metrics", "get_upcoming_macro_events"],
+    "cmc_agent_hub_tools_usage": "live-only"
   },
   "backtest": {
     "runner": "backtest/backtest.py",
-    "command": "python3 skills/meta-strategy-composer/backtest/backtest.py",
+    "command": "python3 bnbhack/skills/meta-strategy-composer/backtest/backtest.py",
     "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
     "deterministic": true,
     "report": "output/report.json",
@@ -51,7 +52,8 @@
     "pass_criteria": "At least one scenario deploys, every per-leg worst-case loss is bounded, and the portfolio-level summed worst-case loss stays inside the drawdown budget across all scenarios."
   },
   "verification": {
-    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py meta-strategy-composer",
+    "kind": "invariant-check",
+    "repro_command": "python3 bnbhack/data/make_sample_db.py && python3 bnbhack/skills/run_backtests.py meta-strategy-composer",
     "content_hash_artifact": "output/report.manifest.json",
     "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
   }

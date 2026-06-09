@@ -3,7 +3,7 @@
    the commit reveal registry, the RiskGovernor and its keeper all on BSC mainnet.
    Edit GITHUB_URL / DOCS links in one place. */
 
-// Open-source repository for the judged submission.
+// Open-source repository. Update to the exact public repo before submission.
 export const GITHUB_URL = 'https://github.com/mefai-dev/mefai-verifiable-trading-agent'
 export const TERMINAL_URL = 'https://mefai.io'
 // The live ERC-8004 registration-v1 document the agent's identity points its
@@ -53,16 +53,16 @@ export const TRACKS = [
   {
     id: 'agent', path: '/compete/agent', tone: '#F0B90B',
     title: 'Autonomous Trading Agent',
-    blurb: 'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.',
+    blurb: 'A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.',
   },
   {
     id: 'skills', path: '/compete/skills', tone: '#3861FB',
     title: 'CMC Strategy Skills',
-    blurb: 'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 181k labeled outcomes and the full CoinMarketCap Agent Hub.',
+    blurb: 'Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 181k labeled outcomes and the full CoinMarketCap Agent Hub.',
   },
   {
     id: 'protocol', path: '/compete/protocol', tone: '#3375BB',
     title: 'Verifiable Protocol',
-    blurb: 'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.',
+    blurb: 'A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.',
   },
 ]

@@ -60,13 +60,33 @@ Key outputs: `approved`, `notional`, `leverage`, `margin`, `worst_case_loss`,
 
 ## Backtest / verify
 
-`backtest/backtest.py` proves the budget invariant across an equity x drawdown
-grid for several symbols and shows size collapsing to zero as drawdown approaches
-the cap. Run:
+Two layers, both pinned inside the same reproducible hash-guard
+(`bnbhack/skills/BACKTEST_REPORTS.json`):
+
+1. **Invariant check** (`backtest/backtest.py`) proves the budget invariant
+   across an equity x drawdown grid for several symbols and shows size collapsing
+   to zero as drawdown approaches the cap.
+2. **Walk-forward out-of-sample equity** (`backtest/walk_forward.py`) is the
+   headline edge: it splits the labeled outcomes by time, estimates each bucket's
+   edge on the train window only, then walks the held-out test window forward
+   sizing with this exact model. It reports max drawdown and net-of-cost return
+   for the risk engine against a naive flat-leverage floor, so the value of the
+   drawdown budget is explicit and falsifiable.
 
 ```bash
+# invariant check
 python3 bnbhack/skills/risk-budgeted-allocator/backtest/backtest.py
+# walk-forward equity engine (writes output/equity_report.json + equity_curve.svg)
+python3 bnbhack/skills/risk-budgeted-allocator/backtest/walk_forward.py
+# both at once, fingerprinted into BACKTEST_REPORTS.json:
+python3 bnbhack/skills/run_backtests.py risk-budgeted-allocator
 ```
+
+The shipped `output/equity_report.json` runs on the **public synthetic sample
+DB** (illustrative, reproducible from `bnbhack/data/make_sample_db.py`); its
+figures demonstrate the engine's mechanics, not a live track record. Spans below
+half a year report window metrics (return over max drawdown), not annualised
+CAGR, so no displayed number is an annualisation artefact.
 
 ## Limitations
 

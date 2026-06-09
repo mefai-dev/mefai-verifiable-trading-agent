@@ -42,11 +42,12 @@
       "tables": ["signal_performance"],
       "description": "Realized expectancy and adverse-excursion stops from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
     },
-    "cmc_agent_hub_tools": ["get_global_metrics_latest", "get_global_crypto_derivatives_metrics"]
+    "cmc_agent_hub_tools": ["get_global_metrics_latest", "get_global_crypto_derivatives_metrics"],
+    "cmc_agent_hub_tools_usage": "live-only"
   },
   "backtest": {
     "runner": "backtest/backtest.py",
-    "command": "python3 skills/risk-budgeted-allocator/backtest/backtest.py",
+    "command": "python3 bnbhack/skills/risk-budgeted-allocator/backtest/backtest.py",
     "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
     "deterministic": true,
     "report": "output/report.json",
@@ -54,7 +55,8 @@
     "pass_criteria": "Worst-case loss stays within the budget for every scenario, position size is monotone non-increasing in current drawdown, and size is zero at or past the cap."
   },
   "verification": {
-    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py risk-budgeted-allocator",
+    "kind": "walk-forward",
+    "repro_command": "python3 bnbhack/data/make_sample_db.py && python3 bnbhack/skills/run_backtests.py risk-budgeted-allocator",
     "content_hash_artifact": "output/report.manifest.json",
     "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
   }

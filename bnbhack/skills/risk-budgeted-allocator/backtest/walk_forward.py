@@ -69,6 +69,9 @@ VENUE_MAX_LEV = float(os.getenv("BT_MAX_LEV", "5"))   # conservative cap
 # engine adds (drawdown control), not a strategy we would run.
 FLAT_LEV = float(os.getenv("BT_FLAT_LEV", "1.0"))
 SECONDS_PER_YEAR = 365.25 * 24 * 3600
+# Below this test span, annualised metrics (CAGR / annual Calmar) are suppressed
+# in favour of window metrics, because annualising a few weeks is not meaningful.
+ANNUALIZE_MIN_YEARS = float(os.getenv("BT_ANNUALIZE_MIN_YEARS", "0.5"))
 
 _HORIZON_COLS = {"1h": ("pnl_1h", "result_1h"),
                  "4h": ("pnl_4h", "result_4h"),
@@ -231,24 +234,36 @@ def _metrics(curve: List[Tuple[int, float]], rets: List[float],
     sharpe = (mean / std * ann) if std > 0 else 0.0
     sortino = (mean / dstd * ann) if dstd > 0 else 0.0
     total_return = equity / START_EQUITY - 1.0
-    # CAGR is only meaningful over a non-trivial span; under ~2 weeks the
-    # fractional-year exponent is unstable, so report the raw total return.
-    if years >= 0.04 and equity > 0:
+    # Annualised figures (CAGR, annual Calmar) are only meaningful over a
+    # multi-quarter span. The public sample DB is a short synthetic slice, so for
+    # sub-threshold spans we DO NOT annualise: a fractional-year exponent over a
+    # few weeks inflates a modest total return into a meaningless magnitude
+    # (e.g. a 5x test return over 48 days -> millions of percent CAGR). Instead
+    # we report WINDOW metrics over the test window and flag the basis, so no
+    # displayed number is an annualisation artefact.
+    annualized = years >= ANNUALIZE_MIN_YEARS and equity > 0
+    if annualized:
         cagr = (equity / START_EQUITY) ** (1.0 / years) - 1.0
+        calmar = (cagr / max_dd) if max_dd > 0 else 0.0
     else:
-        cagr = total_return
-    calmar = (cagr / max_dd) if max_dd > 0 else 0.0
+        cagr = None
+        # window Calmar: total return over the window's max drawdown (not annualised)
+        calmar = (total_return / max_dd) if max_dd > 0 else 0.0
     return {
-        "n_trades": n_trades,
-        "final_equity": round(equity, 2),
-        "total_return_pct": round(total_return * 100.0, 2),
-        "cagr_pct": round(cagr * 100.0, 2),
+        # headline first: a risk-budget engine is judged on drawdown control and
+        # realised return over the window, not on an annualised extrapolation.
         "max_drawdown_pct": round(max_dd * 100.0, 2),
+        "total_return_pct": round(total_return * 100.0, 2),
+        "final_equity": round(equity, 2),
+        "calmar": round(calmar, 3),
+        "calmar_basis": "annualized" if annualized else "window (total_return / max_drawdown)",
+        "cagr_pct": (round(cagr * 100.0, 2) if cagr is not None else None),
+        "annualized": annualized,
         "sharpe": round(sharpe, 3),
         "sortino": round(sortino, 3),
-        "calmar": round(calmar, 3),
         "mean_trade_ret_pct": round(mean * 100.0, 4),
         "trade_ret_std_pct": round(std * 100.0, 4),
+        "n_trades": n_trades,
         "avg_leverage_x": round(avg_lev, 3),
         "test_years": round(years, 3),
         "_curve": curve,
@@ -354,6 +369,11 @@ def run() -> dict:
         "n_test": len(test),
         "n_buckets": len(bucket),
         "n_selected_buckets": n_selected_buckets,
+        "data_basis": ("public synthetic sample DB (illustrative; reproducible "
+                       "from bnbhack/data/make_sample_db.py). Figures demonstrate "
+                       "the engine's mechanics and ablation, not a live track "
+                       "record. Sub-year spans report window metrics, not "
+                       "annualised CAGR."),
         "kelly_engine": kelly,
         "kelly_engine_with_edge_gate": gated,
         "naive_flat_leverage": naive,
@@ -396,16 +416,17 @@ def main() -> int:
     k = report["kelly_engine"]
     g = report["kelly_engine_with_edge_gate"]
     nv = report["naive_flat_leverage"]
+    basis = "annualized" if k.get("annualized") else "window (sub-year span, not annualized)"
     print(f"horizon              : {report['horizon']}  cost {report['roundtrip_cost_pct']}%")
     print(f"train / test trades  : {report['n_train']} / {report['n_test']}")
     print(f"selected buckets     : {report['n_selected_buckets']} / {report['n_buckets']}")
-    print(f"KELLY ENGINE   ret={k['total_return_pct']}%  CAGR={k['cagr_pct']}%  "
-          f"maxDD={k['max_drawdown_pct']}%  Sharpe={k['sharpe']}  "
-          f"Sortino={k['sortino']}  Calmar={k['calmar']}  n={k['n_trades']}")
-    print(f"+ EDGE GATE    ret={g['total_return_pct']}%  maxDD={g['max_drawdown_pct']}%  "
-          f"Sharpe={g['sharpe']}  Calmar={g['calmar']}  n={g['n_trades']}")
-    print(f"NAIVE FLAT {report['naive_flat_leverage_x']}x ret={nv['total_return_pct']}%  "
-          f"maxDD={nv['max_drawdown_pct']}%  Sharpe={nv['sharpe']}  n={nv['n_trades']}")
+    print(f"metrics basis        : {basis}")
+    print(f"KELLY ENGINE   maxDD={k['max_drawdown_pct']}%  ret={k['total_return_pct']}%  "
+          f"Calmar={k['calmar']}  Sharpe={k['sharpe']}  Sortino={k['sortino']}  n={k['n_trades']}")
+    print(f"+ EDGE GATE    maxDD={g['max_drawdown_pct']}%  ret={g['total_return_pct']}%  "
+          f"Calmar={g['calmar']}  Sharpe={g['sharpe']}  n={g['n_trades']}")
+    print(f"NAIVE FLAT {report['naive_flat_leverage_x']}x maxDD={nv['max_drawdown_pct']}%  "
+          f"ret={nv['total_return_pct']}%  Sharpe={nv['sharpe']}  n={nv['n_trades']}")
     return 0
 
 

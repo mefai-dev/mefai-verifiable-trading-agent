@@ -74,6 +74,12 @@ Sweeps regime direction x strength for a slice and confirms the monotone
 properties: aligned size rises with conviction, opposed size falls, extreme
 opposition stands aside, and the drawdown gate forces size to zero at the cap.
 
+The CMC Agent Hub tools declared in `skill.json` (`get_global_metrics_latest`,
+`get_global_crypto_derivatives_metrics`, `get_upcoming_macro_events`) are
+`usage: live-only`: they feed the regime read in live mode only. The overlay
+itself takes the regime as an input, so the backtest above is fully offline and
+deterministic.
+
 ## Limitations
 
 - The regime is supplied live by the caller (e.g. from a CMC fear/greed +

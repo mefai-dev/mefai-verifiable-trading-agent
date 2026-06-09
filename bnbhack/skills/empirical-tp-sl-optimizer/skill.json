@@ -40,7 +40,7 @@
   },
   "backtest": {
     "runner": "backtest/backtest.py",
-    "command": "python3 skills/empirical-tp-sl-optimizer/backtest/backtest.py",
+    "command": "python3 bnbhack/skills/empirical-tp-sl-optimizer/backtest/backtest.py",
     "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
     "deterministic": true,
     "report": "output/report.json",
@@ -48,7 +48,8 @@
     "pass_criteria": "Recommendation logic is consistent across every slice: recommend implies positive expectancy above one standard error with samples at or above min_samples."
   },
   "verification": {
-    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py empirical-tp-sl-optimizer",
+    "kind": "invariant-check",
+    "repro_command": "python3 bnbhack/data/make_sample_db.py && python3 bnbhack/skills/run_backtests.py empirical-tp-sl-optimizer",
     "content_hash_artifact": "output/report.manifest.json",
     "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
   }

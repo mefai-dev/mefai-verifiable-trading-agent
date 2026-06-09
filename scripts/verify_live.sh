@@ -29,14 +29,13 @@ REFERER="${MEFAI_REFERER:-https://mefai.io/compete/protocol}"
 
 # Public, key-free BNB Chain JSON-RPC endpoints (only used to read contract code).
 RPC_MAINNET="${MEFAI_RPC_MAINNET:-https://bsc-dataseed.binance.org}"
-RPC_TESTNET="${MEFAI_RPC_TESTNET:-https://data-seed-prebsc-1-s1.binance.org:8545}"
 
 # Verified deployments (see bnbhack/contracts/DEPLOYMENTS.md).
 LEDGER="0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"   # mainnet result ledger
 ERC8004="0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"  # mainnet ERC-8004 identity registry
 AGENT_WALLET="0xD5df700Ed5355f0c778159592a072B8773faE1CC"
-REGISTRY="0x48E9Dcb1f0F12367041Bbe5f2FE1f66D0D830558"  # testnet commit-reveal registry
-GOVERNOR="0xf751366159446894D6fce783A9eB1bd5B6df25Be"  # testnet RiskGovernor
+REGISTRY="0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB"  # mainnet commit-reveal registry
+GOVERNOR="0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2"  # mainnet RiskGovernor (maxDrawdownBps 1400)
 
 PASS=0
 FAIL=0
@@ -191,8 +190,8 @@ chk_code() { # name addr rpc explorer
 }
 chk_code "Result ledger (mainnet)"        "$LEDGER"   "$RPC_MAINNET" "https://bscscan.com"
 chk_code "ERC-8004 identity (mainnet)"    "$ERC8004"  "$RPC_MAINNET" "https://bscscan.com"
-chk_code "Commit-reveal registry (testnet)" "$REGISTRY" "$RPC_TESTNET" "https://testnet.bscscan.com"
-chk_code "RiskGovernor (testnet)"         "$GOVERNOR" "$RPC_TESTNET" "https://testnet.bscscan.com"
+chk_code "Commit-reveal registry (mainnet)" "$REGISTRY" "$RPC_MAINNET" "https://bscscan.com"
+chk_code "RiskGovernor (mainnet)"         "$GOVERNOR" "$RPC_MAINNET" "https://bscscan.com"
 printf '        %s\n' "$(dim "agent wallet holding the identity: $AGENT_WALLET")"
 
 # ── summary ─────────────────────────────────────────────────────────────────
