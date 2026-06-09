@@ -88,7 +88,7 @@ direction-aware. Nothing is signed until both execute flags are set.
 
 ---
 
-## Why this wins
+## What makes it trustworthy
 
 A trading agent is easy to claim and hard to trust. MEFAI closes that gap on
 three fronts at once. Its edge is **measured, not asserted**: every signal is
