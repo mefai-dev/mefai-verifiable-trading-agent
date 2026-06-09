@@ -361,8 +361,25 @@ def _plan_tx_from_quote(qbody: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return out
 
 
+def _sell_base_units(amount: float, from_token: str) -> Optional[int]:
+    """The sold amount in raw base units, for the solver's standing-allowance
+    comparison. Every token in the BSC registry is 18-decimal, so a known symbol
+    converts exactly; an unknown raw-address sold token has no safe default and is
+    left unquantified (the allowance read still runs, only the size compare SKIPs).
+    Native BNB has no ERC-20 allowance leg, so it is excluded."""
+    sym = (from_token or "").strip().upper()
+    if sym == "BNB" or sym not in BSC_TOKENS:
+        return None
+    try:
+        return int(Decimal(str(amount)) * (Decimal(10) ** 18))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
 def _quote_to_plan(qbody: Dict[str, Any], to_addr: str, slippage_pct: float,
-                   equity: Optional[float], equity_floor: Optional[float]
+                   equity: Optional[float], equity_floor: Optional[float], *,
+                   sell_token: Optional[str] = None, owner: Optional[str] = None,
+                   trade_amount: Optional[int] = None
                    ) -> TradePlan:
     """Build the solver TradePlan from a twak quote. The bought token and the 0x
     spender are honeypot/contract scanned; the quote's own output vs minReceived
@@ -397,6 +414,11 @@ def _quote_to_plan(qbody: Dict[str, Any], to_addr: str, slippage_pct: float,
         tx=_plan_tx_from_quote(qbody),
         equity=equity,
         equity_floor=equity_floor,
+        # The sold ERC-20 + wallet let the solver read the live standing allowance
+        # to the swap spender (router) and flag a pre-existing infinite approval.
+        sell_token=sell_token,
+        owner=owner,
+        trade_amount=trade_amount,
     )
 
 
@@ -483,7 +505,13 @@ async def swap(amount: float, from_token: str, to_token: str,
                                   f"{MAX_PRICE_IMPACT_PCT:.1f}% (thin liquidity)")
 
     slip = max(MIN_SLIPPAGE_PCT, min(MAX_SLIPPAGE_PCT, _to_float(slippage_pct) or 1.0))
-    plan = _quote_to_plan(q.data, dst_addr, slip, equity, equity_floor)
+    # The sold ERC-20 (none for native BNB) + the public wallet drive the live
+    # standing-allowance read; the spend is the sold amount in base units.
+    sell_tok = None if _is_native_sentinel(src_addr) else src_addr
+    owner = AGENT_WALLET if _is_addr(AGENT_WALLET) else None
+    plan = _quote_to_plan(q.data, dst_addr, slip, equity, equity_floor,
+                          sell_token=sell_tok, owner=owner,
+                          trade_amount=_sell_base_units(amt, from_token))
     verdict = await evaluate_trade(plan, strict=True)
 
     impact_note = (f" (price impact {pi:.2f}%)"

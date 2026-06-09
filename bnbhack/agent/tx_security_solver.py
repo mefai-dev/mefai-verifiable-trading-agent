@@ -59,6 +59,8 @@ _INFINITE_APPROVAL = 1 << 255
 # Solidity Error(string) and Panic(uint256) selectors used to detect a revert.
 _ERROR_SELECTOR = "08c379a0"
 _PANIC_SELECTOR = "4e487b71"
+# ERC-20 allowance(address,address) selector for the read-only standing-approval check.
+_ALLOWANCE_SELECTOR = "dd62ed3e"
 
 # Default risk thresholds (overridable per call via TradePlan).
 MAX_SLIPPAGE_BPS = 300        # 3.0% hard cap on tolerated slippage
@@ -262,8 +264,10 @@ class TradePlan:
     slippage_bps: Optional[int] = None     # tolerated slippage in basis points
     max_slippage_bps: int = MAX_SLIPPAGE_BPS
     # approval hygiene
-    approval_amount: Optional[int] = None  # allowance about to be granted
+    approval_amount: Optional[int] = None  # allowance about to be granted (if known)
     trade_amount: Optional[int] = None     # amount the trade will actually spend
+    sell_token: Optional[str] = None       # ERC-20 being sold, for a live allowance read
+    owner: Optional[str] = None            # wallet holding the allowance (read-only)
     # preflight
     tx: Optional[Dict[str, Any]] = None    # {from,to,data,value} for eth_call
     # gas
@@ -550,6 +554,50 @@ async def check_gas(plan: TradePlan) -> CheckResult:
     return CheckResult("gas_sanity", SKIP, "no gas baseline to compare")
 
 
+async def check_standing_allowance(plan: TradePlan) -> CheckResult:
+    """Read the wallet's CURRENT on-chain allowance of the sold ERC-20 to the swap
+    spender and surface a standing infinite approval. This is the live counterpart
+    to check_approval: that one vets an allowance the plan declares it is about to
+    grant, while this one reports the allowance the wallet already carries. It is
+    advisory (a standing infinite approval WARNs, it never blocks): a brand-new
+    spender that the wallet has not yet approved reads zero, which is the normal
+    pre-trade state, so this check must not fail a legitimate first swap. Native
+    BNB has no allowance leg and SKIPs; an unreachable RPC SKIPs (not critical)."""
+    token = _norm_addr(plan.sell_token)
+    owner = _norm_addr(plan.owner)
+    spender = _norm_addr(plan.router)
+    if token is None or token == _ZERO_ADDR:
+        return CheckResult("standing_allowance", SKIP, "no ERC-20 sell token")
+    if owner is None or spender is None:
+        return CheckResult("standing_allowance", SKIP, "no owner/spender to read")
+    data = ("0x" + _ALLOWANCE_SELECTOR
+            + owner[2:].rjust(64, "0") + spender[2:].rjust(64, "0"))
+    result, error = await _rpc_call("eth_call", [{"to": token, "data": data}, "latest"])
+    if error is not None or not isinstance(result, str) or not result.startswith("0x"):
+        return CheckResult("standing_allowance", SKIP,
+                           "allowance source unavailable", {"unavailable": True})
+    allowance = _to_int(result)
+    if allowance is None:
+        return CheckResult("standing_allowance", SKIP, "allowance not decodable")
+    spend = _to_int(plan.trade_amount)
+    out: Dict[str, Any] = {"allowance": allowance}
+    if spend is not None:
+        out["spend"] = spend
+    if allowance >= _INFINITE_APPROVAL:
+        return CheckResult("standing_allowance", WARN,
+                           "wallet holds a standing infinite allowance to the swap "
+                           "spender; revoke it when idle to cap drain exposure", out)
+    if allowance == 0:
+        return CheckResult("standing_allowance", PASS,
+                           "no standing allowance to the spender", out)
+    if spend is not None and allowance > spend:
+        return CheckResult("standing_allowance", WARN,
+                           "standing allowance exceeds this trade's spend; approve "
+                           "the exact amount and revoke after settlement", out)
+    return CheckResult("standing_allowance", PASS,
+                       "standing allowance is finite", out)
+
+
 # --- orchestrator ----------------------------------------------------------
 
 def _has_trade_intent(plan: TradePlan) -> bool:
@@ -591,6 +639,9 @@ async def evaluate_trade(plan: TradePlan, strict: bool = True) -> SecurityVerdic
     net_coros = [check_preflight(plan), check_gas(plan)]
     if token_ok:
         net_coros = [check_token_risk(plan), check_contract(plan)] + net_coros
+    # Live standing-allowance read only when a real ERC-20 sell leg is present.
+    if _norm_addr(plan.sell_token) not in (None, _ZERO_ADDR):
+        net_coros.append(check_standing_allowance(plan))
     net = await asyncio.gather(*net_coros)
 
     checks: List[CheckResult] = pure + list(net)
