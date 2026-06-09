@@ -28,6 +28,17 @@ function pctNum(s: unknown): number {
 }
 const has = (n: number) => Number.isFinite(n)
 
+/* CMC table gates return parallel headers[] + rows[]; resolve a column by its
+   header name (falling back to a known position) so a reordered column never
+   shifts the read. */
+function colAt(headers: unknown, name: string, fallback: number): number {
+  if (Array.isArray(headers)) {
+    const i = headers.indexOf(name)
+    if (i >= 0) return i
+  }
+  return fallback
+}
+
 /* ─────────────── gate parsers (defensive, real values only) ─────────────── */
 type Sentiment = {
   fgIndex: number; fgLabel: string; fgWeek: number
@@ -71,12 +82,17 @@ function parseNarratives(g: CmcGate | null): Narrative[] | null {
   const cl = g?.data?.categoryList
   const rows = cl?.rows
   if (!Array.isArray(rows) || !rows.length) return null
+  const h = cl.headers
+  const iName = colAt(h, 'categoryName', 3)
+  const iMc = colAt(h, 'marketCapUsd', 4)
+  const iChg = colAt(h, 'marketCapChangePercentage24h', 5)
+  const iTop = colAt(h, 'topCoinList', 17)
   const out: Narrative[] = []
   for (const r of rows.slice(0, 5)) {
     const coins: string[] = []
-    const tc = r?.[17]?.rows
+    const tc = r?.[iTop]?.rows
     if (Array.isArray(tc)) for (const c of tc.slice(0, 3)) if (c?.[0]) coins.push(String(c[0]))
-    out.push({ name: String(r?.[3] ?? ''), mcap: String(r?.[4] ?? ''), chg24: pctNum(r?.[5]), coins })
+    out.push({ name: String(r?.[iName] ?? ''), mcap: String(r?.[iMc] ?? ''), chg24: pctNum(r?.[iChg]), coins })
   }
   return out
 }
@@ -93,17 +109,23 @@ function parseTa(g: CmcGate | null): Ta | null {
 
 type Ev = { title: string; date: string }
 function parseMacro(g: CmcGate | null): Ev[] | null {
-  const rows = g?.data?.upcomingEventNews?.rows
+  const blk = g?.data?.upcomingEventNews
+  const rows = blk?.rows
   if (!Array.isArray(rows) || !rows.length) return null
-  return rows.slice(0, 3).map((r: unknown[]) => ({ title: String(r?.[0] ?? ''), date: String(r?.[3] ?? '') }))
+  const iTitle = colAt(blk.headers, 'title', 0)
+  const iDate = colAt(blk.headers, 'eventDate', 3)
+  return rows.slice(0, 3).map((r: unknown[]) => ({ title: String(r?.[iTitle] ?? ''), date: String(r?.[iDate] ?? '') }))
     .filter((e: Ev) => e.title)
 }
 
 type News = { title: string; at: string }
 function parseNews(g: CmcGate | null): News[] | null {
-  const rows = g?.data?.rows
+  const d = g?.data
+  const rows = d?.rows
   if (!Array.isArray(rows) || !rows.length) return null
-  return rows.slice(0, 4).map((r: unknown[]) => ({ title: String(r?.[0] ?? ''), at: String(r?.[4] ?? '') }))
+  const iTitle = colAt(d.headers, 'title', 0)
+  const iAt = colAt(d.headers, 'publishedAt', 4)
+  return rows.slice(0, 4).map((r: unknown[]) => ({ title: String(r?.[iTitle] ?? ''), at: String(r?.[iAt] ?? '') }))
     .filter((n: News) => n.title)
 }
 
@@ -137,7 +159,11 @@ function buildContext(sent: Sentiment | null, deriv: Derivs | null, ta: Ta | nul
     subs.push({ key: 'dom', label: 'BTC dominance', reading: `${sent.btcDom.toFixed(2)}% ${falling ? 'falling' : 'rising'}`,
       lean: falling ? 60 : 40, ok: true })
   }
-  void deriv
+  // 5 · Perp funding (positioning) · positive = longs in control, negative = squeeze setup
+  if (deriv && has(deriv.funding)) {
+    subs.push({ key: 'fund', label: 'Perp funding', reading: deriv.funding > 0 ? 'positive' : deriv.funding < 0 ? 'negative' : 'flat',
+      lean: deriv.funding > 0 ? 56 : deriv.funding < 0 ? 44 : 50, ok: true })
+  }
   const score = subs.length ? Math.round(subs.reduce((a, s) => a + s.lean, 0) / subs.length) : 50
   return { score, subs }
 }
