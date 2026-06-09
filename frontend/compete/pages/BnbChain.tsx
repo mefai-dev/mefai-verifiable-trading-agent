@@ -1,13 +1,13 @@
 /* BNB HACK · what we built on BNB Chain.
-   Everything verifiable lives on BNB Chain. The result ledger and identity are on
-   BSC mainnet; the live judged commit reveal registry and risk governor run on BSC
-   testnet for the contest window. Each card shows its chain and the raw address is
-   one tap away on the matching explorer. */
+   Everything verifiable lives on BSC mainnet (chain 56): the result ledger, the
+   identity, the live judged commit reveal registry, the risk governor and its
+   equity keeper. Each card shows its chain and the raw address is one tap away on
+   the explorer. */
 
 import { useState } from 'react'
 import { Btn, Chip, Panel, Reveal } from '../ui'
-import { apiGet, usePoll } from '../api'
-import type { X402Catalog } from '../api'
+import { apiGet, fetchAgentIdentity, usePoll } from '../api'
+import type { X402Catalog, AgentIdentity, WriteOutcome } from '../api'
 import { ADDR, GITHUB_URL, scan, chainLabel } from '../config'
 import { SponsorHero, FeatureGrid, SponsorSectionHead, PlainContract } from './sponsorKit'
 import { SkillCatalog } from './skillCatalog'
@@ -31,7 +31,7 @@ export default function BnbChain({ go }: { go: (p: string) => void }) {
     <SponsorHero
       tone={TONE} eyebrow="Built on BNB Chain" go={go}
       title={<>Proof not promises<br />all on <span style={{ color: TONE }}>BNB Chain</span></>}
-      blurb="The whole point of MEFAI is that you do not have to trust us. Every prediction every risk limit and every result is anchored to BNB Chain where you can audit it yourself. The result ledger and identity are on BSC mainnet; the live judged commit reveal registry and risk governor run on BSC testnet. Below the contracts in plain language first."
+      blurb="The whole point of MEFAI is that you do not have to trust us. Every prediction every risk limit and every result is anchored to BNB Chain where you can audit it yourself. The result ledger, the identity, the live judged commit reveal registry and the risk governor all run on BSC mainnet. Below the contracts in plain language first."
     />
 
     <SponsorSectionHead tone={TONE} eyebrow="Our flagship capability" title={<>MEFAI Omni Signal · the whole decision chain <span style={{ color: TONE }}>live</span></>}
@@ -62,6 +62,14 @@ export default function BnbChain({ go }: { go: (p: string) => void }) {
         ))}
       </div>
     </section>
+
+    <SponsorSectionHead tone={TONE} eyebrow="The BNB AI Agent SDK, running" title="The agent identity and job lifecycle live"
+      sub="Not a static card. The agent runs the BNB AI Agent SDK as a server: an ERC-8004 verifiable identity that points its metadata at the track record, plus the ERC-8183 agentic commerce job escrow. Below is the live identity and the full job lifecycle, each step a real dry run from the agent code. Minting and funding are BSC mainnet writes kept behind a gated final go so nothing here moves funds." />
+    <Reveal>
+      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 22px' }}>
+        <AgentIdentityPanel />
+      </div>
+    </Reveal>
 
     <SponsorSectionHead tone={TONE} eyebrow="Agents pay agents" title="The machine payable feed live" />
     <Reveal>
@@ -120,6 +128,100 @@ function EmbedViewer() {
     <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--c-line)', background: 'var(--c-panel-2)', height: 'min(72vh, 760px)' }}>
       <iframe key={cur.path} src={`${cur.path}?mobile=preview`} title={cur.label} loading="lazy" allow="clipboard-write" style={{ width: '100%', height: '100%', border: 0, display: 'block' }} />
     </div>
+  </Panel>
+}
+
+/* ─────────────── ERC-8004 identity + ERC-8183 lifecycle, live ─────────────── */
+function eip155Scan(v: string): { chain: number; addr: string; url: string } | null {
+  const m = /^eip155:(\d+):(0x[a-fA-F0-9]{40})$/.exec((v || '').trim())
+  if (!m) return null
+  const chain = Number(m[1])
+  const host = chain === 97 ? 'testnet.bscscan.com' : 'bscscan.com'
+  return { chain, addr: m[2], url: `https://${host}/address/${m[2]}` }
+}
+const stripDry = (s: string) => (s || '').replace(/^dry-run \(execute=False\):\s*/i, '')
+const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
+
+function ScanLink({ addr, chain }: { addr: string; chain: number }) {
+  const host = chain === 97 ? 'testnet.bscscan.com' : 'bscscan.com'
+  return <a href={`https://${host}/address/${addr}`} target="_blank" rel="noopener noreferrer" className="mono"
+    style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+    {shortAddr(addr)} <IconExternal size={11} />
+  </a>
+}
+
+function LifecycleStep({ n, label, outcome }: { n: number; label: string; outcome: WriteOutcome }) {
+  return <div style={{ display: 'flex', gap: 11, padding: '10px 12px', borderRadius: 11, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
+    <span style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 7, display: 'grid', placeItems: 'center', fontSize: 11.5, fontWeight: 800, color: '#000', background: 'var(--gold)' }}>{n}</span>
+    <div style={{ minWidth: 0, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{label}</span>
+        <Chip tone="var(--c-muted)">{outcome.executed ? 'executed' : 'preview'}</Chip>
+      </div>
+      <div className="mono" style={{ fontSize: 11, color: 'var(--c-muted)', lineHeight: 1.55, wordBreak: 'break-word' }}>{stripDry(outcome.detail)}</div>
+    </div>
+  </div>
+}
+
+function AgentIdentityPanel() {
+  const { data, error } = usePoll<AgentIdentity>((s) => fetchAgentIdentity(s), 180_000)
+  const reg = data?.registry
+  const lc = data?.lifecycle
+  return <Panel title="ERC-8004 IDENTITY · ERC-8183 COMMERCE" accent={TONE}
+    right={data ? (reg?.minted ? 'minted' : 'registration ready') : error ? 'offline' : 'loading'}>
+    {!data
+      ? <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '14px 0' }}>{error ? 'The agent server is unreachable right now.' : <>Reading the identity<span className="cp-ellipsis" /></>}</div>
+      : <div style={{ display: 'grid', gap: 16 }}>
+        {/* registry coordinates */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+          <div style={{ padding: 13, borderRadius: 11, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
+            <div style={{ fontSize: 10.5, letterSpacing: .6, color: 'var(--c-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Identity registry</div>
+            <ScanLink addr={reg!.contract} chain={56} />
+            <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 4 }}>ERC-8004 on BSC mainnet</div>
+          </div>
+          <div style={{ padding: 13, borderRadius: 11, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
+            <div style={{ fontSize: 10.5, letterSpacing: .6, color: 'var(--c-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Agent wallet</div>
+            <ScanLink addr={reg!.agent_wallet} chain={56} />
+            <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 4 }}>{reg!.minted ? `agent id ${reg!.agent_id}` : 'holds the identity'}</div>
+          </div>
+        </div>
+
+        {/* track-record metadata */}
+        <div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>Track record metadata (setMetadata)</div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {data.metadata.map((m) => {
+              const link = eip155Scan(m.value)
+              const isHttps = /^https:\/\//.test(m.value)
+              return <div key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 11px', borderRadius: 9, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)', flexWrap: 'wrap' }}>
+                <span className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-text)' }}>{m.key}</span>
+                {link
+                  ? <ScanLink addr={link.addr} chain={link.chain} />
+                  : isHttps
+                    ? <a href={m.value} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', textDecoration: 'none', wordBreak: 'break-all' }}>{m.value.replace(/^https:\/\//, '')} <IconExternal size={11} /></a>
+                    : <span className="mono" style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>{m.value}</span>}
+              </div>
+            })}
+          </div>
+        </div>
+
+        {/* lifecycle */}
+        {lc && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gap: 7 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800 }}>ERC-8004 identity</div>
+            <LifecycleStep n={1} label="register identity" outcome={lc.erc8004.register} />
+            <LifecycleStep n={2} label={`write metadata (${lc.erc8004.set_metadata.length})`} outcome={lc.erc8004.set_metadata[0]} />
+          </div>
+          <div style={{ display: 'grid', gap: 7 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800 }}>ERC-8183 job escrow</div>
+            <LifecycleStep n={1} label="create job" outcome={lc.erc8183.create_job} />
+            <LifecycleStep n={2} label="fund escrow" outcome={lc.erc8183.fund_job} />
+            <LifecycleStep n={3} label="complete and release" outcome={lc.erc8183.complete_job} />
+          </div>
+        </div>}
+
+        <div style={{ fontSize: 11, color: 'var(--c-muted-2)', lineHeight: 1.55 }}>{data.note}</div>
+      </div>}
   </Panel>
 }
 

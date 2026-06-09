@@ -35,19 +35,41 @@ DEFAULT_DB = os.path.join(HERE, "signal.db")
 
 # Per-symbol synthetic shape: (win_rate, payoff_ratio, reference_price).
 # A payoff above one with a sub-fifty-five win rate is exactly the positive
-# expectancy shape the engine is built to size; XRP is left marginal so the
-# net-of-cost edge gate has a cell to reject.
+# expectancy shape the engine is built to size. The set spans a deliberate edge
+# GRADIENT, from a strong-edge top tier down through a marginal middle to a
+# negative-edge bottom tier, so the leaderboard can rank and the rotation skill
+# can form a disjoint top-N versus bottom-N partition (a single uniform tier
+# would make that separation self-referential). Illustrative only.
 SYMBOLS = {
-    "BTCUSDT.P": (0.515, 1.5, 60000.0),
-    "ETHUSDT.P": (0.510, 1.5, 3000.0),
-    "BNBUSDT.P": (0.520, 1.4, 600.0),
-    "SOLUSDT.P": (0.498, 1.6, 150.0),
-    "XRPUSDT.P": (0.480, 1.1, 0.60),
+    # strong edge (top of the ranking)
+    "BTCUSDT.P":  (0.545, 1.70, 60000.0),
+    "ETHUSDT.P":  (0.540, 1.65, 3000.0),
+    "BNBUSDT.P":  (0.535, 1.60, 600.0),
+    "SOLUSDT.P":  (0.530, 1.60, 150.0),
+    "INJUSDT.P":  (0.528, 1.55, 25.0),
+    "TAOUSDT.P":  (0.525, 1.55, 450.0),
+    "ARBUSDT.P":  (0.520, 1.50, 1.10),
+    "LINKUSDT.P": (0.518, 1.50, 18.0),
+    # marginal middle
+    "AVAXUSDT.P": (0.512, 1.40, 35.0),
+    "OPUSDT.P":   (0.508, 1.35, 2.40),
+    "SUIUSDT.P":  (0.505, 1.30, 1.30),
+    "APTUSDT.P":  (0.500, 1.25, 9.0),
+    # weak / negative edge (bottom of the ranking)
+    "XRPUSDT.P":  (0.490, 1.10, 0.60),
+    "ADAUSDT.P":  (0.485, 1.05, 0.45),
+    "DOGEUSDT.P": (0.478, 1.00, 0.14),
+    "LTCUSDT.P":  (0.472, 0.98, 85.0),
+    "TRXUSDT.P":  (0.466, 0.95, 0.12),
+    "BCHUSDT.P":  (0.460, 0.92, 420.0),
+    "ETCUSDT.P":  (0.452, 0.90, 28.0),
+    "XLMUSDT.P":  (0.445, 0.88, 0.11),
 }
-# 5m is the live loop's default scan timeframe; the longer buckets feed the
-# 24h-horizon backtests. Every bucket carries enough rows to clear the
-# optimizer and walk-forward minimum-sample gates.
-TIMEFRAMES = ["5m", "1h", "4h", "1d"]
+# 5m is the live loop's default scan timeframe; 15m is the strategy-skill scan
+# timeframe; the longer buckets feed the 24h-horizon backtests. Every bucket
+# carries enough rows to clear the optimizer and walk-forward minimum-sample
+# gates.
+TIMEFRAMES = ["5m", "15m", "1h", "4h", "1d"]
 
 TP_LEVELS = [(0.5, "tp_05"), (1.0, "tp_1"), (1.5, "tp_15"), (2.0, "tp_2"),
              (3.0, "tp_3"), (5.0, "tp_5"), (10.0, "tp_10")]
@@ -56,6 +78,12 @@ SL_LEVELS = [(0.2, "sl_02"), (0.3, "sl_03"), (0.5, "sl_05"), (0.7, "sl_07"),
              (3.0, "sl_3"), (4.0, "sl_4"), (5.0, "sl_5"), (7.0, "sl_7"),
              (10.0, "sl_10")]
 HORIZON_SEC = 86400  # the 24h label window the barrier times live inside
+
+# Fixed reference epoch so the generated database is byte-reproducible: with a
+# seeded RNG AND a pinned clock, every run produces an identical signal.db (and
+# therefore an identical dataset sha256). Pass --live-time to anchor entries to
+# the wall clock instead (useful only for a live-loop demo against the sample).
+REF_NOW = 1_781_000_000  # fixed point in 2026; arbitrary but stable
 
 
 def _trade(rng: random.Random, win_rate: float, payoff: float):
@@ -110,7 +138,7 @@ def _trade(rng: random.Random, win_rate: float, payoff: float):
     return row
 
 
-def build(db_path: str, rows_per_bucket: int) -> None:
+def build(db_path: str, rows_per_bucket: int, now: int = REF_NOW) -> None:
     rng = random.Random(8004)  # seeded: the sample is reproducible
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -131,7 +159,6 @@ def build(db_path: str, rows_per_bucket: int) -> None:
     insert_sql = (f"INSERT INTO signal_performance ({','.join(all_cols)}) "
                   f"VALUES ({placeholders})")
 
-    now = int(time.time())
     window = 120 * 86400  # spread entries over ~120 days, ascending by time
     n_perf = 0
     for symbol, (wr, payoff, ref_price) in SYMBOLS.items():
@@ -178,8 +205,12 @@ def main() -> None:
     ap.add_argument("--rows", type=int, default=400,
                     help="rows per (symbol, timeframe) bucket")
     ap.add_argument("--db", default=DEFAULT_DB, help="output sqlite path")
+    ap.add_argument("--live-time", action="store_true",
+                    help="anchor entries to the wall clock (breaks byte "
+                         "reproducibility; default is a fixed reference epoch)")
     args = ap.parse_args()
-    build(args.db, max(1, args.rows))
+    now = int(time.time()) if args.live_time else REF_NOW
+    build(args.db, max(1, args.rows), now=now)
 
 
 if __name__ == "__main__":

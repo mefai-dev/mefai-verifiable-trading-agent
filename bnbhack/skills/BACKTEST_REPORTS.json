@@ -1,0 +1,54 @@
+{
+  "dataset": {
+    "bytes": 8744960,
+    "path": "data/signal.db",
+    "present": true,
+    "row_counts": {
+      "signal_performance": 40000,
+      "signals": 2000
+    },
+    "sha256": "f7202dd2ef0ffd971204828a7f1fc2cd4616bf0dfda267881ae7ee632bb0282d"
+  },
+  "generated_at": "2026-06-08T20:46:54Z",
+  "overall": "PASS",
+  "platform": "Linux-6.8.0-110-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "repro_digest": "2b28bc4bf26b8726ce952f6e0cb2d8c80469881a5d94d49d183869a22fb07161",
+  "skills": [
+    {
+      "code_sha256": "d281b7b596f12beb2bba7e19750fdf32d287665c771089c399a2ed5f60b1194e",
+      "content_hash": "b711607008fbe1fb625406a68fe838dae5f95caea5d33c4ccb75361f116df417",
+      "manifest": "skills/empirical-tp-sl-optimizer/output/report.manifest.json",
+      "result": "PASS",
+      "skill": "empirical-tp-sl-optimizer"
+    },
+    {
+      "code_sha256": "e533e712faa1e32a77f67042b6f6e582a528c4f457d74b2aa23020f8d626f088",
+      "content_hash": "dc88562a99c5129c31856c5f56ea9bbdba3f3d37e4983714dc9b6c7234dcbaaf",
+      "manifest": "skills/meta-strategy-composer/output/report.manifest.json",
+      "result": "PASS",
+      "skill": "meta-strategy-composer"
+    },
+    {
+      "code_sha256": "5710665150d475e2aa4188c109f49104fb63cf2728aa0ae49fbe60657cd06356",
+      "content_hash": "a26078211dfe284e1189f29d4f26f3d0f7fcebc6827edb39377598ceb1bbba64",
+      "manifest": "skills/narrative-rotation/output/report.manifest.json",
+      "result": "PASS",
+      "skill": "narrative-rotation"
+    },
+    {
+      "code_sha256": "f6a099bad71dea70b45c07777c863435e13ce652b6561f4c494ea4dca4003831",
+      "content_hash": "bb821568cc26cf2a5ad679a68746a1fec2cafce67ab0b9a4866b84cc96850fdb",
+      "manifest": "skills/regime-risk-governor/output/report.manifest.json",
+      "result": "PASS",
+      "skill": "regime-risk-governor"
+    },
+    {
+      "code_sha256": "a9e3a08747edf14507bd334da58797af3916350a8eb4229845545d0fad6d4cd3",
+      "content_hash": "296e6f269273b23446a6b80759cddcb29cc19027d778cf33c504bb240909ac30",
+      "manifest": "skills/risk-budgeted-allocator/output/report.manifest.json",
+      "result": "PASS",
+      "skill": "risk-budgeted-allocator"
+    }
+  ]
+}

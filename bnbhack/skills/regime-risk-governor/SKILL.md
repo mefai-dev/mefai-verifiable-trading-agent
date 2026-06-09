@@ -1,6 +1,11 @@
 ---
 name: regime-risk-governor
 description: Decide whether to deploy a strategy right now and at what size, given the live market regime and remaining drawdown room. Gates a backtested TP/SL bracket against the current regime direction and strength, and against the drawdown-budget room, returning deploy / stand-aside plus a size scale. Use when the user asks if it is safe to trade now, wants a risk-off killswitch, needs regime-aware position scaling, or asks how much drawdown room is left before trading must stop.
+license: MIT
+metadata:
+  version: "1.0.0"
+  category: trading-strategy
+  spec: skill.json
 ---
 
 # Regime Risk Governor

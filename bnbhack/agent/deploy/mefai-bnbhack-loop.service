@@ -27,6 +27,10 @@ User=mefai-agent
 Group=mefai-agent
 WorkingDirectory=/opt/mefai-agent/bnbhack/agent
 Environment=PYTHONDONTWRITEBYTECODE=1
+# Pin the writable state dir OUTSIDE the code tree and exactly match the
+# ReadWritePaths grant below, so the loop's default state location can never
+# drift from the one the sandbox actually permits to be written.
+Environment=BNBHACK_LOOP_STATE_DIR=/opt/mefai-agent/state
 EnvironmentFile=/opt/mefai-agent/.env
 # Signing secrets (twak wallet password / HMAC / access id) live here, loaded
 # only by the loop. The public backend (mefai-bnbhack.service) does NOT load this

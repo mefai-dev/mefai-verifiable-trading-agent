@@ -1,0 +1,54 @@
+{
+  "schema": "cmc-agent-skill/1.0",
+  "name": "regime-risk-governor",
+  "display_name": "Regime Risk Governor",
+  "version": "1.0.0",
+  "category": "trading-strategy",
+  "tags": ["regime", "risk-off", "killswitch", "drawdown-gate", "capital-preservation", "crypto"],
+  "license": "MIT",
+  "author": "MEFAI",
+  "summary": "Decide whether to deploy a backtested bracket right now and at what size, gating it against live market regime direction and strength and against the remaining drawdown budget, returning deploy or stand-aside plus a size scale.",
+  "runtime": "python>=3.10",
+  "entrypoint": {
+    "kind": "python",
+    "module": "tp_sl_optimizer",
+    "callable": "regime_overlay",
+    "network": false,
+    "read_only": true
+  },
+  "inputs": [
+    { "name": "result", "type": "object", "required": true, "description": "An OptimizeResult from the Empirical TP/SL Optimizer." },
+    { "name": "regime_direction", "type": "integer", "required": true, "description": "+1 risk-on, -1 risk-off, 0 neutral." },
+    { "name": "regime_strength", "type": "number", "required": true, "description": "0..1 conviction of the regime read." },
+    { "name": "current_drawdown", "type": "number", "required": false, "default": 0.0, "description": "Peak-to-trough fraction for the room gate." }
+  ],
+  "outputs": [
+    { "name": "deploy", "type": "boolean", "description": "Whether trading is allowed now." },
+    { "name": "bracket", "type": "object", "description": "Which TP/SL bracket to use." },
+    { "name": "risk_scale", "type": "number", "description": "0..1 multiplier; feed as regime_gate to the Risk-Budgeted Allocator." },
+    { "name": "alignment", "type": "integer", "description": "+1, -1 or 0 vs the strategy direction." },
+    { "name": "reason", "type": "string", "description": "Human-readable gating rationale." }
+  ],
+  "data_sources": {
+    "primary": {
+      "kind": "labeled-outcome-history",
+      "tables": ["signal_performance"],
+      "description": "Edge presence for the slice from labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
+    },
+    "cmc_agent_hub_tools": ["get_global_metrics_latest", "get_global_crypto_derivatives_metrics", "get_upcoming_macro_events"]
+  },
+  "backtest": {
+    "runner": "backtest/backtest.py",
+    "command": "python3 skills/regime-risk-governor/backtest/backtest.py",
+    "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
+    "deterministic": true,
+    "report": "output/report.json",
+    "metrics": ["aligned", "opposed", "drawdown_gate", "risk_scale"],
+    "pass_criteria": "Size is non-decreasing as alignment improves, non-increasing under opposition, extreme opposition stands aside, and the drawdown room gate halts at the cap."
+  },
+  "verification": {
+    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py regime-risk-governor",
+    "content_hash_artifact": "output/report.manifest.json",
+    "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
+  }
+}

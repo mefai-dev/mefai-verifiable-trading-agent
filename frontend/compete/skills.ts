@@ -427,15 +427,15 @@ const BNB_CAPS: SkillDef[] = [
   {
     id: 'bnb-registry', name: 'Commit reveal registry', group: 'bnb', kind: 'contract',
     summary: 'Every call sealed before the outcome is known.',
-    what: 'A public notebook where each prediction is sealed as a keccak hash on BSC before entry and revealed after impossible to backfill or fake.',
-    invoke: '0x48E9Dcb1f0F12367041Bbe5f2FE1f66D0D830558', tags: ['commit-reveal', 'proof', 'core'],
+    what: 'A public notebook where each prediction is sealed as a keccak hash on BSC mainnet before entry and revealed after impossible to backfill or fake.',
+    invoke: '0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB', tags: ['commit-reveal', 'proof', 'core'],
     related: ['bnb-ledger', 'bnb-signals'], used: true,
   },
   {
     id: 'bnb-governor', name: 'RiskGovernor circuit breaker', group: 'bnb', kind: 'contract',
     summary: 'A drawdown cap the agent cannot breach.',
-    what: 'A contract enforcing a 1400 bps drawdown cap. Breach the budget and the vault halts on the testnet registry beneath the hard floor.',
-    invoke: '0xf751366159446894D6fce783A9eB1bd5B6df25Be', tags: ['risk', 'circuit-breaker', 'core'],
+    what: 'A contract enforcing a 1400 bps drawdown cap. Breach the budget and the vault halts on the mainnet registry beneath the hard floor.',
+    invoke: '0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2', tags: ['risk', 'circuit-breaker', 'core'],
     related: ['bnb-sizing', 'bnb-keeper'], used: true,
   },
   {

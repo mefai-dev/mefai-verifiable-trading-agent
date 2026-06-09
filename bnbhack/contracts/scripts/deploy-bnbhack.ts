@@ -56,11 +56,14 @@ async function main() {
     console.log(`Agent registered: ${AGENT_NAME} -> ${agentId}`);
   }
 
+  const net = await ethers.provider.getNetwork();
+  const scan = net.chainId === 56n ? "https://bscscan.com" : "https://testnet.bscscan.com";
   console.log("\n--- DEPLOYMENT COMPLETE ---");
+  console.log(`Chain: ${net.chainId}`);
   console.log(`CommitRevealPredictionRegistry: ${registryAddr}`);
   console.log(`RiskGovernor:                   ${governorAddr}`);
-  console.log(`BscScan: https://testnet.bscscan.com/address/${registryAddr}`);
-  console.log(`BscScan: https://testnet.bscscan.com/address/${governorAddr}`);
+  console.log(`BscScan: ${scan}/address/${registryAddr}`);
+  console.log(`BscScan: ${scan}/address/${governorAddr}`);
 
   await verify(registryAddr, []);
   await verify(governorAddr, [MAX_DRAWDOWN_BPS]);

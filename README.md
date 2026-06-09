@@ -140,6 +140,33 @@ edge from a training window and is tested on a later window it never saw, with
 equity compounded net of cost under the same drawdown budget the live engine
 uses.
 
+### One-click live verification
+
+You should not have to trust this README. One script reads the running agent and
+the public BNB Chain and confirms the whole verifiable chain end to end, with no
+key, no wallet and no funds:
+
+```bash
+bash scripts/verify_live.sh
+```
+
+It checks, in order: the autonomous loop is live (`/loop/state`), signal fusion
+resolves to one conviction (`/fusion`), drawdown-budgeted sizing returns a real
+decision (`/sizing`), TP/SL brackets come from labeled history (`/tp-sl`), the
+security gate runs its go / no-go checks (`/security/evaluate`), the x402 feed is
+served (`/x402/products`), sources are ranked by realized expectancy
+(`/leaderboard`), the UVII is computed over the resolved record (`/uvii`), and
+finally that the result ledger, the ERC-8004 identity, the commit-reveal registry
+and the RiskGovernor each carry deployed bytecode (a key-free `eth_getCode` read
+against the public RPCs). Every line prints the live value it read and a BscScan
+link you can open by hand. It exits `0` only when all checks pass.
+
+Point it at a local cockpit instead of the public edge with one env var:
+
+```bash
+MEFAI_API_BASE=http://127.0.0.1:8401 bash scripts/verify_live.sh
+```
+
 ### A note on the data and the frontend
 
 - **The labeled-outcome book is private.** The 181k resolved outcomes are real

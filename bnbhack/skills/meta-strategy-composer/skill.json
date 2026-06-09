@@ -1,0 +1,58 @@
+{
+  "schema": "cmc-agent-skill/1.0",
+  "name": "meta-strategy-composer",
+  "display_name": "Meta-Strategy Composer",
+  "version": "1.0.0",
+  "category": "trading-strategy",
+  "tags": ["pipeline", "portfolio", "composition", "end-to-end", "trade-plan", "crypto"],
+  "license": "MIT",
+  "author": "MEFAI",
+  "summary": "One end-to-end pipeline that chains Narrative Rotation, Empirical TP/SL Optimizer, Regime Risk Governor and Risk-Budgeted Allocator into a single backtestable decision: what to trade, where to set TP/SL, whether the regime allows it, and how large, all inside one drawdown budget.",
+  "runtime": "python>=3.10",
+  "composes": ["narrative-rotation", "empirical-tp-sl-optimizer", "regime-risk-governor", "risk-budgeted-allocator"],
+  "entrypoint": {
+    "kind": "python",
+    "module": "backtest",
+    "callable": "compose_plan",
+    "network": false,
+    "read_only": true
+  },
+  "inputs": [
+    { "name": "equity", "type": "number", "required": true, "description": "Account equity in quote currency." },
+    { "name": "current_drawdown", "type": "number", "required": true, "description": "Peak-to-trough fraction already incurred, 0..1." },
+    { "name": "jury_cap", "type": "number", "required": false, "default": 0.20, "description": "Max-drawdown disqualification threshold." },
+    { "name": "regime_direction", "type": "integer", "required": true, "description": "+1 risk-on, -1 risk-off, 0 neutral." },
+    { "name": "regime_strength", "type": "number", "required": true, "description": "0..1 conviction of the regime read." },
+    { "name": "timeframe", "type": "string", "required": false, "default": "1h", "description": "Signal timeframe for the legs." },
+    { "name": "signal_type", "type": "string|null", "required": false, "default": null, "description": "buy or sell; null pools both." },
+    { "name": "top_n", "type": "integer", "required": false, "default": 4, "description": "Number of leaders to allocate across." },
+    { "name": "since_ts", "type": "integer|null", "required": false, "default": null, "description": "Unix seconds floor for a live forward window." }
+  ],
+  "outputs": [
+    { "name": "legs", "type": "array", "description": "Per-leg plan: selected symbol, chosen TP/SL, deploy decision, regime scale, leverage, notional, worst-case loss." },
+    { "name": "portfolio_budget_held", "type": "boolean", "description": "Whether the summed worst-case loss stays inside the drawdown budget." },
+    { "name": "representative_plan", "type": "object", "description": "A single deployable representative leg for display." }
+  ],
+  "data_sources": {
+    "primary": {
+      "kind": "labeled-outcome-history",
+      "tables": ["signal_performance"],
+      "description": "Selection, brackets and sizing all derive from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
+    },
+    "cmc_agent_hub_tools": ["trending_crypto_narratives", "get_crypto_quotes_latest", "get_global_metrics_latest", "get_global_crypto_derivatives_metrics", "get_upcoming_macro_events"]
+  },
+  "backtest": {
+    "runner": "backtest/backtest.py",
+    "command": "python3 skills/meta-strategy-composer/backtest/backtest.py",
+    "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
+    "deterministic": true,
+    "report": "output/report.json",
+    "metrics": ["per_leg_budget_held", "portfolio_budget_held", "any_scenario_deployed"],
+    "pass_criteria": "At least one scenario deploys, every per-leg worst-case loss is bounded, and the portfolio-level summed worst-case loss stays inside the drawdown budget across all scenarios."
+  },
+  "verification": {
+    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py meta-strategy-composer",
+    "content_hash_artifact": "output/report.manifest.json",
+    "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
+  }
+}

@@ -1,0 +1,32 @@
+# MEFAI BNB HACK loop watchdog + heartbeat alert.
+# Reference template. Install with:
+#   cp deploy/mefai-bnbhack-watchdog.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now mefai-bnbhack-watchdog
+#
+# A small decoupled supervisor for the autonomous loop. systemd Restart=always
+# already revives the loop if its process exits, but a process can wedge while
+# still alive (hung network read, stuck await) and never advance its heartbeat.
+# This watchdog reads only the loop's PUBLIC state file (heartbeat epoch) and,
+# if the heartbeat goes stale past the budget, restarts the loop unit and records
+# the event. It holds no signing secrets and makes no trade decisions, so it does
+# NOT load any EnvironmentFile with credentials. If the watchdog itself breaks,
+# the trading loop is untouched.
+
+[Unit]
+Description=MEFAI BNB HACK Loop Watchdog
+After=network.target mefai-bnbhack-loop.service
+Wants=mefai-bnbhack-loop.service
+StartLimitIntervalSec=300s
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/mefai-agent/bnbhack/agent
+ExecStart=/usr/bin/python3 watchdog.py
+Restart=always
+RestartSec=15
+OOMScoreAdjust=-300
+
+[Install]
+WantedBy=multi-user.target

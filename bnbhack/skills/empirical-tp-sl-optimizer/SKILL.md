@@ -1,6 +1,11 @@
 ---
 name: empirical-tp-sl-optimizer
 description: Find the best take-profit / stop-loss bracket for a crypto strategy slice from labeled outcome history. Grid-searches a ladder of TP and SL levels over a (symbol, timeframe, signal_type) slice using pre-recorded barrier-touch times, returning the bracket with the best risk-honest expectancy plus the full grid and a significance gate. Use when the user asks where to set TP/SL, wants to optimize a bracket, compare reward:risk levels, or measure a strategy on a live forward window.
+license: MIT
+metadata:
+  version: "1.0.0"
+  category: trading-strategy
+  spec: skill.json
 ---
 
 # Empirical TP/SL Optimizer

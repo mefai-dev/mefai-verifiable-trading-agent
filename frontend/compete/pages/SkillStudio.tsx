@@ -8,8 +8,8 @@ import {
   CoinLogo, CmcTable, Bar, fmtNum, fmtPct, fmtUsd,
 } from '../ui'
 import type { CmcColumn } from '../ui'
-import { apiGet, apiPost, usePoll, fetchCmcGlobal, fetchCmcIntel } from '../api'
-import type { Leaderboard, EntityStats, TpSl, SizingResult, GridCell, CmcGlobal, CmcIntel } from '../api'
+import { apiGet, apiPost, usePoll, fetchCmcGlobal, fetchCmcIntel, fetchBacktestReports, fetchBacktestReport } from '../api'
+import type { Leaderboard, EntityStats, TpSl, SizingResult, GridCell, CmcGlobal, CmcIntel, BacktestIndexEnvelope, BacktestManifestEnvelope, BacktestSkillRow } from '../api'
 import { scan } from '../config'
 import { ADDR } from '../config'
 import { IconExternal, IconAlert } from '../icons'
@@ -105,6 +105,13 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
 
+    {/* reproducible backtest verification · regenerate the artifact and compare hashes */}
+    <Reveal delay={80}>
+      <div style={{ marginTop: 36 }}>
+        <BacktestVerification />
+      </div>
+    </Reveal>
+
     {/* footer note */}
     <Reveal delay={80}>
       <div style={{ marginTop: 26, textAlign: 'center', fontSize: 12, color: 'var(--c-muted)' }}>
@@ -112,6 +119,93 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
   </div>
+}
+
+/* ─────────────── reproducible backtest verification ───────────────
+   Renders the artifact written by skills/run_backtests.py: every skill's
+   PASS/FAIL plus the dataset and code fingerprints and a repository-stable
+   repro_digest. One click opens a skill's full manifest (content hash, the
+   exact regenerate command, the file hashes and the backtest console). A judge
+   reruns the command on the public repo and confirms the hashes match. */
+function shortHash(h?: string | null): string { return h ? `${h.slice(0, 10)}…${h.slice(-6)}` : '-' }
+function CopyHash({ text }: { text: string }) {
+  const [done, setDone] = useState(false)
+  return <button className="cp-pill" style={{ fontSize: 11 }} onClick={() => {
+    try { navigator.clipboard?.writeText(text); setDone(true); setTimeout(() => setDone(false), 1400) } catch { /* clipboard blocked */ }
+  }}>{done ? '✓' : '⧉'}</button>
+}
+function BacktestVerification() {
+  const { data, loading } = usePoll<BacktestIndexEnvelope>((s) => fetchBacktestReports(s), 120_000)
+  const [open, setOpen] = useState<string | null>(null)
+  const idx = data?.available ? data.index : undefined
+  const skills = idx?.skills ?? []
+  const passing = skills.filter((s) => s.result === 'PASS').length
+  const rows = idx?.dataset?.row_counts ?? {}
+  const totalRows = Object.values(rows).reduce<number>((a, v) => a + (typeof v === 'number' ? v : 0), 0)
+
+  const cols: CmcColumn<BacktestSkillRow>[] = [
+    { key: 'name', header: 'Skill', align: 'l', sticky: true, sortValue: (r) => r.skill, render: (r) => <span style={{ fontWeight: 700 }}>{r.skill}</span> },
+    { key: 'result', header: 'Result', sortValue: (r) => (r.result === 'PASS' ? 1 : 0), render: (r) => <Chip tone={r.result === 'PASS' ? 'var(--green)' : 'var(--red)'} solid>{r.result}</Chip> },
+    { key: 'content', header: 'Content hash', align: 'l', sortValue: (r) => r.content_hash ?? '', render: (r) => <span className="mono" style={{ fontSize: 11.5, color: 'var(--c-text-2)' }}>{shortHash(r.content_hash)} {r.content_hash && <CopyHash text={r.content_hash} />}</span> },
+    { key: 'code', header: 'Code hash', align: 'l', sortValue: (r) => r.code_sha256, render: (r) => <span className="mono" style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>{shortHash(r.code_sha256)}</span> },
+    { key: 'view', header: '', render: (r) => <Btn variant="ghost" sm onClick={() => setOpen(open === r.skill ? null : r.skill)}>{open === r.skill ? 'Close' : 'View report'}</Btn> },
+  ]
+
+  return <Panel title="REPRODUCIBLE BACKTEST VERIFICATION" accent="#3861FB"
+    right={idx ? `${passing} / ${skills.length} passing` : loading ? 'loading…' : 'not generated'}
+    help={<>Each strategy skill ships a deterministic backtest run against a pinned synthetic sample dataset with a seeded generator. This panel serves the exact artifact those runs write: every skill’s PASS/FAIL, the dataset and code fingerprints, and one repository stable digest over them all. Open any skill to see its content hash, the one line command that regenerates it, the hashed source files and the backtest console. Clone the public repo, run the command and the hashes match · that is the proof the numbers are not hand typed.</>}>
+    {!idx ? <div style={{ color: 'var(--c-muted)', padding: 30, textAlign: 'center' }}>{loading ? 'loading verification artifact…' : 'verification artifact not generated yet'}</div> : <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 16 }}>
+        <Stat label="Overall" value={idx.overall} tone={idx.overall === 'PASS' ? 'var(--green)' : 'var(--red)'} mono={false} />
+        <Stat label="Skills passing" value={`${passing} / ${skills.length}`} tone={CMC} />
+        <Stat label="Dataset rows" value={totalRows ? totalRows.toLocaleString() : '-'} tone="var(--c-text)" sub="pinned sample" />
+        <Stat label="Python" value={idx.python} tone="var(--c-text)" mono={false} />
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14, alignItems: 'center', fontSize: 12, color: 'var(--c-muted)' }}>
+        <span>Dataset <span className="mono" style={{ color: 'var(--c-text-2)' }}>{idx.dataset?.path}</span></span>
+        <span className="mono" style={{ color: 'var(--c-text-2)' }}>sha256 {shortHash(idx.dataset?.sha256)}{idx.dataset?.sha256 && <CopyHash text={idx.dataset.sha256} />}</span>
+        <span style={{ marginLeft: 'auto' }}>Repro digest <span className="mono" style={{ color: 'var(--green)' }}>{shortHash(idx.repro_digest)}</span>{idx.repro_digest && <CopyHash text={idx.repro_digest} />}</span>
+      </div>
+      <CmcTable columns={cols} rows={skills} empty="no skills" defaultSort={{ key: 'name', dir: 'asc' }} />
+      {open && <BacktestDetail skill={open} />}
+      <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--c-muted)', lineHeight: 1.55 }}>
+        Regenerate locally <span className="mono" style={{ color: 'var(--c-text-2)' }}>python3 data/make_sample_db.py &amp;&amp; python3 skills/run_backtests.py</span>
+      </div>
+    </>}
+  </Panel>
+}
+function BacktestDetail({ skill }: { skill: string }) {
+  const { data, loading } = usePoll<BacktestManifestEnvelope>((s) => fetchBacktestReport(skill, s), 120_000, [skill])
+  const m = data?.available ? data.manifest : undefined
+  if (!m) return <div style={{ color: 'var(--c-muted)', padding: 18, textAlign: 'center', fontSize: 12.5 }}>{loading ? 'loading report…' : 'report unavailable'}</div>
+  const files = Object.entries(m.code?.files ?? {})
+  return <Card style={{ padding: 18, marginTop: 14 }} glow="color-mix(in srgb, var(--cmc) 16%, transparent)">
+    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ fontWeight: 800, fontSize: 15 }}>{m.skill}</div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <Chip tone={m.result === 'PASS' ? 'var(--green)' : 'var(--red)'} solid>{m.result}</Chip>
+        <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>exit code <span className="mono">{m.exit_code}</span></span>
+      </div>
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 12px', fontSize: 12, marginBottom: 12 }}>
+      <span style={{ color: 'var(--c-muted)' }}>Content hash</span><span className="mono" style={{ color: 'var(--c-text-2)', wordBreak: 'break-all' }}>{m.content_hash}</span>
+      <span style={{ color: 'var(--c-muted)' }}>Code hash</span><span className="mono" style={{ color: 'var(--c-text-2)', wordBreak: 'break-all' }}>{m.code?.sha256}</span>
+      <span style={{ color: 'var(--c-muted)' }}>Regenerate</span><span className="mono" style={{ color: 'var(--green)', wordBreak: 'break-all' }}>{m.repro_command}</span>
+    </div>
+    {files.length > 0 && <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginBottom: 6 }}>Strategy code fingerprint</div>
+      <div style={{ display: 'grid', gap: 4 }}>
+        {files.map(([f, h]) => <div key={f} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11.5 }}>
+          <span className="mono" style={{ color: 'var(--c-text-2)' }}>{f}</span>
+          <span className="mono" style={{ color: 'var(--c-muted)' }}>{shortHash(h)}</span>
+        </div>)}
+      </div>
+    </div>}
+    {m.stdout_tail && <div>
+      <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginBottom: 6 }}>Backtest console</div>
+      <pre className="mono" style={{ fontSize: 11.5, background: 'var(--c-bg-2, rgba(0,0,0,.25))', borderRadius: 10, padding: 12, margin: 0, overflowX: 'auto', color: 'var(--c-text-2)', lineHeight: 1.5 }}>{m.stdout_tail}</pre>
+    </div>}
+  </Card>
 }
 
 /* ─────────────── Risk-Budgeted Allocator ─────────────── */

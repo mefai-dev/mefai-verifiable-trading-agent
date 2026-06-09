@@ -1,0 +1,53 @@
+{
+  "schema": "cmc-agent-skill/1.0",
+  "name": "narrative-rotation",
+  "display_name": "Narrative Rotation",
+  "version": "1.0.0",
+  "category": "trading-strategy",
+  "tags": ["asset-selection", "rotation", "narrative", "momentum", "expectancy", "crypto"],
+  "license": "MIT",
+  "author": "MEFAI",
+  "summary": "Rank symbols by realized expectancy and skill from labeled outcome history, then optionally tilt the shortlist with live CoinMarketCap narrative and momentum, producing a rotation watchlist of proven leaders.",
+  "runtime": "python>=3.10",
+  "entrypoint": {
+    "kind": "python",
+    "module": "leaderboard",
+    "callable": "build_leaderboard",
+    "network": false,
+    "read_only": true
+  },
+  "inputs": [
+    { "name": "group_by", "type": "string", "required": false, "default": "symbol", "description": "Grouping dimension for the ranking." },
+    { "name": "rank_by", "type": "string", "required": false, "default": "expectancy", "description": "expectancy, pnl, win_rate or skill." },
+    { "name": "min_samples", "type": "integer", "required": false, "default": 30, "description": "Minimum resolved trades for a symbol to qualify." },
+    { "name": "horizon", "type": "string", "required": false, "default": "4h", "description": "Outcome horizon used for expectancy." },
+    { "name": "since_ts", "type": "integer|null", "required": false, "default": null, "description": "Unix seconds floor for a live forward window." }
+  ],
+  "outputs": [
+    { "name": "entries", "type": "array", "description": "Ranked EntityStats: expectancy, win_rate, skill, realized_pnl, drawdown, sample counts." },
+    { "name": "overall", "type": "object", "description": "Global baseline stats across all qualified symbols." },
+    { "name": "qualified", "type": "integer", "description": "Count of symbols clearing the sample gate." }
+  ],
+  "data_sources": {
+    "primary": {
+      "kind": "labeled-outcome-history",
+      "tables": ["signal_performance"],
+      "description": "Realized per-symbol expectancy and skill from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
+    },
+    "cmc_agent_hub_tools": ["trending_crypto_narratives", "get_crypto_quotes_latest", "get_global_metrics_latest"]
+  },
+  "backtest": {
+    "runner": "backtest/backtest.py",
+    "command": "python3 skills/narrative-rotation/backtest/backtest.py",
+    "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
+    "deterministic": true,
+    "report": "output/report.json",
+    "metrics": ["global_baseline_expectancy", "top_basket", "bottom_basket", "qualified_symbols"],
+    "pass_criteria": "The ranking forms a clean disjoint top vs bottom partition where the top basket beats both the global baseline and the bottom basket on realized expectancy."
+  },
+  "verification": {
+    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py narrative-rotation",
+    "content_hash_artifact": "output/report.manifest.json",
+    "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
+  }
+}

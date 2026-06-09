@@ -2,7 +2,7 @@
 MEFAI BNB HACK · Verifiable proof bridge (commit-reveal + RiskGovernor)
 
 The agent's chain-anchored proof layer for the autonomous loop. It wraps two
-BSC-testnet contracts so the live judged window is itself un-backfillable:
+BSC contracts so the live judged window is itself un-backfillable:
 
   - CommitRevealPredictionRegistry: the agent COMMITS a keccak256 seal of a
     prediction (symbol, signal, confidence, entry, target, stop, expiry, salt)
@@ -26,9 +26,10 @@ Safety model (mirrors bsc_exec / erc8004_identity):
     (NOT solidity_keccak / encodePacked), so a locally computed seal can never
     silently diverge from the ledger recomputation.
 
-This is BSC TESTNET (chain 97) by default; it spends only testnet gas. Switching
-to mainnet would require new addresses + an explicit execute and is out of scope
-for this module.
+The connected chain follows BNBHACK_CHAIN_ID: production runs on BSC mainnet
+(chain 56, the contracts in DEPLOYMENTS.md), while a keyless local run defaults
+to BSC testnet (chain 97). A write refuses to sign if the RPC reports a chain
+other than CHAIN_ID, so the network is never ambiguous.
 """
 
 from __future__ import annotations
@@ -43,13 +44,19 @@ from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger("mefai.bnbhack.chain")
 
-# --- network + addresses (testnet) ------------------------------------------
+# --- network + addresses ----------------------------------------------------
+# The connected chain is whatever BNBHACK_CHAIN_ID points at (56 = BSC mainnet
+# in production, 97 = BSC testnet for a keyless local run). Addresses are read
+# from chain-agnostic env vars first, then the legacy per-network names as a
+# fallback, so the same code path serves either chain with no edit.
 RPC_URL = os.getenv("BNBHACK_RPC_URL",
                     os.getenv("ARENA_RPC_URL",
                               "https://bsc-testnet-rpc.publicnode.com"))
 CHAIN_ID = int(os.getenv("BNBHACK_CHAIN_ID", "97"))
-REGISTRY_ADDR = os.getenv("BNBHACK_REGISTRY_TESTNET", "").strip()
-GOVERNOR_ADDR = os.getenv("BNBHACK_RISKGOVERNOR_TESTNET", "").strip()
+_REG_FALLBACK = "BNBHACK_REGISTRY_MAINNET" if CHAIN_ID == 56 else "BNBHACK_REGISTRY_TESTNET"
+_GOV_FALLBACK = "BNBHACK_RISKGOVERNOR_MAINNET" if CHAIN_ID == 56 else "BNBHACK_RISKGOVERNOR_TESTNET"
+REGISTRY_ADDR = (os.getenv("BNBHACK_REGISTRY_ADDR") or os.getenv(_REG_FALLBACK, "")).strip()
+GOVERNOR_ADDR = (os.getenv("BNBHACK_RISKGOVERNOR_ADDR") or os.getenv(_GOV_FALLBACK, "")).strip()
 
 # RPC failover. A single provider hiccup in the judged window must not silently
 # stall the commit/reveal/equity proof trail, so we keep an ordered candidate
@@ -89,7 +96,11 @@ _MAX_GAS_LIMIT = 1_000_000
 _MAX_GAS_GWEI = 20.0
 GAS_LIMIT = min(int(os.getenv("BNBHACK_GAS_LIMIT", "300000")), _MAX_GAS_LIMIT)
 GAS_GWEI = min(float(os.getenv("BNBHACK_GAS_GWEI", "3")), _MAX_GAS_GWEI)
-TX_TIMEOUT = 60
+# Per-attempt receipt wait, and a hard wall-clock ceiling across all retries of a
+# single send. A blocking send must never wedge the decision loop: once the total
+# budget is spent we stop retrying and return so the next cycle keeps running.
+TX_TIMEOUT = max(5, min(int(os.getenv("BNBHACK_TX_TIMEOUT", "25")), 120))
+TX_SEND_BUDGET = max(TX_TIMEOUT, min(int(os.getenv("BNBHACK_TX_SEND_BUDGET", "45")), 240))
 PRICE_SCALE = 10000   # uint64 prices carry 4 decimals (price * 1e4)
 
 # A single process-wide lock per signing wallet so concurrent sends cannot reuse
@@ -198,6 +209,10 @@ class TxOutcome:
     tx_hash: str = ""
     value: Any = None
     detail: str = ""
+    # True once the raw transaction was actually broadcast to the network (even
+    # if the receipt later failed/timed out). Lets callers distinguish a real
+    # on-the-wire attempt from a pre-broadcast failure (e.g. nonce/build error).
+    broadcast: bool = False
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -360,7 +375,16 @@ class ChainWriter:
                                            f"expected chain {CHAIN_ID}")
         lock = _nonce_lock(acct.address)
         last_err = ""
+        broadcast = False
+        last_txh = ""
+        deadline = time.monotonic() + TX_SEND_BUDGET
         for attempt in range(retries):
+            # Never start another retry once the per-send wall-clock budget is
+            # spent: a blocking receipt wait must not wedge the decision loop.
+            if time.monotonic() >= deadline:
+                break
+            # Bound this attempt's receipt wait by whatever budget remains.
+            wait_left = max(1, min(TX_TIMEOUT, int(deadline - time.monotonic())))
             with lock:
                 try:
                     nonce = w3.eth.get_transaction_count(acct.address, "pending")
@@ -373,21 +397,33 @@ class ChainWriter:
                     })
                     signed = acct.sign_transaction(tx)
                     h = w3.eth.send_raw_transaction(signed.raw_transaction)
-                    rcpt = w3.eth.wait_for_transaction_receipt(h, timeout=TX_TIMEOUT)
+                    broadcast = True
                     txh = h.hex()
                     if not txh.startswith("0x"):
                         txh = "0x" + txh
+                    last_txh = txh
+                    rcpt = w3.eth.wait_for_transaction_receipt(h, timeout=wait_left)
                     if rcpt.get("status") != 1:
                         return TxOutcome(True, ok=False, tx_hash=txh,
-                                         detail="transaction reverted")
-                    return TxOutcome(True, ok=True, tx_hash=txh, value=rcpt)
+                                         broadcast=True, detail="transaction reverted")
+                    return TxOutcome(True, ok=True, tx_hash=txh, value=rcpt,
+                                     broadcast=True)
                 except Exception as exc:
                     last_err = str(exc)
+                    # The raw tx is on the wire but the receipt did not arrive in
+                    # the budget. Do NOT rebroadcast (that would burn a second
+                    # nonce); hand back the broadcast hash so the caller can poll
+                    # it on a later cycle instead of treating it as never-sent.
+                    if broadcast:
+                        logger.warning("chain receipt wait elapsed: %s", last_err)
+                        return TxOutcome(True, ok=False, tx_hash=last_txh,
+                                         broadcast=True, detail="receipt pending")
                     if "nonce" in last_err.lower() and attempt < retries - 1:
                         time.sleep(0.5)
                         continue
-                    # A transient RPC fault (timeout, 5xx, broken pipe) should not
-                    # abandon the send: rotate to a healthy node and retry once.
+                    # A transient pre-broadcast RPC fault (build/estimate, 5xx,
+                    # broken pipe) should not abandon the send: rotate to a healthy
+                    # node and retry while budget remains.
                     if attempt < retries - 1 and self._reconnect():
                         w3 = self._w3
                         continue
@@ -397,6 +433,10 @@ class ChainWriter:
                     # exception string can embed the RPC endpoint host. Return a
                     # generic message so no node/endpoint detail leaks to readers.
                     return TxOutcome(True, ok=False, detail="send failed")
+        # Budget exhausted or retries spent. If we did broadcast, surface the hash.
+        if broadcast:
+            return TxOutcome(True, ok=False, tx_hash=last_txh, broadcast=True,
+                             detail="receipt pending")
         return TxOutcome(True, ok=False, detail="send failed")
 
     def _event_arg(self, receipt, event_name: str, arg: str) -> Optional[int]:
@@ -480,6 +520,23 @@ class ChainWriter:
         from web3 import Web3
         addr = Web3.to_checksum_address(agent or self.agent_address)
         fn = self._governor.functions.recordEquity(addr, int(equity_units))
+        return self._send(fn, self._oracle_acct)
+
+    def register_vault(self, initial_equity: int, agent: Optional[str] = None,
+                       *, execute: bool = False) -> TxOutcome:
+        """Keeper registers the agent's vault in the RiskGovernor. Until this lands
+        the governor reports the vault unregistered, so canTrade returns (false,0)
+        and recordEquity reverts: the agent would commit but never be allowed to
+        trade. Idempotent at the call site (loop checks vault().registered first)."""
+        if not execute:
+            return _dry(f"would register vault with initialEquity {initial_equity}")
+        if not self._ensure() or self._governor is None:
+            return TxOutcome(False, detail="governor not configured")
+        if self._oracle_acct is None:
+            return TxOutcome(False, detail="keeper key not configured (cannot sign)")
+        from web3 import Web3
+        addr = Web3.to_checksum_address(agent or self.agent_address)
+        fn = self._governor.functions.registerVault(addr, int(initial_equity))
         return self._send(fn, self._oracle_acct)
 
     # -- reads (no gas, no key) ---------------------------------------------

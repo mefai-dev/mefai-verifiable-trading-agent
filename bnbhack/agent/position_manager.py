@@ -45,6 +45,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 import bsc_exec
+import perp_exec
 
 logger = logging.getLogger("mefai.bnbhack.positions")
 
@@ -578,6 +579,12 @@ class PositionManager:
         slice, lock the stop into profit and extend the target to TP2."""
         symbol = p["symbol"]
         d = _leg_dir(p)
+        # A live perp short is closed in full at the first target: the venue
+        # close is reduce-all, and a partial reduce-only leg would pay a second
+        # round-trip on a thin slice. A LONG (spot) and a PAPER short keep the
+        # scale-out. This routes only the live-perp short to a clean full close.
+        if execute and d < 0 and perp_exec.enabled():
+            return await self._close(p, mark, "target", execute)
         entry = float(p["entry"] or mark)
         qty = float(p["qty_token"] or 0)
         size = float(p["size_usd"] or 0)
@@ -668,8 +675,9 @@ class PositionManager:
         exit_price = mark
         detail = f"paper close ({reason})"
 
-        # Only a LONG holds a spot token to sell on the venue; a SHORT leg is
-        # paper-only (live shorts route through the perp venue, not spot).
+        # A LONG holds a spot token to sell on PancakeSwap; a live SHORT is
+        # market-closed (reduce-only) on the perp venue. When perps are disabled
+        # (the default) a short leg is paper-only and never signs here.
         if execute and d > 0 and qty > 0 and token:
             # Real exit: sell the held token back to USDT through the gate.
             try:
@@ -696,6 +704,28 @@ class PositionManager:
                 self._stuck_closes[int(p["id"])] = n
                 lvl = logger.error if n >= self._stuck_alert_after else logger.warning
                 lvl("live close not executed for %s (%s); leaving open "
+                    "(stuck attempt %d/%d)", symbol, detail, n,
+                    self._stuck_alert_after)
+                return None
+        elif execute and d < 0 and perp_exec.enabled():
+            # Real exit of a live short: market-close (reduce-only) on the perp
+            # venue. The fill price marks the exit; on a miss leave the leg open
+            # (same stuck-exit guard as the long path) so the ledger never claims
+            # a close the venue position does not reflect.
+            try:
+                po = await perp_exec.close_short(symbol)
+                executed = bool(po.executed)
+                detail = po.detail
+                if executed and po.price and po.price > 0:
+                    exit_price = po.price
+            except Exception as exc:
+                logger.warning("perp close failed for %s: %s", symbol, exc)
+                detail = "perp close error"
+            if not executed:
+                n = self._stuck_closes.get(int(p["id"]), 0) + 1
+                self._stuck_closes[int(p["id"])] = n
+                lvl = logger.error if n >= self._stuck_alert_after else logger.warning
+                lvl("live perp close not executed for %s (%s); leaving open "
                     "(stuck attempt %d/%d)", symbol, detail, n,
                     self._stuck_alert_after)
                 return None

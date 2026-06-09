@@ -88,6 +88,28 @@ export type RegimeDecision = { deploy: boolean; bracket: GridCell | null; risk_s
 export type TpSl = { symbol: string | null; timeframe: string | null; signal_type: string | null; horizon: string; n_total: number; min_samples: number; recommend: boolean; note: string; best: GridCell | null; best_per_risk: GridCell | null; regime?: RegimeDecision }
 export type X402Product = { product_id: string; title: string; description: string; price_atomic: string; mime_type: string }
 export type X402Catalog = { products: X402Product[]; network: string }
+export type X402Step = {
+  n: number; name: string; title: string; detail: string
+  status?: number; accepts?: any[]
+  payer?: string; value_atomic?: string; nonce?: string; valid_before?: number; signature?: string
+  valid?: boolean; code?: string; reason?: string; recovered_payer?: string; network?: string
+  payload_keys?: string[]; payment?: Record<string, any> | null; payment_response?: Record<string, any> | null
+}
+export type X402Roundtrip = {
+  product: { product_id: string; title: string; description: string; price_atomic: string; mime_type: string }
+  terms: {
+    network: string; chain_id: number | null; asset: string; pay_to: string
+    asset_name: string; asset_version: string; max_amount_required: string; resource: string; max_timeout_seconds: number
+  }
+  steps: X402Step[]
+  settlement: { settled: boolean; deferred: boolean; note: string }
+  ephemeral_signer: boolean; verified: boolean
+}
+export type X402CmcProbe = { reached: boolean; http_status: number | null; is_402: boolean; accepts: any[] | null; resource?: string | null; note: string }
+export type X402CmcChallenge = {
+  gateway: string; network: string; chain_id: number; price_human: number; asset_symbol: string
+  tools: string[]; probe_tool?: string; probe: X402CmcProbe; source: string
+}
 export type CmcGate = { tool: string; data: any }
 
 export type LoopDecision = {
@@ -391,13 +413,88 @@ export type SecurityPlan = {
 export async function fetchSecurity(plan: SecurityPlan, signal?: AbortSignal): Promise<SecurityVerdict> {
   return apiPost<SecurityVerdict>('/security/evaluate', { chain_id: 56, strict: true, ...plan }, signal)
 }
+export type SwapQuote = { input?: string; output?: string; minReceived?: string; provider?: string; priceImpact?: string }
+export type SwapPreview = {
+  go: boolean; executed: boolean; quote: SwapQuote; verdict: SecurityVerdict | null; detail: string
+  sign_boundary: { signed: boolean; custody: string; note: string }
+  route: { from_token: string; to_token: string; amount: number; slippage_pct: number; chain_id: number }
+  source: string
+}
+export type SwapPreviewInput = { from_token: string; to_token: string; amount: number; slippage_pct?: number }
+export async function fetchSwapPreview(input: SwapPreviewInput, signal?: AbortSignal): Promise<SwapPreview> {
+  return apiPost<SwapPreview>('/twak/swap-preview', { slippage_pct: 1.0, ...input }, signal)
+}
 export async function fetchX402Products(signal?: AbortSignal): Promise<X402Catalog> {
   return apiGet<X402Catalog>('/x402/products', signal)
+}
+export async function fetchX402Roundtrip(productId: string, signal?: AbortSignal): Promise<X402Roundtrip> {
+  return apiGet<X402Roundtrip>(`/x402/roundtrip/${encodeURIComponent(productId)}`, signal)
+}
+export async function fetchX402CmcChallenge(signal?: AbortSignal): Promise<X402CmcChallenge> {
+  return apiGet<X402CmcChallenge>('/x402/cmc-challenge', signal)
+}
+
+/* ─────────────── ERC-8004 identity + ERC-8183 commerce server template ───────────────
+   The agent's live identity surface: the registration-v1 card, the registry
+   coordinates, and the full ERC-8183 job lifecycle exposed as honest dry-run
+   previews from the real agent code path. No write executes from this surface. */
+export type AgentService = { name: string; endpoint: string; version?: string; skills?: string[]; domains?: string[] }
+export type AgentCard = {
+  type: string; name: string; description: string; image: string
+  services: AgentService[]; registrations: { agentId: string | null; agentRegistry: string }[]
+  active: boolean; x402Support: boolean; supportedTrust: string[]
+  'x-mefai'?: { track: string; proofs: Record<string, string> }
+}
+export type WriteOutcome = { executed: boolean; result: Record<string, unknown>; detail: string }
+export type AgentIdentity = {
+  card: AgentCard
+  registry: { contract: string; chain_id: number; agent_wallet: string; agent_id: string | null; minted: boolean }
+  identity: Record<string, unknown> | null
+  metadata: { key: string; value: string }[]
+  lifecycle: {
+    erc8004: { register: WriteOutcome; set_metadata: WriteOutcome[] }
+    erc8183: { create_job: WriteOutcome; fund_job: WriteOutcome; complete_job: WriteOutcome }
+  }
+  note: string; source: string
+}
+export async function fetchAgentIdentity(signal?: AbortSignal): Promise<AgentIdentity> {
+  return apiGet<AgentIdentity>('/agent/identity', signal)
 }
 /* allowlisted CMC MCP gate passthrough: global-metrics, derivatives, narratives,
    marketcap-ta, macro-events. Returns { tool, data } with the raw hub payload. */
 export async function fetchCmcGate(tool: string, signal?: AbortSignal): Promise<CmcGate> {
   return apiGet<CmcGate>(`/cmc/${encodeURIComponent(tool)}`, signal)
+}
+
+/* ─────────────── reproducible backtest verification ───────────────
+   The index + per-skill manifests written by skills/run_backtests.py. The same
+   artifact a judge regenerates from the public repo (pinned sample dataset +
+   seeded RNG) and compares by content hash. Read-only; carries no secrets. */
+export type BacktestDataset = {
+  path: string; present: boolean; bytes?: number; sha256?: string
+  row_counts?: Record<string, number | null>
+}
+export type BacktestSkillRow = {
+  skill: string; result: 'PASS' | 'FAIL'; content_hash: string | null
+  code_sha256: string; manifest: string
+}
+export type BacktestIndex = {
+  generated_at: string; overall: 'PASS' | 'FAIL'; python: string; platform: string
+  dataset: BacktestDataset; skills: BacktestSkillRow[]; repro_digest: string
+}
+export type BacktestIndexEnvelope = { available: boolean; index?: BacktestIndex; reason?: string }
+export type BacktestManifest = {
+  skill: string; result: 'PASS' | 'FAIL'; exit_code: number
+  dataset: BacktestDataset; code: { files: Record<string, string>; sha256: string }
+  content_hash: string | null; report_relpath: string; repro_command: string
+  stdout_tail: string; report: Record<string, unknown> | null
+}
+export type BacktestManifestEnvelope = { available: boolean; manifest?: BacktestManifest; reason?: string }
+export async function fetchBacktestReports(signal?: AbortSignal): Promise<BacktestIndexEnvelope> {
+  return apiGet<BacktestIndexEnvelope>('/backtest/reports', signal)
+}
+export async function fetchBacktestReport(skill: string, signal?: AbortSignal): Promise<BacktestManifestEnvelope> {
+  return apiGet<BacktestManifestEnvelope>(`/backtest/report/${encodeURIComponent(skill)}`, signal)
 }
 
 /* ─────────────── polling hook ─────────────── */

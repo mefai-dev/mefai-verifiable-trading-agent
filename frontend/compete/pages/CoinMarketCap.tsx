@@ -140,9 +140,8 @@ function LiveMarket() {
       <TokenTable intel={intel} error={intelErr} />
     </div>
 
-    <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
+    <div style={{ marginTop: 16 }}>
       <NarrativeRotation intel={intel} />
-      <AnomalyWatch intel={intel} error={intelErr} />
     </div>
   </div>
 }
@@ -182,30 +181,6 @@ function NarrativeRotation({ intel }: { intel: CmcIntel | null }) {
     {rows.length === 0
       ? <div style={{ color: 'var(--c-muted)', padding: 24, textAlign: 'center', fontSize: 13 }}>{intel ? 'Ecosystem grouping needs at least two tokens per narrative.' : 'reading ecosystems…'}</div>
       : <CmcTable columns={cols} rows={rows} maxHeight={440} defaultSort={{ key: 'chg', dir: 'desc' }} />}
-  </Panel>
-}
-
-/* ─────────────── anomaly watch · MEFAI's own anomaly flag on the audited set ─────────────── */
-function AnomalyWatch({ intel, error }: { intel: CmcIntel | null; error?: boolean }) {
-  const flagged = (intel?.tokens ?? []).filter((t) => t.has_anomaly)
-  return <Panel title="ANOMALY WATCH" accent="#3861FB" right={intel ? `${flagged.length} flagged` : error ? 'offline' : 'loading'}>
-    {flagged.length === 0
-      ? <div style={{ color: 'var(--c-muted)', padding: 24, textAlign: 'center', fontSize: 13 }}>{error ? 'The audit feed is unreachable right now.' : intel ? 'No anomalies in the audited set right now.' : 'reading the audit…'}</div>
-      : <div style={{ display: 'grid', gap: 6, maxHeight: 440, overflowY: 'auto' }}>
-        {flagged.map((t) => (
-          <div key={t.cmc_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
-            <CoinLogo symbol={t.symbol} size={20} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: 13 }}>{t.symbol}</span>
-                <Chip tone={verdictTone(t.verdict)}>{t.verdict}</Chip>
-              </div>
-              {t.verdict_reason && <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 3, lineHeight: 1.45 }}>{t.verdict_reason}</div>}
-            </div>
-            <span className="mono" style={{ fontWeight: 800, color: TONE, flexShrink: 0 }}>{fmtNum(t.mefai_score, 0)}</span>
-          </div>
-        ))}
-      </div>}
   </Panel>
 }
 

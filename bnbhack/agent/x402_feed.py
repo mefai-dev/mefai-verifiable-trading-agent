@@ -32,6 +32,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
@@ -783,6 +784,180 @@ def _sign_authorization(req: Dict, *, value: int, valid_after: int,
 
 def _b64(payment: Dict) -> str:
     return base64.b64encode(json.dumps(payment).encode("utf-8")).decode("ascii")
+
+
+def demo_roundtrip(product_id: str, cfg: RequirementsConfig, *,
+                   now: Optional[float] = None,
+                   feed_params: Optional[Dict] = None,
+                   db_path: str = DEFAULT_DB_PATH) -> Dict:
+    """Run the full 402 -> sign -> verify -> 200 handshake end to end and return a
+    step-by-step transcript of the real protocol artifacts.
+
+    The buyer here is a freshly generated ephemeral key that signs a genuine
+    EIP-3009 TransferWithAuthorization for the exact published price. Every
+    cryptographic step is real: the signature is recovered server-side and the
+    recovered signer is checked against authorization.from before the feed is
+    served. Only the on-chain SETTLEMENT (broadcasting the authorization) is
+    deferred to an x402 facilitator with a funded relayer, exactly as
+    VerifyOnlySettler documents. No real funds move and no key is held; this is a
+    self-contained proof that the payment core verifies a real signed payment.
+    """
+    now_s = _now() if now is None else now
+    product = get_product(product_id)
+    req = payment_requirements(product_id, cfg)
+    price = int(req["maxAmountRequired"])
+
+    # Step 1: the server's 402 challenge (the published payment terms).
+    challenge = serve_feed(product_id, None, cfg=cfg, now=now_s, db_path=db_path)
+
+    # Step 2: an ephemeral buyer signs an EIP-3009 authorization for the exact
+    # price, valid for a short window, with a single-use random nonce.
+    acct = Account.create()
+    nonce = os.urandom(32)
+    valid_before = int(now_s + 60)
+    payment = _sign_authorization(req, value=price, valid_after=0,
+                                  valid_before=valid_before, nonce=nonce,
+                                  key=acct.key)
+    sig = payment["payload"]["signature"]
+
+    # Step 3: the server verifies the signature and binds it to the payer.
+    vr = verify_payment(payment, req, now=now_s)
+
+    # Step 4: the verified payment redeems the feed (single-use nonce claimed).
+    store = NonceStore()
+    served = serve_feed(product_id, _b64(payment), cfg=cfg, now=now_s,
+                        nonce_store=store, feed_params=feed_params,
+                        db_path=db_path)
+    pay_resp = None
+    enc = served.headers.get("X-PAYMENT-RESPONSE")
+    if enc:
+        try:
+            pay_resp = json.loads(base64.b64decode(enc).decode("utf-8"))
+        except (binascii.Error, ValueError, UnicodeDecodeError):
+            pay_resp = None
+    served_payment = served.body.get("payment") if served.status == 200 else None
+
+    return {
+        "product": {
+            "product_id": product.product_id, "title": product.title,
+            "description": product.description,
+            "price_atomic": product.price_atomic, "mime_type": product.mime_type,
+        },
+        "terms": {
+            "network": cfg.network,
+            "chain_id": NETWORK_CHAIN_ID.get(cfg.network),
+            "asset": req["asset"], "pay_to": req["payTo"],
+            "asset_name": req["extra"]["name"],
+            "asset_version": req["extra"]["version"],
+            "max_amount_required": req["maxAmountRequired"],
+            "resource": req["resource"],
+            "max_timeout_seconds": req["maxTimeoutSeconds"],
+        },
+        "steps": [
+            {"n": 1, "name": "challenge",
+             "title": "402 Payment Required",
+             "status": challenge.status,
+             "detail": "Server returns the published x402 payment terms.",
+             "accepts": challenge.body.get("accepts", [])},
+            {"n": 2, "name": "sign",
+             "title": "EIP-3009 signed authorization",
+             "detail": "Ephemeral buyer signs TransferWithAuthorization for the "
+                       "exact price.",
+             "payer": acct.address,
+             "value_atomic": str(price),
+             "nonce": "0x" + nonce.hex(),
+             "valid_before": valid_before,
+             "signature": sig},
+            {"n": 3, "name": "verify",
+             "title": "Signature recovered and bound to payer",
+             "detail": "Server recovers the signer and checks it equals "
+                       "authorization.from.",
+             "valid": vr.valid, "code": vr.code, "reason": vr.reason,
+             "recovered_payer": vr.payer,
+             "network": vr.network},
+            {"n": 4, "name": "serve",
+             "title": "200 OK · verified feed served",
+             "status": served.status,
+             "detail": "Payment verified, single-use nonce claimed, feed returned.",
+             "payload_keys": sorted(served.body.keys()) if served.status == 200 else [],
+             "payment": served_payment,
+             "payment_response": pay_resp},
+        ],
+        "settlement": {
+            "settled": bool(pay_resp and pay_resp.get("success")),
+            "deferred": bool(pay_resp and pay_resp.get("deferred", True)),
+            "note": "Cryptographic verification is real and complete; the "
+                    "settlement transaction is deferred to an x402 facilitator "
+                    "with a funded relayer (no funds move in this proof).",
+        },
+        "ephemeral_signer": True,
+        "verified": bool(vr.valid and served.status == 200),
+    }
+
+
+def consume_feed(product_id: str, cfg: RequirementsConfig, *,
+                 now: Optional[float] = None,
+                 feed_params: Optional[Dict] = None,
+                 db_path: str = DEFAULT_DB_PATH) -> Dict:
+    """Buyer-side primitive: natively consume one x402 feed end to end and return
+    a compact result the autonomous loop can publish.
+
+    This is the same real protocol as ``demo_roundtrip`` (402 challenge -> ephemeral
+    EIP-3009 signed authorization for the exact price -> server-side signature
+    recovery and verification -> 200 verified feed), trimmed to the fields a
+    consumer cares about. No key is held and no funds move: settlement stays
+    deferred to an x402 facilitator (VerifyOnlySettler), so this is a genuine
+    machine-to-machine purchase whose settlement leg is the only deferred step.
+
+    Returns ``{ok, product_id, price_atomic, network, chain_id, payer, verified,
+    settled, settlement_deferred, feed}`` where ``feed`` is the compact verified
+    payload (global index / overall plus the top entities). On any error returns
+    ``{ok: False, error: <str>}`` and never raises."""
+    try:
+        now_s = _now() if now is None else now
+        req = payment_requirements(product_id, cfg)
+        price = int(req["maxAmountRequired"])
+        # An ephemeral buyer signs a real authorization for the exact price with a
+        # single-use random nonce, valid for a short window.
+        acct = Account.create()
+        nonce = os.urandom(32)
+        valid_before = int(now_s + 60)
+        payment = _sign_authorization(req, value=price, valid_after=0,
+                                      valid_before=valid_before, nonce=nonce,
+                                      key=acct.key)
+        vr = verify_payment(payment, req, now=now_s)
+        store = NonceStore()
+        served = serve_feed(product_id, _b64(payment), cfg=cfg, now=now_s,
+                            nonce_store=store, feed_params=feed_params,
+                            db_path=db_path)
+        verified = bool(vr.valid and served.status == 200)
+        feed: Dict = {}
+        pay = {}
+        if served.status == 200:
+            pay = served.body.get("payment", {}) or {}
+            if product_id == "uvii-index":
+                feed = {"global_index": served.body.get("global_index"),
+                        "entities": served.body.get("entities", [])}
+            else:
+                feed = {"overall": served.body.get("overall"),
+                        "qualified": served.body.get("qualified"),
+                        "ranked": served.body.get("ranked", [])}
+        return {
+            "ok": verified,
+            "product_id": product_id,
+            "price_atomic": req["maxAmountRequired"],
+            "network": cfg.network,
+            "chain_id": NETWORK_CHAIN_ID.get(cfg.network),
+            "asset": req["asset"],
+            "pay_to": req["payTo"],
+            "payer": vr.payer,
+            "verified": verified,
+            "settled": bool(pay.get("settled")),
+            "settlement_deferred": bool(pay.get("settlement_deferred", True)),
+            "feed": feed,
+        }
+    except Exception as exc:  # a feed purchase must never crash the loop
+        return {"ok": False, "error": str(exc), "product_id": product_id}
 
 
 def _selftest() -> int:

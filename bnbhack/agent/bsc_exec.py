@@ -115,6 +115,10 @@ BSC_TOKENS: Dict[str, str] = {
 # the solver can vet the router/spender of a swap, not just the bought token.
 ZEROX_PROXY_BSC = "0xdef1c0ded9bec7f1a1670819833240f027b25eff"
 
+# Public agent wallet (the `from` for a preflight eth_call). Read-only address;
+# never a key. Absent => preflight has no sender and degrades to a SKIP.
+AGENT_WALLET = (os.getenv("TWAK_AGENT_WALLET") or "").strip()
+
 
 def _is_addr(v: Any) -> bool:
     return isinstance(v, str) and bool(_ADDR_RE.match(v.strip()))
@@ -328,16 +332,46 @@ def _is_native_sentinel(addr: Optional[str]) -> bool:
     return isinstance(addr, str) and _is_addr(addr) and int(addr, 16) == 0
 
 
+def _plan_tx_from_quote(qbody: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Extract an unsigned {from,to,data,value} from the twak quote so the solver's
+    preflight can eth_call-simulate the EXACT swap before it is signed. The quote
+    may nest the transaction under a few common keys; we look in each and degrade
+    to None (preflight then SKIPs honestly) when no calldata is present, rather
+    than fabricating a call. Requires the public agent wallet for the `from`."""
+    if not isinstance(qbody, dict) or not _is_addr(AGENT_WALLET):
+        return None
+    tx: Optional[Dict[str, Any]] = None
+    for key in ("tx", "transaction", "txn", "swapTransaction", "rawTransaction"):
+        v = qbody.get(key)
+        if isinstance(v, dict):
+            tx = v
+            break
+    if tx is None and ("to" in qbody or "data" in qbody):
+        tx = qbody
+    if not isinstance(tx, dict):
+        return None
+    to = tx.get("to") or tx.get("router") or tx.get("allowanceTarget")
+    data = tx.get("data") or tx.get("calldata") or tx.get("callData")
+    if not _is_addr(to) or not isinstance(data, str) or not data.startswith("0x"):
+        return None
+    out: Dict[str, Any] = {"from": AGENT_WALLET, "to": to, "data": data}
+    val = tx.get("value")
+    if val is not None:
+        out["value"] = val
+    return out
+
+
 def _quote_to_plan(qbody: Dict[str, Any], to_addr: str, slippage_pct: float,
                    equity: Optional[float], equity_floor: Optional[float]
                    ) -> TradePlan:
     """Build the solver TradePlan from a twak quote. The bought token and the 0x
     spender are honeypot/contract scanned; the quote's own output vs minReceived
-    feeds the solver's stronger slippage path (realised tolerance), and the
-    requested slippage carries through for the MEV read. A swap whose DESTINATION
-    is native BNB has no token contract to scan, so token is left None (the gate
-    then relies on the spender + slippage + governor checks) rather than the zero
-    address, which would otherwise hard-fail address validation."""
+    feeds the solver's stronger slippage path (realised tolerance), the requested
+    slippage carries through for the MEV read, and the quote's unsigned swap tx
+    (when present) is forwarded so preflight eth_call-simulates the exact route. A
+    swap whose DESTINATION is native BNB has no token contract to scan, so token is
+    left None (the gate then relies on the spender + slippage + preflight + governor
+    checks) rather than the zero address, which would hard-fail address validation."""
     bps = int(round(max(0.0, slippage_pct) * 100))
     token = None if _is_native_sentinel(to_addr) else (to_addr if _is_addr(to_addr) else None)
     # Derive expected_out / min_out from the live quote on a shared integer scale
@@ -358,6 +392,9 @@ def _quote_to_plan(qbody: Dict[str, Any], to_addr: str, slippage_pct: float,
         min_out=min_out,
         slippage_bps=bps,
         max_slippage_bps=int(round(MAX_SLIPPAGE_PCT * 100)),
+        # Feed the real unsigned swap tx (when the quote carries calldata) so the
+        # solver eth_call-simulates the exact route; absent => preflight SKIPs.
+        tx=_plan_tx_from_quote(qbody),
         equity=equity,
         equity_floor=equity_floor,
     )
@@ -366,19 +403,26 @@ def _quote_to_plan(qbody: Dict[str, Any], to_addr: str, slippage_pct: float,
 def _notional_usd(amount: float, from_token: str, to_token: str,
                   qbody: Dict[str, Any], approx_usd: Optional[float]
                   ) -> Optional[float]:
-    """Best-effort USD notional of a swap, preferring the live quote over the
-    caller-asserted approx_usd. Selling a stable -> amount is the notional; buying
-    a stable -> the quote output is the notional. Falls back to approx_usd, then
-    None (caller treats None as 'cannot value' and fails closed for an execute)."""
+    """Best-effort USD notional of a swap for the cap check. Selling a stable ->
+    amount is the notional. Buying a stable -> the cap must NOT be evadable by a
+    manipulated-low DEX quote, so the notional is the LARGER of the quote output
+    and the caller's independent mark (approx_usd, a Binance-derived USD value):
+    flooring with the independent mark means a quote massaged below the cap cannot
+    authorise an oversized order. Falls back to approx_usd, then None (caller
+    treats None as 'cannot value' and fails closed for an execute)."""
     src = (from_token or "").strip().upper()
     dst = (to_token or "").strip().upper()
+    appx = _to_float(approx_usd) if approx_usd is not None else None
     if src in _USD_STABLES:
-        return amount
+        # Selling a stable: amount is the notional, but never let it read below an
+        # independent mark either (defensive; they should agree closely).
+        return max(amount, appx) if appx is not None and appx > 0 else amount
     if dst in _USD_STABLES:
         out = _amount_field(qbody.get("output"))
-        if out is not None and out > 0:
-            return out
-    return _to_float(approx_usd) if approx_usd is not None else None
+        cands = [v for v in (out, appx) if v is not None and v > 0]
+        if cands:
+            return max(cands)
+    return appx
 
 
 def _price_impact_pct(qbody: Dict[str, Any]) -> Optional[float]:
@@ -414,7 +458,10 @@ async def swap(amount: float, from_token: str, to_token: str,
 
     q = await quote(amount, from_token, to_token, slippage_pct)
     if not q.ok:
-        return SwapOutcome(False, False, None, detail=f"quote failed: {q.error}")
+        # The raw quote error can embed a tool/RPC endpoint; keep it in the server
+        # log only and return a generic detail (this surfaces in public state).
+        logger.warning("bsc swap quote failed: %s", q.error)
+        return SwapOutcome(False, False, None, detail="quote unavailable")
 
     # Quote-derived USD cap (does not rely on the caller asserting approx_usd).
     usd = _notional_usd(amt, from_token, to_token, q.data, approx_usd)
@@ -460,7 +507,7 @@ async def swap(amount: float, from_token: str, to_token: str,
     if not ex.ok:
         logger.warning("bsc swap gate passed but execution failed: %s", ex.error)
         return SwapOutcome(True, False, verdict, quote=q.data,
-                           detail=f"gate passed but execution failed: {ex.error}")
+                           detail="gate passed but execution failed")
     return SwapOutcome(True, True, verdict, quote=q.data, result=ex.data,
                        detail=f"executed after passing security gate{impact_note}")
 
@@ -541,7 +588,7 @@ async def transfer(to: str, amount: float, token: str = "BNB", *,
     if not ex.ok:
         logger.warning("bsc transfer gate passed but execution failed: %s", ex.error)
         return TransferOutcome(True, False, verdict,
-                               detail=f"gate passed but transfer failed: {ex.error}")
+                               detail="gate passed but transfer failed")
     return TransferOutcome(True, True, verdict, result=ex.data,
                            detail="transfer executed after destination vet")
 

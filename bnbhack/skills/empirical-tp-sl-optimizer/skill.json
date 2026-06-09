@@ -1,0 +1,55 @@
+{
+  "schema": "cmc-agent-skill/1.0",
+  "name": "empirical-tp-sl-optimizer",
+  "display_name": "Empirical TP/SL Optimizer",
+  "version": "1.0.0",
+  "category": "trading-strategy",
+  "tags": ["take-profit", "stop-loss", "expectancy", "risk-reward", "backtest", "crypto"],
+  "license": "MIT",
+  "author": "MEFAI",
+  "summary": "Grid-search the take-profit / stop-loss bracket with the best risk-honest expectancy for a (symbol, timeframe, signal_type) slice, replayed from recorded barrier-touch times with no price re-simulation and no look-ahead.",
+  "runtime": "python>=3.10",
+  "entrypoint": {
+    "kind": "python",
+    "module": "tp_sl_optimizer",
+    "callable": "optimize",
+    "network": false,
+    "read_only": true
+  },
+  "inputs": [
+    { "name": "symbol", "type": "string|null", "required": false, "default": null, "description": "Pair such as BTCUSDT; null pools across symbols." },
+    { "name": "timeframe", "type": "string|null", "required": false, "default": null, "description": "Signal timeframe such as 1h; null pools across timeframes." },
+    { "name": "signal_type", "type": "string|null", "required": false, "default": null, "description": "buy or sell; null pools both directions." },
+    { "name": "since_ts", "type": "integer|null", "required": false, "default": null, "description": "Unix seconds floor; set to the submission-lock time to measure only fresh forward outcomes." },
+    { "name": "min_samples", "type": "integer", "required": false, "default": 30, "description": "Minimum resolved trades for a bracket to be eligible." }
+  ],
+  "outputs": [
+    { "name": "recommend", "type": "boolean", "description": "True only when the per-risk pick clears one standard error above zero and the sample gate." },
+    { "name": "best_per_risk", "type": "object", "description": "Risk-honest pick: tp, sl, rr, n, win_rate, payoff, expectancy, expectancy_stderr, expectancy_per_risk." },
+    { "name": "best", "type": "object", "description": "Raw max-expectancy bracket, reference only." },
+    { "name": "grid", "type": "array", "description": "All TP/SL cells sorted by expectancy-per-risk." },
+    { "name": "note", "type": "string", "description": "Human-readable recommendation summary." }
+  ],
+  "data_sources": {
+    "primary": {
+      "kind": "labeled-outcome-history",
+      "tables": ["signal_performance"],
+      "description": "Pre-recorded barrier-touch times for resolved MEFAI signals (181k labeled outcomes across 40+ assets and 7 timeframes in production; a pinned synthetic sample ships for reproducible backtests)."
+    },
+    "cmc_agent_hub_tools": []
+  },
+  "backtest": {
+    "runner": "backtest/backtest.py",
+    "command": "python3 skills/empirical-tp-sl-optimizer/backtest/backtest.py",
+    "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
+    "deterministic": true,
+    "report": "output/report.json",
+    "metrics": ["expectancy", "expectancy_per_risk", "expectancy_stderr", "win_rate", "payoff", "rr", "n"],
+    "pass_criteria": "Recommendation logic is consistent across every slice: recommend implies positive expectancy above one standard error with samples at or above min_samples."
+  },
+  "verification": {
+    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py empirical-tp-sl-optimizer",
+    "content_hash_artifact": "output/report.manifest.json",
+    "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
+  }
+}

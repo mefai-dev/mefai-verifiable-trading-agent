@@ -51,6 +51,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import agent_card
 import bsc_exec
 import chain_writer
+import notify
+import perp_exec
+import x402_feed
 from chain_writer import SIGNAL_BUY, SIGNAL_SELL
 from fusion_core import fuse
 from fusion_providers import gather_readings
@@ -81,6 +84,11 @@ START_EQUITY_PATH = Path(os.getenv("BNBHACK_START_EQUITY_FILE",
 # peak makes the drawdown budget (and the killswitch margin) survive a restart.
 PEAK_EQUITY_PATH = Path(os.getenv("BNBHACK_PEAK_EQUITY_FILE",
                                   str(_STATE_DIR / "peak_equity.json")))
+# Persisted per-UTC-day executed-trade counter. Surviving a restart here is what
+# stops a mid-day restart from re-arming the daily floor after the agent already
+# traded earlier in the day (which would double up on fees for no benefit).
+DAILY_TRADE_PATH = Path(os.getenv("BNBHACK_DAILY_TRADE_FILE",
+                                  str(_STATE_DIR / "daily_trades.json")))
 
 _TF_SECONDS = {
     "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
@@ -88,10 +96,30 @@ _TF_SECONDS = {
     "1d": 86400, "1w": 604800,
 }
 
-# Bare base -> the BSC spot token the loop would actually buy for a LONG (BTC is
-# traded as BTCB on BSC). Bases not listed get a prediction but no spot leg.
-_BSC_SPOT = {"BTC": "BTCB", "ETH": "ETH", "BNB": "BNB", "SOL": "SOL",
-             "XRP": "XRP", "ADA": "ADA", "DOGE": "DOGE", "CAKE": "CAKE"}
+# Track 1 scores PnL ONLY on the fixed list of eligible BEP-20 tokens; a trade
+# on any base outside it does not count toward the live ranking. This is the
+# eligible-base allowlist (bare bases, as published on the competition token
+# list). BTC and BNB are intentionally ABSENT: they are not on the eligible
+# list, so longing them would earn zero counted PnL. The watchlist is hard
+# filtered against this set at config load, and the spot map below only ever
+# routes an eligible base.
+_ELIGIBLE_BASES = frozenset({
+    "ETH", "XRP", "TRX", "DOGE", "ZEC", "ADA", "LINK", "BCH", "TON", "LTC",
+    "AVAX", "SHIB", "DOT", "UNI", "ASTER", "AAVE", "ATOM", "FIL", "INJ", "FET",
+    "BONK", "PENGU", "CAKE", "ZRO", "BTT", "FLOKI", "LDO", "PENDLE", "AXS",
+    "TWT", "RAY", "COMP", "APE", "SFP", "1INCH", "BANANAS31", "SNX", "YFI",
+    "AIOZ", "ZIG", "ROSE", "BRETT", "KAVA", "SUSHI", "ZIL", "ZETA", "BABYDOGE",
+})
+
+# Bare base -> the BSC spot token the loop would actually buy for a LONG. ONLY
+# eligible bases (see _ELIGIBLE_BASES) that also have liquid Binance-Peg BEP-20
+# routing on PancakeSwap appear here; a base absent from this map gets a
+# verifiable prediction but no spot leg. BTC/BNB/SOL are excluded by design:
+# they are not eligible, so a spot leg there would risk capital on a trade the
+# competition does not count.
+_BSC_SPOT = {"ETH": "ETH", "XRP": "XRP", "ADA": "ADA", "DOGE": "DOGE",
+             "CAKE": "CAKE", "LINK": "LINK", "AVAX": "AVAX", "AAVE": "AAVE",
+             "ATOM": "ATOM", "LTC": "LTC"}
 
 
 def _now() -> int:
@@ -122,9 +150,17 @@ def _horizon_for_tf(tf: str) -> str:
 # ---------------------------------------------------------------------------
 @dataclass
 class LoopConfig:
+    # Default universe = eligible BEP-20 majors that ALSO have live MEFAI signal
+    # coverage and liquid PancakeSwap routing, so every decision the agent acts
+    # on counts toward Track 1. BTC/BNB are deliberately NOT here (not on the
+    # eligible token list). Any BNBHACK_WATCHLIST override is still hard filtered
+    # against _ELIGIBLE_BASES in __post_init__, so a stray ineligible symbol can
+    # never sneak a non-counting trade into the live window.
     watchlist: List[str] = field(default_factory=lambda: [
         s.strip().upper() for s in os.getenv(
-            "BNBHACK_WATCHLIST", "BTCUSDT,ETHUSDT,BNBUSDT"
+            "BNBHACK_WATCHLIST",
+            "ETHUSDT,XRPUSDT,ADAUSDT,LINKUSDT,AVAXUSDT,DOGEUSDT,AAVEUSDT,"
+            "ATOMUSDT,LTCUSDT"
         ).split(",") if s.strip()])
     timeframe: str = os.getenv("BNBHACK_TIMEFRAME", "5m")
     # Sizing/edge horizon. The out-of-sample walk-forward shows that at the
@@ -153,12 +189,20 @@ class LoopConfig:
         os.getenv("BNBHACK_REGIME_BLOCK_STRENGTH", "0.5"))
     interval: float = float(os.getenv("BNBHACK_LOOP_INTERVAL", "60"))
     reveal_after: float = float(os.getenv("BNBHACK_REVEAL_AFTER", "90"))
-    # A reveal already stops at reveal_deadline; this caps wasted gas/retries on
-    # a reveal that keeps reverting before the deadline. After the cap the row is
-    # closed as 'revealed-paper' (the commit stands; only the reveal is waived).
+    # A chain reveal that keeps failing (e.g. the commit already revealed on a
+    # send the process never saw acknowledged, or a node that keeps reverting)
+    # is retried only this many times before the row is settled as a paper
+    # reveal, so a stuck reveal cannot re-send (and burn gas) until its deadline.
     reveal_max_attempts: int = int(os.getenv("BNBHACK_REVEAL_MAX_ATTEMPTS", "4"))
-    # Finished pending rows older than this are pruned so the store stays bounded
-    # over the multi-day live window. Un-revealed commitments are never pruned.
+    # Hard wall-clock ceiling for the reveal pass within one cycle. Each chain
+    # reveal blocks on a receipt wait, so a backlog of due reveals could otherwise
+    # stall the decision loop for minutes. Once this budget is spent the remaining
+    # reveals defer to the next cycle (they stay due until their deadline).
+    reveal_cycle_budget_sec: float = float(
+        os.getenv("BNBHACK_REVEAL_CYCLE_BUDGET", "30"))
+    # Terminal pending rows older than this are pruned so the proof store stays
+    # bounded over a multi-day window (0 disables pruning). Unrevealed rows are
+    # never pruned.
     pending_retention_days: float = float(
         os.getenv("BNBHACK_PENDING_RETENTION_DAYS", "14"))
     include_cmc: bool = os.getenv("BNBHACK_INCLUDE_CMC", "1") == "1"
@@ -183,12 +227,58 @@ class LoopConfig:
     start_equity_usd: float = float(os.getenv("BNBHACK_START_EQUITY_USD", "0"))
     chain_equity_baseline: int = int(
         os.getenv("BNBHACK_CHAIN_EQUITY_BASELINE", "100000"))
+    # Track 1 qualifies a wallet only when it makes at least one trade per UTC
+    # day (7 over the trading week). The agent is selective by design, so on a
+    # genuinely quiet day it could otherwise skip the day and forfeit ranking.
+    # When the floor is on (live spot only), if no real trade has executed in the
+    # current UTC day by the floor hour, the loop forces ONE minimal long: it
+    # relaxes ONLY the selectivity gates (conviction floor + regime stand-aside)
+    # and still passes every risk gate (sizer drawdown budget, RiskGovernor halt,
+    # full security gate). It never fabricates a trade and never forces past a
+    # drawdown halt (a halted agent is already out, so trading more is pointless).
+    daily_floor: bool = os.getenv("BNBHACK_DAILY_TRADE_FLOOR", "1") == "1"
+    daily_min_trades: int = int(os.getenv("BNBHACK_DAILY_MIN_TRADES", "1"))
+    # Only force in the tail of the UTC day, after the agent has had the whole
+    # day to find a real high-conviction entry on its own terms.
+    daily_floor_hour_utc: int = int(os.getenv("BNBHACK_DAILY_FLOOR_HOUR_UTC", "21"))
+    # The forced floor trade is sized down to this small notional (USD), so it
+    # satisfies the rule with minimal capital at risk rather than a full bet.
+    daily_floor_usd: float = float(os.getenv("BNBHACK_DAILY_FLOOR_USD", "8"))
+    # Native x402 consumption: the agent itself buys a premium verified-record
+    # feed (the UVII trust index) over the x402 micropayment protocol as part of
+    # its own cycle, proving it acts as an agentic-commerce CONSUMER and not only
+    # a seller. It runs the full 402 -> EIP-3009 signed authorization -> verify ->
+    # 200 handshake; settlement stays deferred to a facilitator, so no funds move
+    # and no key is held (safe to leave on by default). Runs at a low cadence to
+    # keep the cycle light; the consumed index is surfaced in the published state.
+    x402_consume: bool = os.getenv("BNBHACK_X402_CONSUME", "1") == "1"
+    x402_product: str = os.getenv("BNBHACK_X402_PRODUCT", "uvii-index")
+    x402_consume_every: int = int(os.getenv("BNBHACK_X402_CONSUME_EVERY", "30"))
+
+    def __post_init__(self) -> None:
+        # Hard eligibility gate: keep only watchlist symbols whose base is on the
+        # Track 1 eligible token list. A trade on an ineligible base earns zero
+        # counted PnL, so it must never enter the live universe (whether it came
+        # from the default or a BNBHACK_WATCHLIST override). Dropped symbols are
+        # logged so a misconfiguration is loud, not silent.
+        kept, dropped = [], []
+        for pair in self.watchlist:
+            if _base_of(pair) in _ELIGIBLE_BASES:
+                kept.append(pair)
+            else:
+                dropped.append(pair)
+        if dropped:
+            logger.warning("watchlist: dropped ineligible (non-counting) "
+                           "symbols %s; eligible set kept %s", dropped, kept)
+        self.watchlist = kept
 
     def mode(self) -> str:
         if self.execute_trades or self.execute_chain:
             bits = []
             if self.execute_trades:
                 bits.append("spot")
+                if perp_exec.enabled():
+                    bits.append("perp")
             if self.execute_chain:
                 bits.append("chain")
             return "live:" + "+".join(bits)
@@ -343,6 +433,7 @@ class Decision:
     reasons: List[str] = field(default_factory=list)
     security: Dict[str, Any] = field(default_factory=dict)
     proof: Dict[str, Any] = field(default_factory=dict)
+    is_floor: bool = False      # forced daily-floor trade (kept >=1 trade/day)
 
 
 def _signals_now(watchlist: List[str], tf: str) -> List[Dict[str, Any]]:
@@ -398,6 +489,14 @@ class AgentLoop:
         # Gas throttle bookkeeping for chain equity writes.
         self._last_equity_record_ts = 0.0
         self._last_equity_recorded: Optional[int] = None
+        # Raw (pre-normalisation) equity at the last ledger write. A raw drawdown
+        # that rounds to the same integer vault units must still force a write so
+        # the killswitch tracks real PnL, not the quantised value.
+        self._last_equity_raw: Optional[float] = None
+        # Rolling equity history for the live equity curve. Seeded from the last
+        # published snapshot so a restart continues the same curve rather than
+        # resetting it. Each entry is [ts, equity] and the ring is capped.
+        self._equity_hist: List[List[float]] = self._load_equity_hist()
         # Mark-to-market bookkeeping. _start_equity_usd pins the drawdown
         # reference; _last_equity_usd is the fail-safe fallback so a transient
         # balance read can never spuriously RAISE equity and mask a drawdown.
@@ -421,6 +520,22 @@ class AgentLoop:
         # It never signs anything; resolving an orphan stays an explicit action.
         self._reconcile_note: str = "not yet run"
         self._orphans: List[Dict[str, Any]] = []
+        # Per-UTC-day executed-trade counter for the daily-trade floor, restored
+        # so a mid-day restart does not re-arm the floor after an earlier trade.
+        self._trade_day, self._trades_today = self._load_daily_trades()
+        self._floor_note: str = ""
+        # Native x402 consumption bookkeeping: the last consumed feed result and
+        # the cycle it was bought on, surfaced in the published state. The buyer
+        # config is the deployer's published terms (recipient + asset + network),
+        # read once from the same env the public feed endpoint uses.
+        self._x402_last: Optional[Dict[str, Any]] = None
+        self._x402_cfg = x402_feed.RequirementsConfig(
+            pay_to=os.getenv("BNBHACK_X402_PAYTO", "0x" + "00" * 19 + "01"),
+            asset=os.getenv("BNBHACK_X402_ASSET",
+                            "0x55d398326f99059fF775485246999027B3197955"),
+            network=os.getenv("BNBHACK_X402_NETWORK", "bsc"),
+            asset_name=os.getenv("BNBHACK_X402_ASSET_NAME", "BSC-USD"),
+            asset_version=os.getenv("BNBHACK_X402_ASSET_VERSION", "1"))
 
     # -- identity ------------------------------------------------------------
     def _agent_id(self) -> str:
@@ -475,6 +590,110 @@ class AgentLoop:
         except Exception as exc:
             logger.warning("peak-equity persist failed: %s", exc)
 
+    # -- daily-trade floor ---------------------------------------------------
+    @staticmethod
+    def _utc_day(now: int) -> str:
+        return time.strftime("%Y-%m-%d", time.gmtime(now))
+
+    @staticmethod
+    def _load_daily_trades() -> Tuple[str, int]:
+        try:
+            with open(DAILY_TRADE_PATH, "r") as f:
+                d = json.load(f)
+            day = str(d.get("day") or "")
+            cnt = int(d.get("count") or 0)
+            return day, max(0, cnt)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return "", 0
+
+    def _save_daily_trades(self) -> None:
+        try:
+            DAILY_TRADE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=str(DAILY_TRADE_PATH.parent),
+                                       suffix=".tmp")
+            with os.fdopen(fd, "w") as f:
+                json.dump({"day": self._trade_day,
+                           "count": self._trades_today, "ts": _now()}, f)
+            os.replace(tmp, str(DAILY_TRADE_PATH))
+        except Exception as exc:
+            logger.warning("daily-trade persist failed: %s", exc)
+
+    def _roll_daily(self, now: int) -> None:
+        """Reset the per-day counter when the UTC date rolls over."""
+        day = self._utc_day(now)
+        if day != self._trade_day:
+            self._trade_day = day
+            self._trades_today = 0
+            self._save_daily_trades()
+
+    def _record_executed_trades(self, n: int) -> None:
+        if n > 0:
+            self._trades_today += n
+            self._save_daily_trades()
+
+    def _floor_due(self, now: int) -> bool:
+        """True when the daily floor should force a qualifying trade: live spot,
+        floor enabled, still short of the daily minimum, and in the tail of the
+        UTC day so the agent had the whole day to enter on its own terms."""
+        if not (self.cfg.execute_trades and self.cfg.daily_floor):
+            return False
+        if self._trades_today >= self.cfg.daily_min_trades:
+            return False
+        return time.gmtime(now).tm_hour >= self.cfg.daily_floor_hour_utc
+
+    async def _daily_floor_trade(self, equity: float, drawdown: float,
+                                 sigs: List[Dict[str, Any]]) -> Decision:
+        """Force ONE minimal long to keep the wallet at >=1 trade/day. Relaxes
+        only the selectivity gates (conviction floor + regime stand-aside);
+        every risk gate (sizer drawdown budget, RiskGovernor, security gate)
+        still applies. Picks the highest-conviction long available this cycle.
+        Returns the floor Decision (action SKIP if none is eligible this tick;
+        the loop retries on the next cycle inside the window)."""
+        best: Optional[Decision] = None
+        for sig in sigs:
+            try:
+                d = await self.decide(sig, equity, drawdown, force=True)
+            except Exception as exc:
+                logger.warning("floor decide failed (%s): %s",
+                               sig.get("pair"), exc)
+                continue
+            # Only a real spot LONG is an executable on-chain trade (a short is
+            # paper-only without a perp venue, so it would not satisfy the rule).
+            if d.action == "TRADE_LONG" and (best is None
+                                             or d.conviction > best.conviction):
+                best = d
+        if best is None:
+            d = Decision(symbol="-", timeframe=self.cfg.timeframe, action="SKIP",
+                         direction=0, conviction=0.0, agreement=0.0, coverage=0.0,
+                         entry=0.0, target=0.0, stop=0.0, leverage=0.0,
+                         notional=0.0, margin=0.0, win_rate=0.0, payoff=0.0,
+                         is_floor=True)
+            d.reasons.append("daily floor: no eligible long this cycle; retrying")
+            self._floor_note = d.reasons[-1]
+            return d
+        best.is_floor = True
+        mode = self.pm.entry_mode(best.symbol, self.cfg.max_positions)
+        if mode not in ("open", "add"):
+            best.action = "SKIP"
+            best.security = {"go": False,
+                             "detail": "daily floor: position cap full "
+                                       "(book already deployed, day is active)"}
+            self._floor_note = best.security["detail"]
+            return best
+        try:
+            await self._commit_and_act(best, equity, mode)
+        except Exception as exc:
+            logger.warning("daily floor commit/act failed (%s): %s",
+                           best.symbol, exc)
+            self._floor_note = "daily floor: execution error"
+            return best
+        executed = isinstance(best.security, dict) and best.security.get("executed")
+        self._floor_note = (
+            f"daily floor executed {best.symbol}" if executed
+            else f"daily floor attempted {best.symbol}: "
+                 f"{(best.security or {}).get('detail', 'no fill')}")
+        return best
+
     # -- equity / drawdown ---------------------------------------------------
     async def _read_equity(self, realized: float = 0.0,
                            unrealized: float = 0.0) -> float:
@@ -495,6 +714,21 @@ class AgentLoop:
                 raw = res.data.get("totalUsd")
                 usd = float(raw) if raw is not None else None
                 if usd is not None and math.isfinite(usd) and usd > 0:
+                    # Fold the perp venue's account equity (margin + open uPnL)
+                    # into the mark so a live short's risk is VISIBLE to the
+                    # drawdown governor. If the perp leg is enabled but its equity
+                    # read fails this cycle, hold last-good rather than publish a
+                    # total that omits the short (which would look like a phantom
+                    # drawdown / recovery and could mis-fire the killswitch).
+                    if perp_exec.enabled():
+                        pe = await perp_exec.account_equity_usd()
+                        if pe is None:
+                            logger.warning(
+                                "perp equity unavailable; using last-good combined")
+                            if self._last_equity_usd is not None:
+                                return self._last_equity_usd
+                        else:
+                            usd += pe
                     if self._start_equity_usd is None:
                         self._start_equity_usd = usd
                         self.peak_equity = usd
@@ -579,6 +813,14 @@ class AgentLoop:
             return
         orphans: List[Dict[str, Any]] = []
         for p in open_rows:
+            # Short legs are backed by the perp venue, not a spot token in the
+            # BSC wallet, so the wallet-balance reconcile does not apply to them
+            # (checking would false-flag every live short as orphaned).
+            try:
+                if int(p["signal_dir"] or 1) < 0:
+                    continue
+            except (TypeError, ValueError, IndexError):
+                pass
             tok = (p["token"] or "").upper()
             qty = float(p["qty_token"] or 0)
             if not tok or qty <= 0:
@@ -601,7 +843,7 @@ class AgentLoop:
 
     # -- one decision --------------------------------------------------------
     async def decide(self, sig: Dict[str, Any], equity: float,
-                     drawdown: float) -> Decision:
+                     drawdown: float, force: bool = False) -> Decision:
         pair = sig["pair"]
         tf = self.cfg.timeframe
         entry = float(sig["price"])
@@ -619,7 +861,10 @@ class AgentLoop:
         if fr.direction == 0:
             d.reasons.append("no directional consensus")
             return d
-        if fr.conviction < self.cfg.conviction_min:
+        # conviction floor and the regime stand-aside are SELECTIVITY gates: a
+        # forced daily-floor trade relaxes only these (never a risk gate) so the
+        # wallet keeps >=1 trade/day on an otherwise-quiet day.
+        if not force and fr.conviction < self.cfg.conviction_min:
             d.reasons.append(
                 f"conviction {fr.conviction:.0f} < min {self.cfg.conviction_min:.0f}")
             return d
@@ -628,7 +873,7 @@ class AgentLoop:
         # CMC regime source directly off the fusion result (its contrarian F&G
         # gauge votes SHORT in extreme greed). Exits of already-open legs are
         # handled by the position manager and are unaffected by this gate.
-        if self.cfg.regime_filter and fr.direction > 0:
+        if not force and self.cfg.regime_filter and fr.direction > 0:
             reg = next((s for s in fr.sources
                         if s.name == "CMC Regime" and s.available), None)
             if (reg is not None and reg.direction < 0
@@ -651,6 +896,15 @@ class AgentLoop:
         d.leverage = sz.leverage
         d.notional = sz.notional
         d.margin = sz.margin
+        if force and self.cfg.daily_floor_usd > 0 and d.margin > self.cfg.daily_floor_usd:
+            # Shrink the forced trade to the daily floor so keeping the cadence
+            # never spends meaningful budget; risk gates below still apply.
+            scale = self.cfg.daily_floor_usd / d.margin
+            d.margin = self.cfg.daily_floor_usd
+            d.notional = d.notional * scale
+            d.is_floor = True
+            d.reasons.append(
+                "daily floor (forced past selectivity to keep >=1 trade/day)")
 
         sd = sz.stop_distance
         rr = sz.payoff * sd
@@ -782,16 +1036,52 @@ class AgentLoop:
                                       "detail": f"governor halt pre-swap: {g_detail}"}
                         return
                     if d.action == "TRADE_SHORT":
-                        # Spot has no borrow leg. Live shorts require a perp venue
-                        # (ApolloX) that is not wired for signing, so a live short
-                        # is an honest no-go and records NOTHING (the live close
-                        # path can never see a short leg). In PAPER the short leg
-                        # is recorded with signal_dir=-1 and no swap so the
-                        # two-sided book is exercised honestly without signing.
+                        # Spot has no borrow leg, so a SHORT routes through the
+                        # perp venue (the audited USDT-M futures adapter, see
+                        # perp_exec). When perps are ENABLED (BNBHACK_EXECUTE_PERP
+                        # plus venue keys) a live short is signed there and the leg
+                        # is recorded with signal_dir<0 at the real fill so the
+                        # close path can exit it on the same venue. When perps are
+                        # DISABLED (the default) a LIVE short stays an honest no-go
+                        # that records nothing, and a PAPER short is simulated
+                        # (signal_dir<0, no swap) so the two-sided book is honest
+                        # without signing anything.
+                        if self.cfg.execute_trades and perp_exec.enabled():
+                            po = await perp_exec.open_short(
+                                d.symbol, rung_usd, equity=equity)
+                            if po.go and po.executed:
+                                entry_px = po.price or d.entry
+                                if mode == "open":
+                                    self.pm.record_open(
+                                        symbol=d.symbol, base=base, token=tok,
+                                        size_usd=rung_usd, entry=entry_px,
+                                        target=d.target, stop=d.stop,
+                                        signal_dir=d.direction,
+                                        swap_result=None,
+                                        max_positions=self.cfg.max_positions,
+                                        rungs_total=rungs,
+                                        size_target_usd=full_usd)
+                                else:
+                                    self.pm.record_add(
+                                        symbol=d.symbol, add_size_usd=rung_usd,
+                                        fill_price=entry_px, swap_result=None)
+                                d.security = {"go": True, "executed": True,
+                                              "detail": po.detail,
+                                              "usd": round(rung_usd, 2),
+                                              "mode": mode, "rungs": rungs,
+                                              "venue": "perp"}
+                            else:
+                                d.security = {"go": po.go, "executed": False,
+                                              "detail": po.detail,
+                                              "usd": round(rung_usd, 2),
+                                              "mode": mode, "rungs": rungs,
+                                              "venue": "perp"}
+                            return
                         if self.cfg.execute_trades:
                             d.security = {"go": False, "executed": False,
-                                          "detail": "live short requires perp venue "
-                                                    "(ApolloX); paper-simulated only",
+                                          "detail": "live short requires a perp "
+                                                    "venue (BNBHACK_EXECUTE_PERP); "
+                                                    "paper-simulated only",
                                           "usd": round(rung_usd, 2), "mode": mode,
                                           "rungs": rungs}
                         else:
@@ -865,7 +1155,15 @@ class AgentLoop:
         except Exception as exc:
             logger.warning("due_reveals failed: %s", exc)
             return revealed
+        deadline = time.monotonic() + max(1.0, self.cfg.reveal_cycle_budget_sec)
         for r in due:
+            # A chain reveal blocks on a receipt wait; once the per-cycle budget
+            # is spent, leave the rest due and let the next cycle drain them so
+            # the decision loop is never wedged behind a reveal backlog.
+            if self.cfg.execute_chain and time.monotonic() >= deadline:
+                logger.info("reveal pass hit cycle budget; deferring %d reveal(s)",
+                            len(due) - len(revealed))
+                break
             if not r["agent_id"]:
                 self.store.mark_revealed(r["local_id"], None, "",
                                          status="revealed-paper")
@@ -875,11 +1173,6 @@ class AgentLoop:
                 # on chain; a dry (paper) commit reveals only as a paper record.
                 want_chain = (self.cfg.execute_chain
                               and r["commit_id"] is not None)
-                # Count the attempt before signing so a reveal that lands but is
-                # never acknowledged (process died before mark) cannot re-send
-                # indefinitely: after the cap it settles as a paper reveal.
-                attempts = (self.store.bump_attempt(r["local_id"])
-                            if want_chain else 0)
                 out = await asyncio.to_thread(
                     self.writer.reveal,
                     r["commit_id"] if r["commit_id"] is not None else 0,
@@ -890,11 +1183,16 @@ class AgentLoop:
                 pid = out.extra.get("prediction_id")
                 tx = chain_writer.ChainWriter.tx_url(out.tx_hash) if out.tx_hash else ""
                 if want_chain and not (out.executed and out.ok):
-                    # Chain reveal attempt failed. Retry on the next cycle until
-                    # the reveal deadline, but stop re-sending once the bounded
-                    # attempt budget is spent so a permanently reverting reveal
-                    # cannot keep burning gas; settle it as a paper reveal. A cap
-                    # of <= 0 means unlimited (retry until the deadline only).
+                    # Count the attempt ONLY when the raw tx actually broadcast.
+                    # A pre-broadcast fault (RPC down, build error) never reached
+                    # the network, so it must not consume the bounded attempt
+                    # budget and prematurely waive a reveal that could still land.
+                    attempts = (self.store.bump_attempt(r["local_id"])
+                                if out.broadcast else 0)
+                    # Stop re-sending once the bounded attempt budget is spent so a
+                    # permanently reverting reveal cannot keep burning gas; settle
+                    # it as a paper reveal. A cap of <= 0 means unlimited (retry
+                    # until the reveal deadline only).
                     if (self.cfg.reveal_max_attempts > 0
                             and attempts >= self.cfg.reveal_max_attempts):
                         self.store.mark_revealed(r["local_id"], pid, out.tx_hash,
@@ -911,23 +1209,73 @@ class AgentLoop:
                 logger.warning("reveal failed (%s): %s", r["symbol"], exc)
         return revealed
 
+    async def _broadcast_cycle(self, decisions: List["Decision"],
+                               closes: List[Any]) -> None:
+        """Announce this cycle's taken legs and closes to the transparency feed.
+        Best-effort: a formatting or send fault is logged and swallowed so the
+        loop is never affected. Only legs that actually took exposure (a passed
+        gate with an open/add rung) are announced, never blocked commit-only
+        decisions."""
+        try:
+            for d in decisions:
+                sec = d.security if isinstance(d.security, dict) else {}
+                if not (sec.get("go") and sec.get("mode") in ("open", "add")):
+                    continue
+                msg = notify.format_open(
+                    sec, d.symbol, d.direction, d.entry, d.target, d.stop,
+                    is_floor=getattr(d, "is_floor", False))
+                if msg:
+                    await notify.broadcast(msg)
+            for c in closes:
+                msg = notify.format_close({
+                    "symbol": c.symbol, "reason": c.reason,
+                    "exit_price": c.exit_price, "pnl_usd": c.pnl_usd,
+                    "pnl_pct": c.pnl_pct, "executed": c.executed,
+                    "partial": c.partial})
+                if msg:
+                    await notify.broadcast(msg)
+        except Exception as exc:
+            logger.debug("broadcast cycle failed: %s", exc)
+
+    async def _consume_x402(self) -> None:
+        """Buy the configured verified-record feed over x402 and cache the result
+        for the published state. Off the event loop, best-effort: a failed buy
+        keeps the previous good result and never disturbs the cycle."""
+        try:
+            res = await asyncio.to_thread(
+                x402_feed.consume_feed, self.cfg.x402_product, self._x402_cfg,
+                feed_params={"group_by": "symbol", "horizon": "auto"},
+                db_path=SIGNAL_DB)
+            res["consumed_cycle"] = self.cycle
+            res["consumed_ts"] = _now()
+            self._x402_last = res
+            if res.get("ok"):
+                logger.info("x402 consume ok: product=%s payer=%s deferred=%s",
+                            res.get("product_id"), res.get("payer"),
+                            res.get("settlement_deferred"))
+            else:
+                logger.warning("x402 consume not verified: %s",
+                               res.get("error") or "see result")
+        except Exception as exc:
+            logger.debug("x402 consume failed: %s", exc)
+
     # -- one cycle -----------------------------------------------------------
     async def run_cycle(self) -> Dict[str, Any]:
         self.cycle += 1
         now = _now()
+        self._roll_daily(now)
 
         reveals = await self._process_reveals()
 
-        # Keep the pending store bounded over the multi-day live window. Runs
-        # roughly hourly (every 60 cycles) and only ever drops finished rows
-        # past the retention horizon, never a live commitment. Offloaded so the
-        # DELETE + WAL checkpoint never blocks the event loop.
+        # Keep the proof store bounded over a multi-day live window. Runs off the
+        # event loop (a delete + WAL checkpoint can briefly block) and only every
+        # 60th cycle; unrevealed commitments are never pruned.
         if self.cfg.pending_retention_days > 0 and self.cycle % 60 == 1:
             try:
                 cutoff = now - int(self.cfg.pending_retention_days * 86400)
                 pruned = await asyncio.to_thread(self.store.prune, cutoff)
                 if pruned:
-                    logger.info("pruned %d finished pending rows", pruned)
+                    logger.info("pending store pruned %d terminal rows", pruned)
             except Exception as exc:
                 logger.warning("pending prune failed: %s", exc)
 
@@ -973,6 +1321,47 @@ class AgentLoop:
                     logger.warning("commit/act failed (%s): %s", d.symbol, exc)
             decisions.append(d)
 
+        # Count real swaps this cycle (executed opens/adds + executed closes) so
+        # the daily-floor cadence guard knows whether the wallet already traded
+        # today. Paper mode never sets executed=True, so the count stays 0 and
+        # the floor never fires (it is gated on execute_trades anyway).
+        executed_now = sum(1 for c in closes if getattr(c, "executed", False))
+        executed_now += sum(
+            1 for d in decisions
+            if isinstance(d.security, dict) and d.security.get("executed"))
+        self._record_executed_trades(executed_now)
+
+        # Daily-floor cadence: if live and still short of the daily minimum late
+        # in the UTC day, force ONE minimal qualifying long. This relaxes only
+        # the selectivity gates (conviction floor + regime stand-aside); every
+        # risk gate (sizer drawdown budget, RiskGovernor, security gate) still
+        # applies, so it never trades through a halt. Records nothing if no long
+        # is eligible this tick (it retries next cycle inside the window).
+        floor_decision: Optional[Decision] = None
+        if self._floor_due(now):
+            floor_decision = await self._daily_floor_trade(equity, drawdown, sigs)
+            decisions.append(floor_decision)
+            if (isinstance(floor_decision.security, dict)
+                    and floor_decision.security.get("executed")):
+                self._record_executed_trades(1)
+
+        # Transparency feed: announce every trade leg the agent actually takes
+        # (and every close) to the optional Telegram broadcast channel, so the
+        # judged window is observable in real time. Best-effort and gated on a
+        # configured bot token; a no-op (and never an exception) otherwise. It
+        # signs nothing and carries no secret · only public trade facts.
+        if notify.enabled():
+            await self._broadcast_cycle(decisions, closes)
+
+        # Native x402 consumption: on a low cadence the agent buys a premium
+        # verified-record feed over x402 (full 402 -> signed EIP-3009 auth ->
+        # verify -> 200), proving it acts as an agentic-commerce consumer. Runs
+        # off the event loop (the feed reads signal.db) and is best-effort: a
+        # failed purchase only leaves the last good result in place.
+        if (self.cfg.x402_consume
+                and self.cycle % max(1, self.cfg.x402_consume_every) == 1):
+            await self._consume_x402()
+
         # Record equity to the RiskGovernor (keeper). USD cents integer scale.
         # Chain reads/writes are offloaded so a slow RPC cannot block the loop.
         # Gas throttle: in live (execute_chain) mode the ledger write is rate
@@ -991,8 +1380,13 @@ class AgentLoop:
             equity_units = int(round(equity * 100))
         if self.cfg.execute_chain:
             elapsed = now - self._last_equity_record_ts
+            # A new low in the quantised vault units, OR any raw equity decrease
+            # (even one that rounds to the same units), forces an immediate write
+            # so the drawdown killswitch never lags a real drawdown.
             new_low = (self._last_equity_recorded is None
-                       or equity_units < self._last_equity_recorded)
+                       or equity_units < self._last_equity_recorded
+                       or (self._last_equity_raw is not None
+                           and equity < self._last_equity_raw))
             do_record = new_low or elapsed >= self.cfg.chain_equity_interval
         else:
             do_record = True
@@ -1002,6 +1396,7 @@ class AgentLoop:
                 execute=self.cfg.execute_chain)
             self._last_equity_record_ts = now
             self._last_equity_recorded = equity_units
+            self._last_equity_raw = equity
         else:
             gov_rec = chain_writer.TxOutcome(
                 executed=False, ok=True, tx_hash="",
@@ -1026,6 +1421,27 @@ class AgentLoop:
         self._publish(state)
         return state
 
+    # Cap the rolling equity curve so the published snapshot stays small. At a
+    # 60s cycle this holds roughly a full day of points; older points roll off.
+    EQUITY_HIST_MAX = 1440
+
+    def _load_equity_hist(self) -> List[List[float]]:
+        """Seed the equity curve from the last published snapshot so a restart
+        continues the same curve. Returns [] on any read/parse failure."""
+        try:
+            with open(STATE_PATH, "r") as f:
+                prev = json.load(f)
+            hist = prev.get("equity_history")
+            if isinstance(hist, list):
+                out: List[List[float]] = []
+                for p in hist[-self.EQUITY_HIST_MAX:]:
+                    if isinstance(p, (list, tuple)) and len(p) == 2:
+                        out.append([float(p[0]), float(p[1])])
+                return out
+        except Exception:
+            pass
+        return []
+
     def _build_state(self, now: int, equity: float, drawdown: float,
                      decisions: List[Decision], reveals: List[Dict[str, Any]],
                      governor: Dict[str, Any], arena: Dict[str, Any],
@@ -1043,6 +1459,10 @@ class AgentLoop:
                     "prediction_id": r["prediction_id"]})
         except Exception:
             pass
+        # Append this cycle to the rolling equity curve (capped ring).
+        self._equity_hist.append([now, round(equity, 2)])
+        if len(self._equity_hist) > self.EQUITY_HIST_MAX:
+            self._equity_hist = self._equity_hist[-self.EQUITY_HIST_MAX:]
         return {
             "ts": now,
             "heartbeat": now,
@@ -1057,6 +1477,7 @@ class AgentLoop:
             },
             "equity": round(equity, 2),
             "peak_equity": round(self.peak_equity, 2),
+            "equity_history": self._equity_hist,
             "drawdown": round(drawdown, 4),
             "jury_cap": self.cfg.jury_cap,
             "internal_cap": round(0.70 * self.cfg.jury_cap, 4),
@@ -1075,6 +1496,16 @@ class AgentLoop:
                 "max_hold_sec": self.pm.rules.max_hold_sec,
                 "roundtrip_cost_pct": self.pm.rules.roundtrip_cost_pct,
             },
+            "daily": {
+                "day": self._trade_day,
+                "trades_today": self._trades_today,
+                "min_required": self.cfg.daily_min_trades,
+                "floor_enabled": bool(self.cfg.execute_trades and self.cfg.daily_floor),
+                "floor_hour_utc": self.cfg.daily_floor_hour_utc,
+                "note": self._floor_note,
+            },
+            "x402_consumed": self._x402_last,
+            "perp": perp_exec.status(),
             "positions": positions,
             "reconcile": {"note": self._reconcile_note,
                           "orphans": self._orphans},
@@ -1087,7 +1518,7 @@ class AgentLoop:
                 "target": round(d.target, 8), "stop": round(d.stop, 8),
                 "leverage": round(d.leverage, 2), "win_rate": round(d.win_rate, 3),
                 "payoff": round(d.payoff, 2), "reasons": d.reasons,
-                "security": d.security, "proof": d.proof,
+                "security": d.security, "proof": d.proof, "is_floor": d.is_floor,
             } for d in decisions],
             "proofs": proofs,
         }
@@ -1106,6 +1537,37 @@ class AgentLoop:
     def request_stop(self) -> None:
         self._stop.set()
 
+    async def _ensure_vault_registered(self) -> None:
+        """Until the RiskGovernor vault is registered, canTrade returns (false,0)
+        and recordEquity reverts, so the agent would commit but never be cleared
+        to trade. On startup (chain mode only) register the vault if it is missing,
+        and fail loudly if it stays unregistered so the operator notices."""
+        if not self.cfg.execute_chain:
+            return
+        try:
+            vault = await asyncio.to_thread(self.writer.vault)
+        except Exception as exc:
+            logger.warning("vault read failed at startup: %s", exc)
+            return
+        if not vault:
+            # Governor not configured (paper-shaped chain); nothing to register.
+            return
+        if vault.get("registered"):
+            return
+        logger.warning("RiskGovernor vault not registered; registering with "
+                       "baseline equity %d", self.cfg.chain_equity_baseline)
+        try:
+            out = await asyncio.to_thread(
+                self.writer.register_vault, self.cfg.chain_equity_baseline,
+                None, execute=True)
+        except Exception as exc:
+            logger.error("vault registration raised: %s", exc)
+            return
+        if not (out.executed and out.ok):
+            logger.error("vault registration did not land (%s); the agent will "
+                         "commit but cannot trade until the vault is registered",
+                         out.detail)
+
     async def run_forever(self) -> None:
         logger.info("agent loop start mode=%s watchlist=%s tf=%s interval=%ss",
                     self.cfg.mode(), self.cfg.watchlist, self.cfg.timeframe,
@@ -1117,6 +1579,9 @@ class AgentLoop:
             logger.info("startup reconcile: %s", self._reconcile_note)
         except Exception as exc:
             logger.warning("startup reconcile failed: %s", exc)
+        # Register the RiskGovernor vault before the first decision so the
+        # pre-trade gate can actually clear (chain mode only; idempotent).
+        await self._ensure_vault_registered()
         while not self._stop.is_set():
             t0 = time.time()
             try:

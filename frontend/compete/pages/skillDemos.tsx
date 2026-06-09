@@ -13,10 +13,12 @@ import type { ReactNode } from 'react'
 import {
   usePoll, fetchCmcGlobal, fetchCmcIntel, fetchCmcGate, fetchX402Products, fetchLoopState,
   fetchSecurity, fetchFusion, fetchRecentSignals, fetchDebate, fetchSizing, fetchTpSl, fetchLeaderboard,
+  fetchX402Roundtrip, fetchX402CmcChallenge,
 } from '../api'
 import type {
   CmcGlobal, CmcIntel, CmcToken, CmcGate, X402Catalog, LoopEnvelope, SecurityVerdict,
   FusionResult, RecentSignals, DebateResult, SizingResult, TpSl, Leaderboard,
+  X402Step, X402Roundtrip, X402CmcChallenge,
 } from '../api'
 import { Chip, CountUp, PctCell, CoinLogo, fmtUsd, fmtPrice, fmtNum, fmtPct, clamp01, shortAddr, Btn } from '../ui'
 import type { SkillDef } from '../skills'
@@ -44,7 +46,7 @@ function DemoFrame({ label, right, children }: { label: string; right?: ReactNod
 function MiniStat({ label, value, tone, sub }: { label: string; value: ReactNode; tone?: string; sub?: string }) {
   return <div style={{ padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
     <div style={{ fontSize: 10, letterSpacing: .5, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 700 }}>{label}</div>
-    <div style={{ fontSize: 16, fontWeight: 800, color: tone || 'var(--c-text)', marginTop: 3 }}>{value}</div>
+    <div style={{ fontSize: 16, fontWeight: 800, color: tone || 'var(--c-text)', marginTop: 3, overflowWrap: 'anywhere' }}>{value}</div>
     {sub && <div style={{ fontSize: 10.5, color: 'var(--c-muted-2)', marginTop: 2 }}>{sub}</div>}
   </div>
 }
@@ -52,10 +54,13 @@ const statGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'r
 
 /* ── live global + regime (cmc-global, cmc-mcap-ta) ── */
 function GlobalDemo({ regime }: { regime?: boolean }) {
-  const { data: g } = usePoll<CmcGlobal>((s) => fetchCmcGlobal(s), 60_000)
+  const { data: g, error } = usePoll<CmcGlobal>((s) => fetchCmcGlobal(s), 60_000)
+  const label = regime ? 'Total market cap regime read' : 'Global metrics live'
+  if (!g && error) return <DemoFrame label={label} right="CMC hub"><Down what="Global market data is not reachable right now." /></DemoFrame>
+  if (!g) return <DemoFrame label={label} right="reading"><Reading /></DemoFrame>
   const chg = g?.mcap_change_24h ?? 0
   const read = chg > 1.5 ? { t: 'Risk on', c: 'var(--green)' } : chg < -1.5 ? { t: 'Risk off', c: 'var(--red)' } : { t: 'Neutral', c: 'var(--gold)' }
-  return <DemoFrame label={regime ? 'Total market cap regime read' : 'Global metrics live'} right={g ? 'updated' : 'reading'}>
+  return <DemoFrame label={label} right="updated">
     {regime && <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
       <Chip tone={read.c} solid>{read.t}</Chip>
       <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>from the 24h market cap trend</span>
@@ -73,8 +78,15 @@ function GlobalDemo({ regime }: { regime?: boolean }) {
 
 /* ── token picker shared by quote / metrics / info / ta / research ── */
 function useTokens() {
-  const { data } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
-  return data?.tokens ?? []
+  const { data, error, loading } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
+  return { tokens: data?.tokens ?? [], error, loading }
+}
+/* shared honest down/reading state for the token-driven CMC demos · render this
+   in JSX (`return <TokenGate .../>`) when the token feed has nothing yet. */
+function TokenGate({ label, error }: { label: string; error: unknown }) {
+  return error
+    ? <DemoFrame label={label} right="CMC hub"><Down what="The CMC token feed is not reachable right now." /></DemoFrame>
+    : <DemoFrame label={label} right="reading"><Reading /></DemoFrame>
 }
 function TokenPick({ tokens, sym, setSym }: { tokens: CmcToken[]; sym: string; setSym: (s: string) => void }) {
   const picks = tokens.slice(0, 6)
@@ -88,10 +100,12 @@ function TokenPick({ tokens, sym, setSym }: { tokens: CmcToken[]; sym: string; s
 }
 
 function QuoteDemo({ metrics }: { metrics?: boolean }) {
-  const tokens = useTokens()
+  const { tokens, error } = useTokens()
   const [sym, setSym] = useState('BTC')
   const t = tokens.find((x) => x.symbol === sym) || tokens[0]
-  return <DemoFrame label={metrics ? 'Per asset metrics live' : 'Latest quote live'} right={t ? `#${t.rank}` : 'reading'}>
+  const label = metrics ? 'Per asset metrics live' : 'Latest quote live'
+  if (tokens.length === 0) return <TokenGate label={label} error={error} />
+  return <DemoFrame label={label} right={t ? `#${t.rank}` : 'reading'}>
     <TokenPick tokens={tokens} sym={t?.symbol ?? sym} setSym={setSym} />
     {t && <div style={statGrid}>
       <MiniStat label="Price" value={fmtPrice(t.price)} tone={TONE} />
@@ -105,9 +119,10 @@ function QuoteDemo({ metrics }: { metrics?: boolean }) {
 }
 
 function InfoDemo() {
-  const tokens = useTokens()
+  const { tokens, error } = useTokens()
   const [sym, setSym] = useState('BNB')
   const t = tokens.find((x) => x.symbol === sym) || tokens[0]
+  if (tokens.length === 0) return <TokenGate label="Asset profile live" error={error} />
   return <DemoFrame label="Asset profile live" right={t ? t.name : 'reading'}>
     <TokenPick tokens={tokens} sym={t?.symbol ?? sym} setSym={setSym} />
     {t && <div style={statGrid}>
@@ -128,10 +143,12 @@ const verdictTone = (v: string) => {
 }
 
 function SignalDemo({ research }: { research?: boolean }) {
-  const tokens = useTokens()
+  const { tokens, error } = useTokens()
   const [sym, setSym] = useState('BTC')
   const t = tokens.find((x) => x.symbol === sym) || tokens[0]
-  return <DemoFrame label={research ? 'Asset dossier live' : 'Technical read live'} right={t ? `${t.symbol} audit` : 'reading'}>
+  const label = research ? 'Asset dossier live' : 'Technical read live'
+  if (tokens.length === 0) return <TokenGate label={label} error={error} />
+  return <DemoFrame label={label} right={t ? `${t.symbol} audit` : 'reading'}>
     <TokenPick tokens={tokens} sym={t?.symbol ?? sym} setSym={setSym} />
     {t && <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
@@ -153,8 +170,9 @@ function SignalDemo({ research }: { research?: boolean }) {
 }
 
 function SearchDemo() {
-  const tokens = useTokens()
+  const { tokens, error } = useTokens()
   const [q, setQ] = useState('bnb')
+  if (tokens.length === 0) return <TokenGate label="Resolve a ticker live" error={error} />
   const needle = q.trim().toLowerCase()
   const hits = needle
     ? tokens.filter((t) => t.symbol.toLowerCase().includes(needle) || t.name.toLowerCase().includes(needle)).slice(0, 4)
@@ -175,10 +193,12 @@ function SearchDemo() {
 }
 
 function ReportDemo() {
-  const { data } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
+  const { data, error } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
   const sum = data?.market_summary
   const top = (data?.tokens ?? []).slice(0, 5)
-  return <DemoFrame label="Market report live" right={sum ? `${sum.total_tokens} audited` : 'reading'}>
+  if (!sum && error) return <DemoFrame label="Market report live" right="CMC hub"><Down what="The CMC market report is not reachable right now." /></DemoFrame>
+  if (!sum) return <DemoFrame label="Market report live" right="reading"><Reading /></DemoFrame>
+  return <DemoFrame label="Market report live" right={`${sum.total_tokens} audited`}>
     {sum && <>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         <Chip tone="var(--green)" solid>{sum.strong_buy} strong buy</Chip>
@@ -248,11 +268,57 @@ const sigTone = (s?: string) => { const k = (s || '').toUpperCase(); if (k.inclu
 const checkTone = (s: string) => { const k = (s || '').toUpperCase(); if (k === 'PASS') return 'var(--green)'; if (k === 'WARN') return 'var(--gold)'; if (k === 'FAIL' || k === 'BLOCK') return 'var(--red)'; return 'var(--c-muted)' }
 const pctTone = (v: string): string => { const t = (v || '').trim(); if (!t || t === '-') return 'var(--c-text)'; return t.startsWith('-') ? 'var(--red)' : 'var(--green)' }
 
-/* ── CoinMarketCap hub gates, fully live (cmc-deriv / narratives / macro) ── */
-const GATE_TOOL: Record<string, { slug: string; label: string }> = {
-  'cmc-deriv': { slug: 'derivatives', label: 'Derivatives metrics live' },
-  'cmc-narratives': { slug: 'narratives', label: 'Trending narratives live' },
-  'cmc-macro': { slug: 'macro-events', label: 'Upcoming macro events live' },
+/* ── CoinMarketCap hub gates, fully live (cmc-global / mcap-ta / deriv / narratives / macro).
+   Each carries its MCP method name so the demo can print the exact data lineage. ── */
+const GATE_TOOL: Record<string, { slug: string; label: string; method: string }> = {
+  'cmc-global': { slug: 'global-metrics', label: 'Global metrics live', method: 'global_metrics_latest' },
+  'cmc-mcap-ta': { slug: 'marketcap-ta', label: 'Market cap technicals live', method: 'marketcap_technical_analysis' },
+  'cmc-deriv': { slug: 'derivatives', label: 'Derivatives metrics live', method: 'derivatives_metrics' },
+  'cmc-narratives': { slug: 'narratives', label: 'Trending narratives live', method: 'trending_narratives' },
+  'cmc-macro': { slug: 'macro-events', label: 'Upcoming macro events live', method: 'upcoming_macro_events' },
+  'cmc-news': { slug: 'news', label: 'Latest market news live', method: 'latest_news' },
+}
+/* a signed value string like "-31.66 B" / "+0.45%" coloured by its sign */
+const signedTone = (v?: string) => { const t = (v || '').trim(); if (t.startsWith('-')) return 'var(--red)'; if (t.startsWith('+')) return 'var(--green)'; return 'var(--c-text)' }
+/* fear & greed / altcoin-season index 0-100 → tone (low = fear/red, high = greed/green) */
+const idxTone = (n: number) => n >= 55 ? 'var(--green)' : n <= 25 ? 'var(--red)' : 'var(--gold)'
+/* RSI tone: oversold reads bullish (green), overbought reads bearish (red) */
+const rsiTone = (n: number) => n <= 30 ? 'var(--green)' : n >= 70 ? 'var(--red)' : 'var(--c-text)'
+
+/* cmc-global · the real CMC global_metrics_latest payload (cap, liquidity,
+   fear & greed, altcoin season, dominance). Every value rendered verbatim. */
+function GlobalMetricsGate({ d }: { d: any }) {
+  const cap = d.market_size?.total_crypto_market_cap_usd || {}
+  const vol = d.liquidity?.volume24h?.total || {}
+  const fg = d.sentiment?.fear_greed?.current || {}
+  const alt = d.rotation?.altcoin_season?.current || {}
+  const altChg = d.rotation?.altcoin_season?.percent_change?.['24h']
+  const dom = d.dominance || {}
+  const fgIdx = Number(fg.index)
+  const altIdx = Number(alt.index)
+  return <div style={statGrid}>
+    <MiniStat label="Total cap" value={cap.current || '-'} tone={TONE} sub={cap.percent_change?.['24h'] ? `24h ${cap.percent_change['24h']}` : undefined} />
+    <MiniStat label="24h volume" value={vol.current || '-'} sub={vol.percent_change?.['24h'] ? `24h ${vol.percent_change['24h']}` : undefined} />
+    <MiniStat label="Fear & greed" value={Number.isFinite(fgIdx) ? String(fgIdx) : '-'} tone={Number.isFinite(fgIdx) ? idxTone(fgIdx) : undefined} sub={fg.value || undefined} />
+    <MiniStat label="Altcoin season" value={Number.isFinite(altIdx) ? String(altIdx) : '-'} tone={Number.isFinite(altIdx) ? idxTone(altIdx) : undefined} sub={altChg ? `24h ${altChg}` : undefined} />
+    <MiniStat label="BTC dominance" value={dom.btc?.current || '-'} tone="var(--gold)" />
+    <MiniStat label="ETH dominance" value={dom.eth?.current || '-'} tone="var(--trust)" />
+  </div>
+}
+
+/* cmc-mcap-ta · the real CMC marketcap_technical_analysis payload (RSI, MACD,
+   pivot, fib retracement on the total-cap series). Rendered verbatim. */
+function MarketcapTaGate({ d }: { d: any }) {
+  const rsi = d.rsi || {}, macd = d.macd || {}, fib = d.fibonacciLevels?.retracementLevels || {}
+  const rsi14 = Number(rsi.rsi14)
+  return <div style={statGrid}>
+    <MiniStat label="RSI 14" value={rsi.rsi14 || '-'} tone={Number.isFinite(rsi14) ? rsiTone(rsi14) : undefined} sub={(rsi.rsi7 || rsi.rsi21) ? `7 ${rsi.rsi7 ?? '-'} · 21 ${rsi.rsi21 ?? '-'}` : undefined} />
+    <MiniStat label="MACD histogram" value={macd.histogram || '-'} tone={signedTone(macd.histogram)} sub={macd.macdLine ? `line ${macd.macdLine}` : undefined} />
+    <MiniStat label="Pivot point" value={d.pivotPoint || '-'} tone={TONE} />
+    <MiniStat label="Market cap" value={d.currentMarketCap || '-'} />
+    <MiniStat label="24h volume" value={d.currentVolume || '-'} />
+    <MiniStat label="Fib 61.8%" value={fib['61.8%'] || '-'} sub={fib['50.0%'] ? `50% ${fib['50.0%']}` : undefined} />
+  </div>
 }
 function DerivGate({ d }: { d: any }) {
   const oi = d.totalOpenInterest || {}, vol = d.totalVolume || {}, fut = d.futures || {}, perp = d.perpetuals || {}
@@ -297,44 +363,201 @@ function MacroGate({ d }: { d: any }) {
     ))}
   </div>
 }
+function NewsGate({ d }: { d: any }) {
+  const headers: string[] = d.headers || []
+  const rows: any[][] = d.rows || []
+  const iTitle = headers.indexOf('title'), iDate = headers.indexOf('publishedAt'), iUrl = headers.indexOf('url')
+  if (iTitle < 0 || rows.length === 0) return null
+  return <div style={{ display: 'grid', gap: 6 }}>
+    {rows.slice(0, 6).map((r, i) => {
+      const url = iUrl >= 0 ? r[iUrl] : ''
+      const title = cell(r, iTitle)
+      return <div key={i} style={{ padding: '8px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.4, textDecoration: 'none' }}>{title}</a>
+        ) : (
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--c-text)', lineHeight: 1.4 }}>{title}</div>
+        )}
+        <div className="mono" style={{ fontSize: 11, color: TONE, marginTop: 3 }}>{cell(r, iDate)}</div>
+      </div>
+    })}
+  </div>
+}
 function gateValid(id: string, d: any): boolean {
+  if (id === 'cmc-global') return !!(d.market_size || d.dominance || d.liquidity)
+  if (id === 'cmc-mcap-ta') return !!(d.macd || d.rsi || d.pivotPoint)
   if (id === 'cmc-deriv') return !!(d.totalOpenInterest || d.totalVolume || d.futures || d.perpetuals)
   if (id === 'cmc-narratives') return (d.categoryList?.headers || []).indexOf('categoryName') >= 0 && (d.categoryList?.rows || []).length > 0
   if (id === 'cmc-macro') return (d.upcomingEventNews?.headers || []).indexOf('title') >= 0 && (d.upcomingEventNews?.rows || []).length > 0
+  if (id === 'cmc-news') return (d.headers || []).indexOf('title') >= 0 && (d.rows || []).length > 0
   return false
+}
+function GateLineage({ method }: { method: string }) {
+  return <div style={{ fontSize: 10, color: 'var(--c-muted-2)', marginTop: 9, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+    <span>source</span>
+    <code className="mono" style={{ fontSize: 10, color: 'var(--c-muted)' }}>CoinMarketCap MCP · {method}</code>
+  </div>
 }
 function CmcGateDemo({ s }: { s: SkillDef }) {
   const map = GATE_TOOL[s.id]
   const { data, error, loading } = usePoll<CmcGate>((sig) => fetchCmcGate(map.slug, sig), 120_000, [map.slug])
   if (loading) return <DemoFrame label={map.label} right="reading"><Reading /></DemoFrame>
-  if (error || !data?.data || !gateValid(s.id, data.data)) return <SchemaDemo s={s} />
+  if (error || !data?.data || !gateValid(s.id, data.data)) {
+    // Graceful real fallback: cap/regime tools still read CoinGecko global (key
+    // free, real). Pure hub feeds fall back to the honest invoke + shape.
+    if (s.id === 'cmc-global') return <GlobalDemo />
+    if (s.id === 'cmc-mcap-ta') return <GlobalDemo regime />
+    return <SchemaDemo s={s} />
+  }
   return <DemoFrame label={map.label} right="CMC hub">
+    {s.id === 'cmc-global' && <GlobalMetricsGate d={data.data} />}
+    {s.id === 'cmc-mcap-ta' && <MarketcapTaGate d={data.data} />}
     {s.id === 'cmc-deriv' && <DerivGate d={data.data} />}
     {s.id === 'cmc-narratives' && <NarrativesGate d={data.data} />}
     {s.id === 'cmc-macro' && <MacroGate d={data.data} />}
+    {s.id === 'cmc-news' && <NewsGate d={data.data} />}
+    <GateLineage method={map.method} />
   </DemoFrame>
 }
 
 /* ── x402 machine payable catalog, live (cmc-skill-x402 / bnb-x402) ── */
-function X402Demo() {
-  const { data, error, loading } = usePoll<X402Catalog>((s) => fetchX402Products(s), 120_000)
-  return <DemoFrame label="Machine payable products live" right={data ? `${data.network} · ${data.products.length}` : 'reading'}>
+function shortHex(s?: string, head = 10, tail = 6): string {
+  if (!s) return '-'
+  return s.length <= head + tail + 1 ? s : `${s.slice(0, head)}…${s.slice(-tail)}`
+}
+
+function X402StepCard({ step }: { step: X402Step }) {
+  const tone = step.name === 'challenge' ? TONE
+    : step.name === 'sign' ? BNB_TONE
+      : step.name === 'verify' ? (step.valid ? 'var(--green)' : 'var(--red)')
+        : 'var(--green)'
+  const accept = step.accepts && step.accepts[0]
+  return <div style={{ display: 'flex', gap: 10, padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+    <span style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 7, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: '#000', background: tone }}>{step.n}</span>
+    <div style={{ minWidth: 0, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700 }}>{step.title}</span>
+        {step.status != null && <Chip tone={tone}>{step.status}</Chip>}
+        {step.name === 'verify' && <Chip tone={tone} solid>{step.valid ? 'verified' : (step.code || 'rejected')}</Chip>}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 3, lineHeight: 1.5 }}>{step.detail}</div>
+      <div className="mono" style={{ fontSize: 10.5, color: 'var(--c-muted-2)', marginTop: 5, lineHeight: 1.7, wordBreak: 'break-all' }}>
+        {step.name === 'challenge' && accept && <>
+          <div>price {accept.maxAmountRequired} · {accept.network} · asset {shortHex(accept.asset)}</div>
+          <div>pay to {shortHex(accept.payTo)}</div>
+        </>}
+        {step.name === 'sign' && <>
+          <div>payer {shortHex(step.payer)} · value {step.value_atomic}</div>
+          <div>nonce {shortHex(step.nonce)}</div>
+          <div>signature {shortHex(step.signature, 14, 8)}</div>
+        </>}
+        {step.name === 'verify' && <>
+          <div>recovered signer {shortHex(step.recovered_payer)}</div>
+          <div>code {step.code} · {step.network}</div>
+        </>}
+        {step.name === 'serve' && step.payment_response && <>
+          <div>settled {String(step.payment_response.success)} · deferred {String(step.payment_response.deferred)}</div>
+          <div>payload {(step.payload_keys || []).join(', ')}</div>
+        </>}
+      </div>
+    </div>
+  </div>
+}
+
+function X402Roundtrip({ productId }: { productId: string }) {
+  const [data, setData] = useState<X402Roundtrip | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  async function run() {
+    setLoading(true); setError(false)
+    try { setData(await fetchX402Roundtrip(productId)) }
+    catch { setError(true) }
+    finally { setLoading(false) }
+  }
+  const right = data ? (data.verified ? 'verified end to end' : 'incomplete') : undefined
+  return <DemoFrame label="Live 402 handshake · MEFAI feed" right={right}>
+    <div style={{ fontSize: 11.5, color: 'var(--c-muted)', lineHeight: 1.55, marginBottom: 8 }}>
+      A fresh ephemeral key signs a real EIP-3009 authorization for the exact price; the server recovers the signer and serves the verified feed. The settlement transaction is deferred to a funded facilitator, so no funds move in this proof.
+    </div>
+    {!data && !loading && <Btn sm variant="primary" onClick={run}>Run live 402 handshake</Btn>}
     {loading && <Reading />}
-    {error && <Down what="The product catalog is not reachable right now." />}
+    {error && <Down what="The handshake endpoint is not reachable right now." />}
     {data && <div style={{ display: 'grid', gap: 6 }}>
-      {data.products.map((p) => {
-        const raw = Number(p.price_atomic) / 1e18
-        const price = Number.isFinite(raw) ? raw : null
-        return <div key={p.product_id} style={{ padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{p.title}</span>
-            <Chip tone={BNB_TONE}>{price == null ? '-' : fmtNum(price, 2)} per call</Chip>
-          </div>
-          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 4, lineHeight: 1.5 }}>{p.description}</div>
-        </div>
-      })}
+      {data.steps.map((s) => <X402StepCard key={s.n} step={s} />)}
+      <div style={{ fontSize: 10.5, color: 'var(--c-muted-2)', lineHeight: 1.6, marginTop: 2 }}>{data.settlement.note}</div>
+      <Btn sm variant="ghost" onClick={run}>Run again</Btn>
     </div>}
   </DemoFrame>
+}
+
+function netLabel(n?: string): string {
+  if (!n) return '-'
+  if (n === 'eip155:8453') return 'Base · 8453'
+  if (n === 'eip155:56') return 'BSC · 56'
+  if (n === 'eip155:204') return 'opBNB · 204'
+  return n
+}
+function X402CmcUpstream() {
+  const { data, error, loading } = usePoll<X402CmcChallenge>((s) => fetchX402CmcChallenge(s), 120_000)
+  const pr = data?.probe
+  const accepts = (pr?.is_402 && pr.accepts) ? pr.accepts : []
+  return <DemoFrame label="CMC upstream x402 gateway · live 402" right={data ? `${data.network} · ${data.chain_id}` : 'reading'}>
+    {loading && <Reading />}
+    {error && <Down what="The CMC gateway probe is not reachable right now." />}
+    {data && <>
+      <div style={{ ...statGrid, marginBottom: 9 }}>
+        <MiniStat label="Price per call" value={`$${fmtNum(data.price_human, 2)}`} tone={TONE} sub={data.asset_symbol} />
+        <MiniStat label="Network" value={data.network} sub={`chain ${data.chain_id}`} />
+        <MiniStat label="Live probe" value={pr?.is_402 ? '402' : (pr?.http_status ?? (pr?.reached ? 'ok' : 'n/a'))} tone={pr?.is_402 ? 'var(--green)' : pr?.reached ? 'var(--gold)' : 'var(--c-muted)'} sub={pr?.is_402 ? 'challenge received' : pr?.reached ? 'reachable' : 'no response'} />
+      </div>
+      <div style={{ fontSize: 10.5, letterSpacing: .5, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 700, marginBottom: 5 }}>metered tools</div>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: accepts.length ? 9 : 6 }}>
+        {data.tools.map((t) => <Chip key={t} tone="var(--c-muted)">{t}</Chip>)}
+      </div>
+      {accepts.length > 0 && <>
+        <div style={{ fontSize: 10.5, letterSpacing: .5, textTransform: 'uppercase', color: 'var(--c-muted)', fontWeight: 700, marginBottom: 5 }}>live accepted terms · {pr?.resource}</div>
+        <div style={{ display: 'grid', gap: 5, marginBottom: 7 }}>
+          {accepts.slice(0, 5).map((a, i) => (
+            <div key={i} style={rowBox}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 700 }}>
+                <Chip tone={a.network === 'eip155:8453' ? TONE : BNB_TONE}>{netLabel(a.network)}</Chip>
+                {(a.extra && a.extra.name) || 'asset'}
+              </span>
+              <span className="mono" style={{ fontSize: 10.5, color: 'var(--c-muted-2)' }}>{a.amount} · {shortHex(a.asset, 8, 6)} · {(a.extra && a.extra.assetTransferMethod) || a.scheme}</span>
+            </div>
+          ))}
+        </div>
+      </>}
+      <div style={{ fontSize: 11, color: 'var(--c-muted)', lineHeight: 1.55 }}>{pr?.note} · <span className="mono">{data.gateway}</span></div>
+      <div style={{ fontSize: 10.5, color: 'var(--c-muted-2)', marginTop: 4 }}>{data.source}</div>
+    </>}
+  </DemoFrame>
+}
+
+function X402Demo({ cmc }: { cmc?: boolean }) {
+  const { data, error, loading } = usePoll<X402Catalog>((s) => fetchX402Products(s), 120_000)
+  const productId = data?.products[0]?.product_id || 'verified-leaderboard'
+  return <div style={{ display: 'grid', gap: 10 }}>
+    <DemoFrame label="Machine payable products live" right={data ? `${data.network} · ${data.products.length}` : 'reading'}>
+      {loading && <Reading />}
+      {error && <Down what="The product catalog is not reachable right now." />}
+      {data && <div style={{ display: 'grid', gap: 6 }}>
+        {data.products.map((p) => {
+          const raw = Number(p.price_atomic) / 1e18
+          const price = Number.isFinite(raw) ? raw : null
+          return <div key={p.product_id} style={{ padding: '9px 11px', borderRadius: 9, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{p.title}</span>
+              <Chip tone={BNB_TONE}>{price == null ? '-' : fmtNum(price, 2)} per call</Chip>
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 4, lineHeight: 1.5 }}>{p.description}</div>
+          </div>
+        })}
+      </div>}
+    </DemoFrame>
+    <X402Roundtrip productId={productId} />
+    {cmc && <X402CmcUpstream />}
+  </div>
 }
 
 /* ── Trust Wallet, live from the autonomous loop snapshot ── */
@@ -614,8 +837,8 @@ function ProofDemo({ s }: { s: SkillDef }) {
 
 /* ── registry: id → live demo. Missing ids simply show the dossier only. ── */
 export const SKILL_DEMO: Record<string, (s: SkillDef) => ReactNode> = {
-  'cmc-global': () => <GlobalDemo />,
-  'cmc-mcap-ta': () => <GlobalDemo regime />,
+  'cmc-global': (s) => <CmcGateDemo s={s} />,
+  'cmc-mcap-ta': (s) => <CmcGateDemo s={s} />,
   'cmc-quotes': () => <QuoteDemo />,
   'cmc-metrics': () => <QuoteDemo metrics />,
   'cmc-info': () => <InfoDemo />,
@@ -629,8 +852,8 @@ export const SKILL_DEMO: Record<string, (s: SkillDef) => ReactNode> = {
   'cmc-deriv': (s) => <CmcGateDemo s={s} />,
   'cmc-narratives': (s) => <CmcGateDemo s={s} />,
   'cmc-macro': (s) => <CmcGateDemo s={s} />,
-  'cmc-news': (s) => <SchemaDemo s={s} />,
-  'cmc-skill-x402': () => <X402Demo />,
+  'cmc-news': (s) => <CmcGateDemo s={s} />,
+  'cmc-skill-x402': () => <X402Demo cmc />,
   'cmc-skill-api-crypto': (s) => <SchemaDemo s={s} />,
   'cmc-skill-api-dex': (s) => <SchemaDemo s={s} />,
   'cmc-skill-api-exchange': (s) => <SchemaDemo s={s} />,

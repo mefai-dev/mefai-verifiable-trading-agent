@@ -1,0 +1,61 @@
+{
+  "schema": "cmc-agent-skill/1.0",
+  "name": "risk-budgeted-allocator",
+  "display_name": "Risk-Budgeted Allocator",
+  "version": "1.0.0",
+  "category": "trading-strategy",
+  "tags": ["position-sizing", "drawdown-budget", "fractional-kelly", "leverage", "risk-management", "crypto"],
+  "license": "MIT",
+  "author": "MEFAI",
+  "summary": "Turn a (symbol, timeframe, equity, current drawdown) decision into a position notional, leverage and margin using drawdown-budget fractional-Kelly sizing, so a trade can never breach the max-drawdown disqualification rule.",
+  "runtime": "python>=3.10",
+  "entrypoint": {
+    "kind": "python",
+    "module": "sizing",
+    "callable": "size_position",
+    "network": false,
+    "read_only": true
+  },
+  "inputs": [
+    { "name": "symbol", "type": "string", "required": true, "description": "Pair such as BTCUSDT." },
+    { "name": "timeframe", "type": "string", "required": true, "description": "Signal timeframe such as 1h." },
+    { "name": "equity", "type": "number", "required": true, "description": "Account equity in quote currency." },
+    { "name": "current_drawdown", "type": "number", "required": true, "description": "Peak-to-trough fraction already incurred, 0..1." },
+    { "name": "jury_cap", "type": "number", "required": false, "default": 0.20, "description": "Max-drawdown disqualification threshold." },
+    { "name": "stop_distance", "type": "number|null", "required": false, "default": null, "description": "Stop fraction; omit to use the empirical adverse-excursion stop." },
+    { "name": "regime_gate", "type": "number", "required": false, "default": 1.0, "description": "0..1 scale from a regime skill; 0 stands aside." },
+    { "name": "conviction", "type": "number", "required": false, "default": 1.0, "description": "0..1 conviction from a fusion or selection skill." },
+    { "name": "venue_max_leverage", "type": "number", "required": false, "description": "Hard leverage ceiling for the venue." },
+    { "name": "horizon", "type": "string", "required": false, "default": "1h", "description": "1h, 4h or 24h horizon for the expectancy lookup." }
+  ],
+  "outputs": [
+    { "name": "approved", "type": "boolean", "description": "Whether any size is allowed given the remaining budget." },
+    { "name": "notional", "type": "number", "description": "Position notional in quote currency." },
+    { "name": "leverage", "type": "number", "description": "Selected leverage." },
+    { "name": "margin", "type": "number", "description": "Margin required." },
+    { "name": "worst_case_loss", "type": "number", "description": "Loss at the stop, guaranteed within the remaining drawdown budget." },
+    { "name": "reasons", "type": "array", "description": "Human-readable sizing rationale lines." }
+  ],
+  "data_sources": {
+    "primary": {
+      "kind": "labeled-outcome-history",
+      "tables": ["signal_performance"],
+      "description": "Realized expectancy and adverse-excursion stops from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
+    },
+    "cmc_agent_hub_tools": ["get_global_metrics_latest", "get_global_crypto_derivatives_metrics"]
+  },
+  "backtest": {
+    "runner": "backtest/backtest.py",
+    "command": "python3 skills/risk-budgeted-allocator/backtest/backtest.py",
+    "dataset": "data/signal.db (pinned synthetic sample, seeded generator)",
+    "deterministic": true,
+    "report": "output/report.json",
+    "metrics": ["worst_case_loss", "notional", "leverage", "internal_cap", "dd_budget_k"],
+    "pass_criteria": "Worst-case loss stays within the budget for every scenario, position size is monotone non-increasing in current drawdown, and size is zero at or past the cap."
+  },
+  "verification": {
+    "repro_command": "python3 data/make_sample_db.py && python3 skills/run_backtests.py risk-budgeted-allocator",
+    "content_hash_artifact": "output/report.manifest.json",
+    "live_forward_proof": "BSC mainnet result ledger 0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744"
+  }
+}

@@ -1,6 +1,11 @@
 ---
 name: meta-strategy-composer
 description: One end-to-end crypto strategy pipeline that fuses asset selection, bracket optimization, regime gating and risk-budgeted sizing into a single backtestable decision. Chains the Narrative Rotation, Empirical TP/SL Optimizer, Regime Risk Governor and Risk-Budgeted Allocator skills so the agent picks what to trade, where to set TP/SL, whether the regime allows it, and how large to go, all inside one drawdown budget. Use when the user wants a complete trade plan, a full portfolio allocation across signals, or to combine the individual strategy skills into one workflow.
+license: MIT
+metadata:
+  version: "1.0.0"
+  category: trading-strategy
+  spec: skill.json
 ---
 
 # Meta-Strategy Composer

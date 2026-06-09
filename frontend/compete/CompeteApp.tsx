@@ -17,6 +17,7 @@ const SkillStudio = lazy(() => import('./pages/SkillStudio'))
 const Protocol = lazy(() => import('./pages/Protocol'))
 const SkillOrchestra = lazy(() => import('./pages/SkillOrchestra'))
 const Docs = lazy(() => import('./pages/Docs'))
+const JudgeMode = lazy(() => import('./pages/JudgeMode'))
 const TrustWallet = lazy(() => import('./pages/TrustWallet'))
 const CoinMarketCap = lazy(() => import('./pages/CoinMarketCap'))
 const BnbChain = lazy(() => import('./pages/BnbChain'))
@@ -27,6 +28,7 @@ const NAV = [
   { path: '/compete/skills', label: 'Strategy Skills' },
   { path: '/compete/protocol', label: 'Protocol' },
   { path: '/compete/orchestra', label: 'AI Council' },
+  { path: '/compete/judge', label: 'Judge mode' },
   { path: '/compete/docs', label: 'Docs' },
 ]
 const STACK = [
@@ -107,6 +109,7 @@ export default function CompeteApp() {
       case '/compete/skills': return <SkillStudio go={go} />
       case '/compete/protocol': return <Protocol go={go} />
       case '/compete/orchestra': return <SkillOrchestra go={go} />
+      case '/compete/judge': return <JudgeMode go={go} />
       case '/compete/docs': return <Docs go={go} />
       case '/compete/trust': return <TrustWallet go={go} />
       case '/compete/cmc': return <CoinMarketCap go={go} />

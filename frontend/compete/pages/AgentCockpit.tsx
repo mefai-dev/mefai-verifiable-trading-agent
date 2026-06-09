@@ -143,6 +143,13 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
 
+    {/* performance attribution · where the realized PnL comes from */}
+    <Reveal delay={80}>
+      <div style={{ marginTop: 28 }}>
+        <PerfAttribution st={st} />
+      </div>
+    </Reveal>
+
     {/* live decisions table */}
     <Reveal delay={80}>
       <div style={{ marginTop: 28 }}>
@@ -483,6 +490,76 @@ function CloseCard({ c }: { c: LoopClose }) {
   </div>
 }
 
+/* ─────────────── performance attribution · where the realized PnL comes from ─────────────── */
+type Agg = { key: string; n: number; wins: number; pnl: number }
+function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
+  const closes = st?.positions?.closes ?? []
+  const n = closes.length
+  const wins = closes.filter((c) => c.pnl_usd >= 0).length
+  const wr = n ? (wins / n) * 100 : 0
+  const net = closes.reduce((a, c) => a + c.pnl_usd, 0)
+  const grossWin = closes.filter((c) => c.pnl_usd > 0).reduce((a, c) => a + c.pnl_usd, 0)
+  const grossLoss = Math.abs(closes.filter((c) => c.pnl_usd < 0).reduce((a, c) => a + c.pnl_usd, 0))
+  const pf = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? Infinity : 0)
+
+  const aggBy = (fn: (c: LoopClose) => string): Agg[] => {
+    const m = new Map<string, Agg>()
+    for (const c of closes) {
+      const k = fn(c)
+      const a = m.get(k) ?? { key: k, n: 0, wins: 0, pnl: 0 }
+      a.n++; if (c.pnl_usd >= 0) a.wins++; a.pnl += c.pnl_usd
+      m.set(k, a)
+    }
+    return [...m.values()].sort((x, y) => y.pnl - x.pnl)
+  }
+  const byReason = aggBy((c) => c.reason)
+  const bySymbol = aggBy((c) => c.symbol)
+  const maxAbs = Math.max(1, ...[...byReason, ...bySymbol].map((a) => Math.abs(a.pnl)))
+
+  const symCols: CmcColumn<Agg>[] = [
+    { key: 'name', header: 'Market', align: 'l', sticky: true, sortValue: (r) => r.key, render: (r) => (
+      <span className="cmc-name"><CoinLogo symbol={r.key} /><span className="cmc-name-main">{r.key.replace('USDT', '')}</span></span>
+    )},
+    { key: 'n', header: 'Trades', sortValue: (r) => r.n, render: (r) => <span className="mono">{r.n}</span> },
+    { key: 'wr', header: 'Win rate', sortValue: (r) => r.wins / r.n, render: (r) => <span className="mono">{fmtPct((r.wins / r.n) * 100, 0)}</span> },
+    { key: 'pnl', header: 'Net PnL', sortValue: (r) => r.pnl, render: (r) => (
+      <span className="mono" style={{ color: r.pnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{r.pnl >= 0 ? '+' : ''}{fmtUsd(r.pnl)}</span>
+    )},
+  ]
+
+  return <Panel title="PERFORMANCE ATTRIBUTION · WHERE PNL COMES FROM" accent="#F0B90B"
+    right={st ? `${n} closed trades` : 'standby'}>
+    {n === 0
+      ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>no closed trades yet · attribution builds as the agent banks results</div>
+      : <>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
+          <Stat label="Closed trades" value={`${n}`} tone={GOLD} sub="banked results" />
+          <Stat label="Recent win rate" value={fmtPct(wr, 0)} tone={wr >= 50 ? 'var(--green)' : 'var(--gold)'} sub={`${wins}/${n} won`} />
+          <Stat label="Realized PnL" value={`${net >= 0 ? '+' : ''}${fmtUsd(net)}`} tone={net >= 0 ? 'var(--green)' : 'var(--red)'} sub="across all closes" />
+          <Stat label="Profit factor" value={pf === Infinity ? '∞' : fmtNum(pf, 2)} tone={pf >= 1 ? 'var(--green)' : 'var(--red)'} sub="gross win / gross loss" />
+        </div>
+        <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>By exit reason</div>
+        <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>
+          {byReason.map((a) => {
+            const tone = CLOSE_TONE[a.key] ?? 'var(--c-muted)'
+            return <div key={a.key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 110px', gap: 10, alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Chip tone={tone}>{a.key}</Chip>
+                <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{a.n}</span>
+              </span>
+              <div style={{ height: 8, borderRadius: 4, background: 'var(--c-panel-2)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${(Math.abs(a.pnl) / maxAbs) * 100}%`, background: a.pnl >= 0 ? 'var(--green)' : 'var(--red)' }} />
+              </div>
+              <span className="mono" style={{ textAlign: 'right', color: a.pnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700, fontSize: 12.5 }}>{a.pnl >= 0 ? '+' : ''}{fmtUsd(a.pnl)}</span>
+            </div>
+          })}
+        </div>
+        <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>By market</div>
+        <CmcTable columns={symCols} rows={bySymbol} defaultSort={{ key: 'pnl', dir: 'desc' }} />
+      </>}
+  </Panel>
+}
+
 /* ─────────────── verified MEFAI signals · entered trades + outcomes ─────────────── */
 function ago(ts: number): string {
   const s = Math.max(0, Math.floor(Date.now() / 1000 - ts))
@@ -572,7 +649,7 @@ function LeaderboardTable({ lb }: { lb: Leaderboard | null }) {
 /* ─────────────── proofs ─────────────── */
 function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
   const rows = st?.proofs ?? []
-  return <Panel title="COMMIT REVEAL PROOFS" accent="#F0B90B" right="BSC testnet">
+  return <Panel title="COMMIT REVEAL PROOFS" accent="#F0B90B" right="BSC mainnet">
     {rows.length === 0
       ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>No proofs this cycle · registry {shortAddr(ADDR.registry)}</div>
       : <div className="cp-cards cp-cards-wide">
@@ -585,8 +662,8 @@ function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
             <span style={{ color: 'var(--c-muted)' }}>signal · conf</span>
             <span className="mono">{fmtNum(p.signal, 0)} · {fmtPct(p.confidence * 100, 0)}</span>
           </div>
-          {p.commit_tx && <a className="cp-a" href={`https://testnet.bscscan.com/tx/${p.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>commit {shortAddr(p.commit_tx)} <IconExternal size={12} /></a>}
-          {p.reveal_tx && <a className="cp-a" href={`https://testnet.bscscan.com/tx/${p.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>reveal {shortAddr(p.reveal_tx)} <IconExternal size={12} /></a>}
+          {p.commit_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>commit {shortAddr(p.commit_tx)} <IconExternal size={12} /></a>}
+          {p.reveal_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>reveal {shortAddr(p.reveal_tx)} <IconExternal size={12} /></a>}
         </div>)}
       </div>}
     <div className="mono" style={{ marginTop: 12, fontSize: 11, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · registry {shortAddr(ADDR.registry)}</div>

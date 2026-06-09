@@ -110,6 +110,7 @@ export function StarField({ count = 30, tone = 'var(--c-primary)' }: { count?: n
 
 /* ─────────────── count-up ─────────────── */
 export function CountUp({ value, decimals = 0, prefix = '', suffix = '', dur = 1100 }: { value: number; decimals?: number; prefix?: string; suffix?: string; dur?: number }) {
+  const target = Number.isFinite(value) ? value : 0
   const [v, setV] = useState(0)
   const ref = useRef<HTMLSpanElement>(null)
   const started = useRef(false)
@@ -124,7 +125,7 @@ export function CountUp({ value, decimals = 0, prefix = '', suffix = '', dur = 1
           const loop = (t: number) => {
             const p = clamp01((t - t0) / dur)
             const e2 = 1 - Math.pow(1 - p, 3)
-            setV(value * e2)
+            setV(target * e2)
             if (p < 1) requestAnimationFrame(loop)
           }
           requestAnimationFrame(loop)
@@ -133,7 +134,7 @@ export function CountUp({ value, decimals = 0, prefix = '', suffix = '', dur = 1
     }, { threshold: 0.4 })
     io.observe(el)
     return () => io.disconnect()
-  }, [value, dur])
+  }, [target, dur])
   return <span ref={ref} className="mono">{prefix}{v.toFixed(decimals)}{suffix}</span>
 }
 
@@ -236,7 +237,9 @@ export function Sparkline({ points, color, w = 130, h = 38 }: { points: number[]
 /* ─────────────── CMC pct cell ─────────────── */
 export function PctCell({ value, d = 2 }: { value: number | null | undefined; d?: number }) {
   if (value == null || !Number.isFinite(Number(value))) return <span style={{ color: 'var(--c-muted-2)' }}>-</span>
-  const v = Number(value), up = v >= 0
+  const v = Number(value)
+  if (v === 0) return <span className="cmc-pct" style={{ color: 'var(--c-muted)' }}>{v.toFixed(d)}%</span>
+  const up = v > 0
   return <span className={`cmc-pct ${up ? 'pos' : 'neg'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
     <IconCaret dir={up ? 'up' : 'down'} size={11} strokeWidth={2.4} />{Math.abs(v).toFixed(d)}%
   </span>

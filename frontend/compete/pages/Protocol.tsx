@@ -2,13 +2,14 @@
    Commit-reveal prediction registry, the RiskGovernor circuit breaker, the unified
    verifiable intelligence index (UVII) and the x402 machine-payable feed. */
 
+import { useState } from 'react'
 import {
   Btn, Card, Chip, Gauge, Panel, PctCell, Reveal, Stat, CountUp,
   CoinLogo, CmcTable, Bar, fmtNum, fmtUsd, shortAddr,
 } from '../ui'
 import type { CmcColumn } from '../ui'
-import { apiGet, usePoll } from '../api'
-import type { UviiIndex, Uvii, X402Catalog, LoopEnvelope } from '../api'
+import { apiGet, usePoll, fetchX402Roundtrip } from '../api'
+import type { UviiIndex, Uvii, X402Catalog, LoopEnvelope, X402Roundtrip } from '../api'
 import { ADDR, AGENT_ID, scan, chainOf } from '../config'
 import { IconExternal } from '../icons'
 
@@ -229,7 +230,56 @@ function X402Panel({ x402 }: { x402: X402Catalog | null }) {
           </div>
         ))}
       </div>}
+    <X402Handshake productId={products[0]?.product_id || 'verified-leaderboard'} />
   </Panel>
+}
+
+/* ─────────────── live 402 handshake (real EIP-3009 roundtrip) ─────────────── */
+function X402Handshake({ productId }: { productId: string }) {
+  const [data, setData] = useState<X402Roundtrip | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  async function run() {
+    setLoading(true); setError(false)
+    try { setData(await fetchX402Roundtrip(productId)) }
+    catch { setError(true) }
+    finally { setLoading(false) }
+  }
+  const short = (s?: string, h = 10, t = 6) => !s ? '-' : (s.length <= h + t + 1 ? s : `${s.slice(0, h)}…${s.slice(-t)}`)
+  return <div style={{ marginTop: 16, padding: 16, borderRadius: 13, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <b style={{ fontSize: 13.5 }}>Run the live 402 handshake</b>
+      {data && <Chip tone={data.verified ? 'var(--green)' : 'var(--gold)'} solid>{data.verified ? 'verified end to end' : 'incomplete'}</Chip>}
+    </div>
+    <p style={{ fontSize: 12, color: 'var(--c-muted)', margin: '6px 0 10px', lineHeight: 1.55 }}>
+      A fresh ephemeral key signs a real EIP-3009 authorization for the exact price; the server recovers the signer and serves the verified feed. The settlement transaction is deferred to a funded facilitator, so no funds move in this proof.
+    </p>
+    {!data && !loading && <Btn sm variant="trust" onClick={run}>Run live 402 handshake</Btn>}
+    {loading && <div style={{ color: 'var(--c-muted)', fontSize: 12.5 }}>running handshake…</div>}
+    {error && <div style={{ color: 'var(--c-muted)', fontSize: 12.5 }}>The handshake endpoint is not reachable right now.</div>}
+    {data && <div style={{ display: 'grid', gap: 6 }}>
+      {data.steps.map((s) => {
+        const tone = s.name === 'verify' ? (s.valid ? 'var(--green)' : 'var(--red)') : s.name === 'serve' ? 'var(--green)' : TRUST
+        return <div key={s.n} style={{ display: 'flex', gap: 10, alignItems: 'baseline', padding: '8px 11px', borderRadius: 9, background: 'var(--c-panel)', border: '1px solid var(--c-line)' }}>
+          <span style={{ flex: '0 0 auto', width: 20, height: 20, borderRadius: 6, display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 800, color: '#000', background: tone }}>{s.n}</span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700 }}>{s.title}</span>
+              {s.status != null && <Chip tone={tone}>{s.status}</Chip>}
+            </div>
+            <div className="mono" style={{ fontSize: 10.5, color: 'var(--c-muted-2)', marginTop: 3, wordBreak: 'break-all', lineHeight: 1.6 }}>
+              {s.name === 'sign' && <>payer {short(s.payer)} · sig {short(s.signature, 14, 8)}</>}
+              {s.name === 'verify' && <>recovered signer {short(s.recovered_payer)} · {s.code}</>}
+              {s.name === 'serve' && s.payment_response && <>settled {String(s.payment_response.success)} · deferred {String(s.payment_response.deferred)}</>}
+              {s.name === 'challenge' && s.accepts && s.accepts[0] && <>{s.accepts[0].maxAmountRequired} · {s.accepts[0].network} · {short(s.accepts[0].payTo)}</>}
+            </div>
+          </div>
+        </div>
+      })}
+      <div style={{ fontSize: 10.5, color: 'var(--c-muted-2)', lineHeight: 1.55 }}>{data.settlement.note}</div>
+      <Btn sm variant="ghost" onClick={run}>Run again</Btn>
+    </div>}
+  </div>
 }
 
 /* ─────────────── proofs table ─────────────── */
@@ -240,8 +290,8 @@ function ProofsTable({ st }: { st?: LoopEnvelope['state'] }) {
     { key: 'status', header: 'Status', render: (r) => <Chip tone={r.status === 'revealed' ? 'var(--green)' : 'var(--gold)'}>{r.status}</Chip> },
     { key: 'signal', header: 'Signal', render: (r) => <span className="mono">{fmtNum(r.signal, 0)}</span> },
     { key: 'conf', header: 'Confidence', render: (r) => <PctCell value={r.confidence} d={0} /> },
-    { key: 'commit', header: 'Commit tx', render: (r) => r.commit_tx ? <a className="cp-a" href={`https://testnet.bscscan.com/tx/${r.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{shortAddr(r.commit_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
-    { key: 'reveal', header: 'Reveal tx', render: (r) => r.reveal_tx ? <a className="cp-a" href={`https://testnet.bscscan.com/tx/${r.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--green)' }}>{shortAddr(r.reveal_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
+    { key: 'commit', header: 'Commit tx', render: (r) => r.commit_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{shortAddr(r.commit_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
+    { key: 'reveal', header: 'Reveal tx', render: (r) => r.reveal_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--green)' }}>{shortAddr(r.reveal_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
     { key: 'pid', header: 'Pred ID', render: (r) => <span className="mono">{r.prediction_id ?? '-'}</span> },
   ]
   return <Panel title="COMMIT REVEAL PROOFS" accent="#3375BB" right={st ? `cycle ${st.cycle}` : 'standby'}

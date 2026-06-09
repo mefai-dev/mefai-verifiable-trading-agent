@@ -11,8 +11,8 @@ import { SPONSOR_LOGO, IconExternal } from '../icons'
 import { CapabilityWeb } from './capabilityWeb'
 
 const cleanSym = (s: string) => s.replace('USDT.P', '').replace('USDT', '').replace('.P', '') || s
-// Commit / reveal seals are written to the testnet registry during the judged window.
-const txUrl = (h: string) => `https://testnet.bscscan.com/tx/${h}`
+// Commit / reveal seals are written to the mainnet registry during the judged window.
+const txUrl = (h: string) => `https://bscscan.com/tx/${h}`
 const isTx = (h?: string) => !!h && /^0x[a-fA-F0-9]{6,}/.test(h)
 
 export default function Landing({ go }: { go: (p: string) => void }) {
@@ -57,6 +57,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
         <Reveal delay={210}>
           <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap', justifyContent: 'center', marginTop: 32 }}>
             <Btn variant="primary" onClick={() => go('/compete/agent')}>Enter the live agent</Btn>
+            <Btn variant="gold" onClick={() => go('/compete/judge')}>Judge mode · verify in 5 min</Btn>
             <Btn variant="ghost" onClick={() => go('/compete/orchestra')}>Talk to the AI council</Btn>
             <Btn variant="ghost" href={GITHUB_URL}>Open source</Btn>
           </div>
@@ -189,7 +190,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ VERIFIABLE PROOF ════════ */}
     <section style={{ maxWidth: 1080, margin: '0 auto', padding: '52px 22px 30px' }}>
-      <Reveal><SectionHead title="Audit the proof yourself" sub="Every contract and identity below is deployed and verified on BNB Chain. The result ledger and identity are on BSC mainnet; the live judged registry and risk governor on BSC testnet. One tap opens it in the matching explorer." /></Reveal>
+      <Reveal><SectionHead title="Audit the proof yourself" sub="Every contract and identity below is deployed and verified on BSC mainnet. The result ledger, the identity, the live judged registry and the risk governor all run on chain 56. One tap opens it in the explorer." /></Reveal>
       <Reveal delay={70}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14, marginTop: 30 }}>
           {[

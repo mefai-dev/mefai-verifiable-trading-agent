@@ -897,3 +897,76 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   .compete-root .cp-omni-v-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .compete-root .cp-omni-src-grid { grid-template-columns: 1fr; }
 }
+
+/* ════════ judge mode · the five minute verifiable tour ════════ */
+.compete-root .cp-judge-hero { text-align: center; max-width: 720px; margin: 0 auto; }
+.compete-root .cp-judge-h1 { font-size: clamp(28px, 4.4vw, 46px); font-weight: 900; letter-spacing: -1px; margin: 14px 0 0; }
+.compete-root .cp-judge-lead { color: var(--c-text-2); line-height: 1.66; font-size: 14.5px; margin: 14px auto 0; }
+.compete-root .cp-judge-cta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+
+.compete-root .cp-judge-map {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
+  margin: 30px 0 8px; padding: 12px; border: 1px solid var(--c-line); border-radius: 14px; background: var(--c-panel-2);
+}
+.compete-root .cp-judge-map-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.compete-root .cp-judge-map-n {
+  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 900; color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+}
+.compete-root .cp-judge-map-t { font-size: 12px; color: var(--c-text-2); line-height: 1.3; }
+
+.compete-root .cp-judge-flow { margin-top: 20px; }
+.compete-root .cp-judge-step { display: flex; gap: 16px; }
+.compete-root .cp-judge-rail { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
+.compete-root .cp-judge-n {
+  width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  font-size: 15px; font-weight: 900; color: #0b0e14; background: var(--gold);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--gold) 30%, transparent);
+}
+.compete-root .cp-judge-line { flex: 1; width: 2px; margin: 6px 0; background: linear-gradient(var(--c-line), color-mix(in srgb, var(--c-line) 30%, transparent)); }
+.compete-root .cp-judge-body { flex: 1; min-width: 0; padding-bottom: 30px; }
+.compete-root .cp-judge-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.compete-root .cp-judge-of { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--c-muted-2); }
+.compete-root .cp-judge-title { font-size: 18px; font-weight: 800; margin: 3px 0 0; }
+.compete-root .cp-judge-verify {
+  font-size: 13px; line-height: 1.6; color: var(--c-text-2); margin: 10px 0 0;
+  padding: 10px 13px; border-left: 2px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  background: var(--c-panel-2); border-radius: 0 10px 10px 0;
+}
+.compete-root .cp-judge-verify b { color: var(--gold); text-transform: uppercase; font-size: 10.5px; letter-spacing: .6px; margin-right: 6px; }
+.compete-root .cp-judge-content { margin-top: 13px; }
+.compete-root .cp-judge-note { font-size: 12.5px; line-height: 1.55; color: var(--c-muted); margin: 0; }
+.compete-root .cp-judge-scan { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; font-size: 12px; font-weight: 600; }
+
+.compete-root .cp-judge-proofs { display: grid; gap: 8px; }
+.compete-root .cp-judge-proof { padding: 10px 12px; border: 1px solid var(--c-line); border-radius: 11px; background: var(--c-panel-2); }
+.compete-root .cp-judge-proof-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.compete-root .cp-judge-hashrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.compete-root .cp-judge-hash-l { font-size: 11px; color: var(--c-muted); }
+.compete-root .cp-judge-hash { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.compete-root .cp-judge-hash-pending { font-size: 11.5px; color: var(--c-muted-2); }
+.compete-root .cp-judge-pid { font-size: 10.5px; color: var(--c-muted-2); margin-top: 5px; }
+
+.compete-root .cp-judge-ledger,
+.compete-root .cp-judge-gov-stats,
+.compete-root .cp-judge-uvii-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.compete-root .cp-judge-gov,
+.compete-root .cp-judge-uvii { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.compete-root .cp-judge-gov-stats,
+.compete-root .cp-judge-uvii-stats { flex: 1; min-width: 220px; }
+.compete-root .cp-judge-lb { display: grid; gap: 5px; margin-top: 12px; }
+.compete-root .cp-judge-lb-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 11px; border: 1px solid var(--c-line); border-radius: 10px; background: var(--c-panel-2);
+}
+.compete-root .cp-judge-close { padding: 22px 24px; margin-top: 14px; text-align: center; }
+.compete-root .cp-judge-close > div { justify-content: center; }
+
+@media (max-width: 560px) {
+  .compete-root .cp-judge-step { gap: 11px; }
+  .compete-root .cp-judge-n { width: 28px; height: 28px; font-size: 13px; }
+  .compete-root .cp-judge-ledger,
+  .compete-root .cp-judge-gov-stats,
+  .compete-root .cp-judge-uvii-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
