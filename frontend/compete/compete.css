@@ -889,7 +889,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 }
 .compete-root .cp-omni-badge.ok { color: var(--green); background: color-mix(in srgb, var(--green) 16%, transparent); }
 .compete-root .cp-omni-badge.wait { color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); }
-.compete-root .cp-omni-badge.off { color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); }
+.compete-root .cp-omni-badge.off { color: var(--red); background: color-mix(in srgb, var(--red) 15%, transparent); }
 
 @media (max-width: 560px) {
   .compete-root .cp-omni-dir { font-size: 22px; }
@@ -921,7 +921,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 }
 .compete-root .cp-cmc-subchip em { font-style: normal; font-size: 9.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--c-muted); font-weight: 700; }
 .compete-root .cp-cmc-subchip b { font-size: 12.5px; font-weight: 800; color: var(--c-text); }
-.compete-root .cp-cmc-method { font-size: 10.5px; line-height: 1.5; color: var(--c-muted-2); margin-top: 11px; max-width: 560px; }
+.compete-root .cp-cmc-method { font-size: 12px; line-height: 1.55; color: var(--c-muted); margin-top: 11px; max-width: 560px; }
 .compete-root .cp-cmc-dial {
   flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 9px;
 }
@@ -940,7 +940,11 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .cp-cmc-kv { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11.5px; }
 .compete-root .cp-cmc-kv span { color: var(--c-muted); }
 .compete-root .cp-cmc-kv b { font-weight: 800; color: var(--c-text); text-align: right; overflow-wrap: anywhere; }
-.compete-root .cp-cmc-down, .compete-root .cp-cmc-wait { font-size: 11px; line-height: 1.5; color: var(--c-muted-2); margin: 0; }
+.compete-root .cp-cmc-wait { font-size: 11px; line-height: 1.5; color: var(--c-muted-2); margin: 0; }
+.compete-root .cp-cmc-down {
+  font-size: 11px; line-height: 1.5; color: var(--c-muted-2); margin: 0;
+  padding-left: 8px; border-left: 2px solid color-mix(in srgb, var(--red) 55%, transparent);
+}
 
 .compete-root .cp-cmc-narr, .compete-root .cp-cmc-feed { display: flex; flex-direction: column; gap: 5px; }
 .compete-root .cp-cmc-narr-r { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
@@ -958,6 +962,13 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 @media (max-width: 560px) {
   .compete-root .cp-cmc-head { justify-content: center; text-align: center; }
   .compete-root .cp-cmc-grid { grid-template-columns: 1fr; }
+  /* lead with the score on mobile, not a wall of text */
+  .compete-root .cp-cmc-dial { order: -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compete-root .cp-ellipsis { animation: none !important; }
+  .compete-root .cp-cmc *, .compete-root .cp-omni * { transition: none !important; }
 }
 
 /* ════════ judge mode · the five minute verifiable tour ════════ */

@@ -3,9 +3,10 @@
    feeds the Omni Signal decision. Six live gates land in parallel · sentiment
    (Fear and Greed + altcoin season + dominance), derivatives (open interest +
    funding + volume), trending narratives, market-wide technicals, upcoming
-   macro events, and the latest news. A transparent composite blends the four
-   numeric regime signals into a single 0-100 reading; every figure is the gate's
-   own value and any gate that does not answer says so. Nothing here is mocked. */
+   macro events, and the latest news. A transparent composite blends the live
+   numeric regime signals (Fear and Greed, market RSI, MACD, BTC dominance, perp
+   funding) into a single 0-100 reading; every figure is the gate's own value and
+   any gate that does not answer says so. Nothing here is mocked. */
 
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -13,8 +14,6 @@ import { fetchCmcGate } from '../api'
 import type { CmcGate } from '../api'
 import { Gauge, Chip, fmtPct } from '../ui'
 import { useTx } from '../i18n'
-
-const TONE = 'var(--gold)'
 
 type Stage = { data: CmcGate | null; error: boolean; loading: boolean }
 const idle = (): Stage => ({ data: null, error: false, loading: true })
@@ -29,13 +28,12 @@ function pctNum(s: unknown): number {
 const has = (n: number) => Number.isFinite(n)
 
 /* CMC table gates return parallel headers[] + rows[]; resolve a column by its
-   header name (falling back to a known position) so a reordered column never
-   shifts the read. */
+   header name so a reordered column never shifts the read. When the gate sends a
+   real header row we trust the name (returning -1, i.e. skip the field, if it was
+   renamed away) rather than reading a stale ordinal as truth; the positional
+   fallback is used only when the gate omits headers entirely. */
 function colAt(headers: unknown, name: string, fallback: number): number {
-  if (Array.isArray(headers)) {
-    const i = headers.indexOf(name)
-    if (i >= 0) return i
-  }
+  if (Array.isArray(headers) && headers.length) return headers.indexOf(name)
   return fallback
 }
 
@@ -89,12 +87,14 @@ function parseNarratives(g: CmcGate | null): Narrative[] | null {
   const iTop = colAt(h, 'topCoinList', 17)
   const out: Narrative[] = []
   for (const r of rows.slice(0, 5)) {
+    const name = String(r?.[iName] ?? '')
+    if (!name) continue
     const coins: string[] = []
     const tc = r?.[iTop]?.rows
-    if (Array.isArray(tc)) for (const c of tc.slice(0, 3)) if (c?.[0]) coins.push(String(c[0]))
-    out.push({ name: String(r?.[iName] ?? ''), mcap: String(r?.[iMc] ?? ''), chg24: pctNum(r?.[iChg]), coins })
+    if (Array.isArray(tc)) for (const c of tc.slice(0, 3)) if (Array.isArray(c) && c[0]) coins.push(String(c[0]))
+    out.push({ name, mcap: String(r?.[iMc] ?? ''), chg24: pctNum(r?.[iChg]), coins })
   }
-  return out
+  return out.length ? out : null
 }
 
 type Ta = { rsi14: number; rsi7: number; macdHist: number; pivot: string; mcap: string }
@@ -299,6 +299,7 @@ export function CmcHubBand() {
   const ta = parseTa(g['marketcap-ta'].data)
   const { score, subs } = buildContext(sent, deriv, ta)
   const anyLive = GATES.some((k) => !g[k].loading && !g[k].error && g[k].data)
+  const hasContext = subs.length > 0
   const lean = leanOf(score)
 
   return <div className="cp-cmc">
@@ -312,14 +313,14 @@ export function CmcHubBand() {
             <em>{tx(su.label)}</em><b>{su.reading}</b>
           </span>)}
         </div>}
-        <div className="cp-cmc-method">{tx('Composite blends four CMC regime signals · Fear and Greed and market RSI read contrarian, MACD with the trend, dominance for rotation. Each input is shown above.')}</div>
+        <div className="cp-cmc-method">{tx('Composite blends the live CMC regime signals shown above · Fear and Greed and market RSI read contrarian, MACD with the trend, dominance for rotation, perp funding for positioning. Every input is the gate\u2019s own value.')}</div>
       </div>
       <div className="cp-cmc-dial">
-        {anyLive
+        {hasContext
           ? <Gauge value={score} max={100} label={tx('market context')} tone={lean.c} size={132}
               sub={tx('0 risk off · 100 risk on')} />
-          : <div className="cp-cmc-dial-wait">{tx('reading the hub')}<span className="cp-ellipsis" /></div>}
-        {anyLive && <Chip tone={lean.c} solid>{tx(lean.t)}</Chip>}
+          : <div className="cp-cmc-dial-wait">{anyLive ? tx('waiting on regime signals') : tx('reading the hub')}<span className="cp-ellipsis" /></div>}
+        {hasContext && <Chip tone={lean.c} solid>{tx(lean.t)}</Chip>}
       </div>
     </div>
 

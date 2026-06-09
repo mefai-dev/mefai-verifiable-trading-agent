@@ -22,7 +22,6 @@ import { useTx } from '../i18n'
 import { CmcHubBand } from './cmcHub'
 
 const TONE = 'var(--gold)'
-const MEFAI = '#A78BFA'
 
 /* the assets the whole chain can run end to end (fusion spot form + council slash form) */
 const ASSETS: { base: string; spot: string; slash: string }[] = [
@@ -124,7 +123,7 @@ function CouncilStage({ s }: { s: Stage<DebateResult> }) {
   return <>
     <div className="cp-omni-row">
       <Chip tone={sigTone(c.signal)} solid>{c.signal}</Chip>
-      <span className="cp-omni-agree mono">{fmtPct((c.agreement_pct ?? c.confidence * 100), 0)} {tx('agreement')}</span>
+      <span className="cp-omni-agree mono">{(() => { const a = c.agreement_pct ?? c.confidence * 100; return Number.isFinite(a) ? `${fmtPct(a, 0)} ${tx('agreement')}` : tx('agreement reading pending') })()}</span>
       <span className="cp-omni-sub">{experts.length} {tx('expert agents at the table')}</span>
     </div>
     {c.summary && <p className="cp-omni-p">{c.summary}</p>}
@@ -255,7 +254,9 @@ export function OmniSignalPanel() {
     setFusion(idle()); setCouncil(idle()); setBracket(idle()); setSizing(idle()); setSecurity(idle())
     const live = () => id === runId.current && !sig.aborted
 
-    fetchFusion(asset.spot, tf, sig)
+    // one fusion call feeds both the Fusion stage and the sizing conviction below
+    const fusionP = fetchFusion(asset.spot, tf, sig)
+    fusionP
       .then((d) => { if (live()) setFusion({ data: d, error: false, loading: false }) })
       .catch(() => { if (live()) setFusion({ data: null, error: true, loading: false }) })
     fetchDebate(asset.slash, sig)
@@ -274,7 +275,7 @@ export function OmniSignalPanel() {
         if (!ls.available || !ls.state) throw new Error('loop snapshot unavailable')
         const equity = ls.state.equity
         let conviction = 0.5 // neutral lean if fusion is briefly unreachable
-        try { const f = await fetchFusion(asset.spot, tf, sig); if (Number.isFinite(f.net)) conviction = clamp01(Math.abs(f.net)) } catch { /* keep neutral lean */ }
+        try { const f = await fusionP; if (Number.isFinite(f.net)) conviction = clamp01(Math.abs(f.net)) } catch { /* keep neutral lean */ }
         const z = await fetchSizing({ symbol: asset.spot, timeframe: tf, equity, conviction }, sig)
         if (live()) setSizing({ data: z, error: false, loading: false })
       } catch { if (live()) setSizing({ data: null, error: true, loading: false }) }
@@ -348,5 +349,3 @@ function StageBadge<T>({ s }: { s: Stage<T> }) {
   if (s.error || !s.data) return <span className="cp-omni-badge off">{tx('down')}</span>
   return <span className="cp-omni-badge ok">{tx('live')}</span>
 }
-
-void MEFAI
