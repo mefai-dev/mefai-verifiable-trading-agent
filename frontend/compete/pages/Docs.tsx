@@ -156,13 +156,6 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: 'roadmap', title: 'Roadmap',
-    body: [
-      'The full judged loop runs on BSC mainnet. The commit reveal registry, the risk governor, the equity keeper, the result ledger and the identity all live on chain 56 with thousands of resolved signals.',
-      'Beyond the contest the plan is to widen the asset universe. To open the machine payable feed to more agents. The verifiable design stays the same at every step.',
-    ],
-  },
-  {
     id: 'conclusion', title: 'Conclusion',
     body: [
       'MEFAI turns a trading record into something you can check. It seals every call before the outcome. It caps its own risk with a contract. It writes every result to a public ledger. The result is an autonomous agent that earns trust by proof rather than by claim.',
