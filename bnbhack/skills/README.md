@@ -4,11 +4,13 @@ Five composable trading-strategy skills, each conforming to the CMC Agent Skill
 schema (`skill.json` · `cmc-agent-skill/1.0`). Every skill is **read-only,
 network-free in CI, and deterministic**: it reads a pinned labeled-outcome store
 and never trades, signs, or writes. The edge comes from **181k labeled MEFAI
-signal outcomes across 40+ assets and 7 timeframes** in production; that book is
-private. A pinned synthetic sample DB ships so every number below regenerates
-byte-for-byte · it covers **20 illustrative symbols (40000 labeled outcomes)** of
-the same shape as the private 40+ asset production base, so the figures here are
-reproducible without it.
+signal outcomes across 40+ assets and multiple timeframes** in production; that
+edge is expectancy / risk-adjusted and drawdown-bounded, not a directional
+hit-rate (the live win rate sits near 50%). That book is private. A
+deterministic sample-DB generator ships; one command regenerates the pinned DB
+byte-for-byte (`sha256 f7202dd2…2bb0282d`). The sample covers **20 illustrative
+symbols (40000 labeled outcomes)** of the same shape as the private 40+ asset
+production base, so the figures here are reproducible without the private book.
 
 > Verify it yourself · no displayed number is one you cannot reproduce.
 
@@ -22,7 +24,7 @@ repository-stable `repro_digest`. On the shipped sample DB
 (`sha256 f7202dd2…2bb0282d`, 40000 labeled outcomes) the current digest is:
 
 ```
-repro_digest  bc6c34de73aa4e6ecebf794824efff058d932773d038611341cf6e2a787ab3e3
+repro_digest  a6d1f89e74c50e8265b8a057ba8ffa8725a2726f9948d96abaa5d4d385bdffb8
 overall       PASS  (5/5 skills)
 ```
 
@@ -104,14 +106,15 @@ backtests.
 The risk-budgeted-allocator is the only skill with a real walk-forward equity
 engine. It splits the labeled outcomes by time, estimates each bucket's edge on
 the **train window only**, then walks the held-out test window forward sizing
-with this exact model. The artifact is pinned under the same hash-guard as the
-invariant backtests.
+with the same drawdown-budget fractional-Kelly model (train-window edge
+estimates, no shrinkage applied in the backtest). The artifact is pinned under
+the same hash-guard as the invariant backtests.
 
 ![Walk-forward equity](risk-budgeted-allocator/output/equity_curve.svg)
 
 From the shipped
 [`equity_report.json`](risk-budgeted-allocator/output/equity_report.json)
-(public synthetic sample · 16000 out-of-sample trades · net of a 0.2% V3
+(public synthetic sample · 16000 out-of-sample candidate signals · net of a 0.2% V3
 round-trip · sub-year window so metrics are reported on a window basis, not
 annualised CAGR):
 
@@ -142,6 +145,9 @@ engine's mechanics and ablation; they are **not** a live track record.
   repository-stable `repro_digest`.
 - The harness records `MEFAI_SIGNAL_DB` resolution, Python version, and platform
   so a mismatch is visible.
+- The `repro_digest` is computed only over dataset and per-skill provenance, so
+  it is stable across machines. On a re-run only `generated_at` (a wall-clock
+  field, excluded from the digest) changes; the digest itself does not.
 
 Live forward proof for the production edge sits on the BSC mainnet result ledger
 `0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744`.

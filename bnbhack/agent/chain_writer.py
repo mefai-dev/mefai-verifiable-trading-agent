@@ -453,7 +453,8 @@ class ChainWriter:
     # -- registry writes (agent-signed) -------------------------------------
     def commit(self, agent_id_hex: str, seal: bytes, expires_at: int,
                reveal_deadline: int, *, execute: bool = False) -> TxOutcome:
-        """Commit a sealed prediction from the agent wallet. TESTNET; dry default."""
+        """Commit a sealed prediction from the agent wallet. MAINNET write in
+        production (chain 56); dry by default."""
         if not execute:
             return _dry(f"would commit seal expiring {expires_at}")
         if not self._ensure() or self._registry is None:
@@ -474,7 +475,8 @@ class ChainWriter:
     def reveal(self, commit_id: int, agent_id_hex: str, symbol: str, signal: int,
                confidence: int, entry: int, target: int, stop: int,
                expires_at: int, salt: bytes, *, execute: bool = False) -> TxOutcome:
-        """Reveal a previously committed prediction. TESTNET; dry default."""
+        """Reveal a previously committed prediction. MAINNET write in production
+        (chain 56); dry by default."""
         if not execute:
             return _dry(f"would reveal commitId {commit_id} for {symbol}")
         if not self._ensure() or self._registry is None:

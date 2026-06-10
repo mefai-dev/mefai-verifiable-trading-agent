@@ -204,7 +204,7 @@ class RequirementsConfig:
     pay_to: str
     asset: str
     network: str = "bsc"
-    resource: str = "https://mefai.io/x402/feed"
+    resource: str = "https://mefai.io/bnbhack-x402/feed"
     asset_name: str = "USD Coin"       # EIP-712 domain name of the asset
     asset_version: str = "2"           # EIP-712 domain version of the asset
     max_timeout_seconds: int = DEFAULT_MAX_TIMEOUT_SECONDS

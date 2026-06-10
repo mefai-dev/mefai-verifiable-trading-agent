@@ -69,7 +69,9 @@ Two layers, both pinned inside the same reproducible hash-guard
 2. **Walk-forward out-of-sample equity** (`backtest/walk_forward.py`) is the
    headline edge: it splits the labeled outcomes by time, estimates each bucket's
    edge on the train window only, then walks the held-out test window forward
-   sizing with this exact model. It reports max drawdown and net-of-cost return
+   sizing with the same drawdown-budget fractional-Kelly model (train-window edge
+   estimates, no shrinkage applied in the backtest). It reports max drawdown and
+   net-of-cost return
    for the risk engine against a naive flat-leverage floor, so the value of the
    drawdown budget is explicit and falsifiable.
 

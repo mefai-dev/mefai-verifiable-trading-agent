@@ -602,6 +602,9 @@ class AgentLoop:
         # read once from the same env the public feed endpoint uses.
         self._x402_last: Optional[Dict[str, Any]] = None
         self._x402_cfg = x402_feed.RequirementsConfig(
+            # The 0x..0001 default is a deliberate deferred-settlement
+            # placeholder (settlement is deferred to a facilitator, no funds
+            # move), not a real recipient; a live deployment sets BNBHACK_X402_PAYTO.
             pay_to=os.getenv("BNBHACK_X402_PAYTO", "0x" + "00" * 19 + "01"),
             asset=os.getenv("BNBHACK_X402_ASSET",
                             "0x55d398326f99059fF775485246999027B3197955"),
@@ -934,11 +937,19 @@ class AgentLoop:
             res = await bsc_exec.balance()
             if res.ok:
                 raw = res.data.get("totalUsd")
+                # twak's totalUsd is the native + priced-token total; it OMITS
+                # unpriced tokens (e.g. USDT), so we add held stablecoins at face
+                # value on top. A None/non-finite totalUsd means the read itself
+                # failed (NOT an empty wallet): treat it as untrustworthy and fall
+                # through to last-good below, because computing stablecoins-only
+                # would drop the native BNB and look like a phantom drawdown. A
+                # real trading wallet always holds BNB gas, so a healthy read is a
+                # positive number that the stablecoin add then augments.
                 usd = float(raw) if raw is not None else None
                 if usd is not None and math.isfinite(usd):
-                    # twak omits unpriced tokens from totalUsd; add held
-                    # stablecoins at face value so idle USDT counts as equity.
                     usd += self._unpriced_stable_usd(res.data)
+                else:
+                    usd = None
                 if usd is not None and math.isfinite(usd) and usd > 0:
                     # Fold the perp venue's account equity (margin + open uPnL)
                     # into the mark so a live short's risk is VISIBLE to the
@@ -1277,8 +1288,9 @@ class AgentLoop:
                         return
                     if d.action == "TRADE_SHORT":
                         # Spot has no borrow leg, so a SHORT routes through the
-                        # perp venue (the audited USDT-M futures adapter, see
-                        # perp_exec). When perps are ENABLED (BNBHACK_EXECUTE_PERP
+                        # live perp venue: Binance USDT-M futures via the gated
+                        # perp_exec adapter (see perp_exec). When perps are ENABLED
+                        # (BNBHACK_EXECUTE_PERP
                         # plus venue keys) a live short is signed there and the leg
                         # is recorded with signal_dir<0 at the real fill so the
                         # close path can exit it on the same venue. When perps are

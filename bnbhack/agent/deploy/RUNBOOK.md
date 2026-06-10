@@ -59,17 +59,21 @@ To stop everything: `systemctl stop mefai-bnbhack-watchdog mefai-bnbhack-loop`
 
 ## Live-trade broadcast (transparency feed, all optional)
 
-The loop can announce every trade leg it takes (and every close) to a Telegram
-chat / channel, so the judged window is observable in real time. It is fully
-opt-in: with no bot token configured it is a silent no-op. It signs nothing,
-moves no funds, and every message carries only public trade facts (symbol, side,
-size, prices, PnL) plus the public BscScan tx link. Set these in the loop's
-secrets EnvironmentFile (`secrets/agent-secrets.env` in the service template):
+The loop can announce every trade leg it takes (and every close) so the judged
+window is observable in real time. Two delivery paths exist and EITHER one
+enables broadcasting: a single Telegram chat / channel, or a per-user push
+fan-out via @mefainews_bot (each subscriber is DMed). It is fully opt-in: with
+neither path configured it is a silent no-op. It signs nothing, moves no funds,
+and every message carries only public trade facts (symbol, side, size, prices,
+PnL) plus the public BscScan tx link. Set these in the loop's secrets
+EnvironmentFile (`secrets/agent-secrets.env` in the service template):
 
 | Var | Default | Meaning |
 | --- | --- | --- |
-| `BNBHACK_TG_BOT_TOKEN` | (falls back to `TELEGRAM_BOT_TOKEN`) | bot token for the broadcast |
-| `BNBHACK_TG_CHAT_ID` | (unset) | target chat / channel id (broadcast is off until set) |
+| `BNBHACK_AGENT_FEED_URL` | `https://mefai.io/push_api/agent_feed/broadcast` | per-user push fan-out endpoint (DM via @mefainews_bot) |
+| `BNBHACK_AGENT_FEED_KEY` | (unset) | push-service API key for the fan-out endpoint (`X-API-KEY`); fan-out is off until set |
+| `BNBHACK_TG_BOT_TOKEN` | (falls back to `TELEGRAM_BOT_TOKEN`) | bot token for the single-chat broadcast |
+| `BNBHACK_TG_CHAT_ID` | (unset) | target chat / channel id (single-chat broadcast is off until set) |
 | `BNBHACK_TG_PAPER` | 1 | also announce paper legs (labelled PAPER); 0 = live executed legs only |
 
 ## Two-sided execution · live SHORT leg (perp venue, all optional)

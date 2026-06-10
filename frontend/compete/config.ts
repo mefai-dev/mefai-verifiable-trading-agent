@@ -43,7 +43,10 @@ export const txHashOf = (v?: string): string =>
   !v ? '' : (v.includes('/tx/') ? v.split('/tx/').pop()! : v)
 
 /* Every contract above is on BSC mainnet (chain 56), so the explorer link and
-   the chain label always resolve to mainnet. */
+   the chain label always resolve to mainnet. chainOf is intentionally pinned to
+   chain 56 for the judged window; the 97 (testnet) branch in chainLabel / scan
+   below is a deliberate fallback kept for when this helper points back at a
+   testnet deployment, not dead code to remove. */
 export const chainOf = (_addr: string): 56 | 97 => 56
 export const chainLabel = (addr: string): string =>
   chainOf(addr) === 97 ? 'BSC testnet' : 'BSC mainnet'

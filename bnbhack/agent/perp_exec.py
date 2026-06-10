@@ -4,14 +4,14 @@ MEFAI BNB HACK · Perp execution adapter (Track 1 live SHORT leg)
 The agent is two-sided by design: a LONG is expressed directly on PancakeSwap
 spot (bsc_exec), but a SHORT cannot be expressed on spot (there is no borrow
 leg). This module is the SHORT leg's execution venue. It routes a directional
-short through the USDT-M futures adapter (Binance-first) that ships with the
-private MEFAI deployment running alongside this repo · exactly the venue the
-bsc_exec perps note documents for leveraged exposure. The public tree ships
-this short leg disabled by default: without that adapter and venue keys it
-stays an honest no-go. ApolloX is deliberately NOT wired as a raw
-leveraged-DEX contract signer here: twak exposes no perp primitive and a
-bespoke signer would be a much larger funds-touching surface, so the gated
-CEX futures adapter is the supported venue.
+short through the live perp venue, Binance USDT-M futures, via the gated adapter
+that ships with the private MEFAI deployment running alongside this repo. That
+is exactly the venue the bsc_exec perps note documents for leveraged exposure.
+The public tree ships this short leg disabled by default: without that adapter
+and venue keys it stays an honest no-go. ApolloX is deliberately NOT wired as a
+raw leveraged-DEX contract signer here, because twak exposes no perp primitive
+and a bespoke signer would be a much larger funds-touching surface, so the gated
+Binance USDT-M futures adapter is the supported venue.
 
 Safety / integrity (mirrors bsc_exec):
   - OFF by default. open_short / close_short are an honest no-go (sign nothing,
@@ -20,7 +20,7 @@ Safety / integrity (mirrors bsc_exec):
     stays the exact honest no-go it already is.
   - Leverage is pinned (BNBHACK_PERP_LEVERAGE, default 1x), so the short is a
     pure directional hedge sized by the same drawdown-Kelly notional as the spot
-    long · never extra leverage the drawdown governor cannot see.
+    long, never extra leverage the drawdown governor cannot see.
   - account_equity_usd() lets the loop fold the venue's margin balance + open
     unrealized PnL into mark-to-market equity, so a live short's risk is VISIBLE
     to the RiskGovernor drawdown killswitch and is never reported only on the
@@ -207,7 +207,7 @@ async def open_short(symbol: str, notional_usd: float,
             result={"venue": ad.venue, "order_id": order.get("id"),
                     "side": "short"} if isinstance(order, dict) else None,
             price=px, qty=qty, notional_usd=qty * px)
-    except Exception as exc:  # noqa: BLE001 · never raise into the loop
+    except Exception as exc:  # noqa: BLE001, never raise into the loop
         # The adapter scrubs venue text; keep the loop-side message generic.
         logger.warning("perp open_short failed for %s: %s", symbol, exc)
         return PerpOutcome(go=False, executed=False,

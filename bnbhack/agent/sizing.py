@@ -319,7 +319,8 @@ class SizingResult:
 def size_position(inp: SizingInput) -> SizingResult:
     """Turn a trade decision into a drawdown-budget fractional-Kelly position.
     Guarantees worst_case_loss <= DD_BUDGET_K * R * equity in every branch, so
-    the agent cannot size itself past the drawdown cap."""
+    the agent cannot size itself past the drawdown cap. The venue-leverage cap
+    only ever lowers notional, so the worst-case-loss bound is preserved."""
     reasons: List[str] = []
 
     # Defensive bounds on inputs (system boundary). Non-finite floats (NaN/inf)
@@ -380,6 +381,10 @@ def size_position(inp: SizingInput) -> SizingResult:
         reasons.append(
             f"thin bucket n={stats.n} < min {MIN_EDGE_SAMPLES}: no bet")
         return result
+    # net_edge uses the shrunk expectancy, but expectancy_stderr is computed from
+    # the raw (un-shrunk) bucket samples on purpose: the wider raw-sample error is
+    # the conservative significance threshold, so a thin bucket must clear a higher
+    # bar before any bet is approved.
     required = EDGE_STDERR_MULT * stats.expectancy_stderr
     if net_edge <= required:
         reasons.append(

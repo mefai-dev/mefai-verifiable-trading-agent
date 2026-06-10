@@ -15,8 +15,9 @@ Method (no look-ahead):
      TRAIN net-of-cost expectancy is positive with enough samples, i.e. the same
      edge gate the live sizer applies. Everything else is stood aside.
   4. Walk the test window forward trade by trade, sizing each accepted signal
-     with the documented drawdown-budget Kelly model (using only train stats and
-     the live running drawdown), compounding the realised net-of-cost return.
+     with the same drawdown-budget fractional-Kelly model (train-window edge
+     estimates and the live running drawdown only, no shrinkage applied in the
+     backtest), compounding the realised net-of-cost return.
   5. Report Sharpe / Sortino / Calmar / max drawdown and an equity curve for the
      drawdown-budget Kelly risk engine (the headline), against a naive flat
      leverage floor baseline so the risk engine's value is explicit, plus an

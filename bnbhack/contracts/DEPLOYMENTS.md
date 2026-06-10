@@ -15,13 +15,19 @@ equity records and halts, and the ledger's results are all public reads.
 | --- | --- | --- |
 | Result ledger | `0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744` | https://bscscan.com/address/0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744 |
 | ERC-8004 Identity Registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432 |
-| CommitRevealPredictionRegistry | `0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB` | https://bscscan.com/address/0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB |
-| RiskGovernor · `maxDrawdownBps=1400` | `0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2` | https://bscscan.com/address/0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2 |
+| CommitRevealPredictionRegistry | `0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB` | https://bscscan.com/address/0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB#code |
+| RiskGovernor · `maxDrawdownBps=1400` | `0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2` | https://bscscan.com/address/0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2#code |
 | Equity keeper · feeds the governor | `0x064Af3880d562720963bba400B51F95d45AF91d3` | https://bscscan.com/address/0x064Af3880d562720963bba400B51F95d45AF91d3 |
 | Agent wallet (holds the identity, authors commits) | `0xD5df700Ed5355f0c778159592a072B8773faE1CC` | https://bscscan.com/address/0xD5df700Ed5355f0c778159592a072B8773faE1CC |
 
-The agent's identity id (keccak256 of the agent name packed with its wallet) is
-`0x7069f5fdcd64bcfa682ebd4d6654229c39b40753dc81f609fb6e9c34c4a246d4`.
+Two distinct identifiers are in play; do not conflate them:
+
+- **ERC-8004 token id (agentId): `131181`** · the numeric NFT id minted to the
+  agent wallet in the ERC-8004 Identity Registry above.
+- **Commit-reveal / Arena agentId:
+  `0x7069f5fdcd64bcfa682ebd4d6654229c39b40753dc81f609fb6e9c34c4a246d4`** · the
+  keccak256 of the agent name packed with its wallet, used by the
+  CommitRevealPredictionRegistry / Arena. This is not the ERC-8004 token id.
 
 ## Build, test and deploy from source
 
@@ -33,7 +39,15 @@ npm test             # 15 tests across the registry and the governor
 
 # A real deploy needs a funded key and is never run by default. The agent
 # stays in paper mode; chain writes are gated behind their own env flag.
+# deploy:testnet is the safe default (BSC testnet, free faucet funds).
 DEPLOYER_PRIVATE_KEY=0x... npm run deploy:testnet
+```
+
+The live addresses listed above were deployed with `npm run deploy:mainnet`
+(chain 56), which needs a funded mainnet key:
+
+```bash
+DEPLOYER_PRIVATE_KEY=0x... npm run deploy:mainnet   # requires a funded mainnet key
 ```
 
 `npm test` runs entirely on the in-process Hardhat network and needs no key, no

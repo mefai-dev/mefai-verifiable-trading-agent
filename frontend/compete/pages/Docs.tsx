@@ -1,7 +1,8 @@
 /* BNB HACK · the MEFAI whitepaper.
    A full technical paper · the trust problem, the design principles, the decision
    loop, the verifiable layer and how to audit every claim on BNB Chain. House
-   style: middle dot as separator, no dash, no comma in visible copy. */
+   style: middle dot as a list separator, never an em or en dash. Commas read
+   naturally in the prose of this paper, so they are used throughout the body. */
 
 import { Btn, Card, Reveal, Stat, CountUp, shortAddr } from '../ui'
 import { apiGet, usePoll } from '../api'

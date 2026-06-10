@@ -168,9 +168,9 @@ function AgentIdentityPanel() {
   const reg = data?.registry
   const lc = data?.lifecycle
   return <Panel title={'ERC-8004 IDENTITY · ERC-8183 COMMERCE'} accent={TONE}
-    right={data ? (reg?.minted ? 'minted' : 'registration ready') : error ? 'offline' : 'loading'}>
+    right={data ? (reg?.minted ? 'minted' : 'registration ready') : error ? 'offline' : loading ? 'loading' : 'offline'}>
     {!data
-      ? <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '14px 0' }}>{error ? 'The agent server is unreachable right now.' : <>{'Reading the identity'}<span className="cp-ellipsis" /></>}</div>
+      ? <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '14px 0' }}>{error || !loading ? 'The agent server is unreachable right now.' : <>{'Reading the identity'}<span className="cp-ellipsis" /></>}</div>
       : <div style={{ display: 'grid', gap: 16 }}>
         {/* registry coordinates */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>

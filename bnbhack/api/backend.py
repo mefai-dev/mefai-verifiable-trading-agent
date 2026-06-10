@@ -10,11 +10,12 @@ limiting, read-only database access, server-side key custody, generic errors, an
 a single place that pins db_path so a client can never point a query at another
 file.
 
-What it serves:
+What it serves (the read side plus the x402 commerce edge):
   GET  /health                  liveness, unauthenticated
   GET  /leaderboard             verified ranking (leaderboard.build_leaderboard)
   GET  /uvii                    unified index (leaderboard.build_uvii_index)
-  GET  /tp-sl                   bracket optimizer (+ optional live regime overlay)
+  GET  /tp-sl                   bracket optimizer (symbol required; + optional
+                                live regime overlay)
   POST /fusion                  omni-signal fusion (gather_readings + fuse)
   POST /sizing                  drawdown-budget Kelly sizing (size_position)
   POST /compose                 meta-strategy composer (full pipeline plan)
@@ -23,10 +24,11 @@ What it serves:
   GET  /x402/products           x402 feed catalog
   POST /x402/feed/{product_id}  x402 payment-gated verified feed (serve_feed)
 
-Secrets and deployer settings come only from the environment (the systemd
-EnvironmentFile); nothing sensitive is ever taken from a request. The on-chain
-oracle writes and the live trade loop are wired in later phases; this layer is the
-read side plus the x402 commerce edge.
+The autonomous trade loop is live in production and writes its results to the
+on-chain oracle (chain 56); this backend stays the read-only/commerce boundary in
+front of those audited modules. Secrets and deployer settings come only from the
+environment (the systemd EnvironmentFile); nothing sensitive is ever taken from a
+request.
 """
 
 from __future__ import annotations
@@ -101,7 +103,7 @@ log = logging.getLogger("bnbhack.backend")
 API_KEY = os.getenv("BNBHACK_API_KEY", "").strip()
 
 # CORS origins allowed to call the data endpoints from a browser.
-_DEFAULT_ORIGINS = "https://mefai.io,https://www.mefai.io,https://build.mefai.io"
+_DEFAULT_ORIGINS = "https://mefai.io,https://www.mefai.io"
 _ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv("BNBHACK_ALLOWED_ORIGINS",
                                  _DEFAULT_ORIGINS).split(",") if o.strip()
@@ -644,7 +646,11 @@ async def uvii(
 
 @app.get("/tp-sl", dependencies=[Depends(require_key)])
 async def tp_sl(
-    symbol: Optional[str] = Query(None, pattern=_SYMBOL_PATTERN),
+    # symbol is required: a symbol-less call would pool the entire
+    # signal_performance table (a heavy unbounded scan that can hang a bare
+    # GET /tp-sl). Query(...) makes FastAPI reject the missing/empty case with
+    # a 422 before any database work runs.
+    symbol: str = Query(..., min_length=1, pattern=_SYMBOL_PATTERN),
     timeframe: Optional[str] = Query(None),
     signal_type: Optional[str] = Query(None),
     since_ts: Optional[int] = Query(None, ge=0, le=4_102_444_800),

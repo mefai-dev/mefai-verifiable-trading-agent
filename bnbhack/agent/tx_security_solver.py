@@ -448,11 +448,15 @@ async def check_contract(plan: TradePlan) -> CheckResult:
     crit = [r for r in risks if isinstance(r, dict)
             and str(r.get("sev", "")).lower() in ("crit", "critical")]
     honeypot = body.get("honeypot") or {}
+    # -1.0 is an internal "no honeypot probe ran" sentinel used only for the
+    # threshold comparisons below; the surfaced OUTPUT field reports None in that
+    # case so a reader never mistakes the sentinel for a measured round-trip loss.
     loss = _finite(honeypot.get("roundTripLossPct"), -1.0)
     proxy = (body.get("proxy") or {}).get("isProxy")
     verified = bool(body.get("verified"))
     data = {"verified": verified, "isProxy": bool(proxy),
-            "roundTripLossPct": loss, "n_risks": len(risks)}
+            "roundTripLossPct": (loss if loss >= 0 else None),
+            "n_risks": len(risks)}
 
     if loss >= HONEYPOT_LOSS_FAIL:
         return CheckResult("contract_scan", FAIL,

@@ -1,5 +1,5 @@
 /* BNB HACK · Track 2 · CMC Strategy Skill Studio (CoinMarketCap palette).
-   Four backtested skills powered by 181k labeled outcomes and the full
+   Five backtested skills powered by 181k labeled outcomes and the full
    CoinMarketCap Agent Hub, presented through CMC-style tables. */
 
 import { useMemo, useState } from 'react'
@@ -62,7 +62,7 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
         <Stat label="Total market cap" value={fmtUsd(mcap)} tone={CMC} sub={mcapChg != null ? fmtPct(mcapChg, 2, true) : 'CMC global'} />
         <Stat label="24h volume" value={fmtUsd(vol)} tone="var(--c-text)" sub="CMC global" />
         <Stat label="BTC dominance" value={btcDom != null ? fmtPct(btcDom, 1) : '-'} tone="var(--gold)" sub="CMC global" />
-        <Stat label="Skills shipped" value={<CountUp value={5} />} tone="var(--green)" sub="composable" />
+        <Stat label="Backtested skills" value={<CountUp value={5} />} tone="var(--green)" sub="+1 live monitor" />
         <Stat label="Resolved outcomes" value={lb ? <CountUp value={lb.overall.n_resolved} /> : '-'} tone="var(--trust)" sub="training base" />
         <Stat label="Qualified sources" value={lb ? <CountUp value={lb.qualified} /> : '-'} tone="var(--c-text)" sub="leaderboard" />
       </div>

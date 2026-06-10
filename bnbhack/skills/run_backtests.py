@@ -43,8 +43,8 @@ ENGINE_MODULES = ["tp_sl_optimizer.py", "leaderboard.py", "sizing.py",
 # Pinned dataset resolution: explicit env wins, else the public sample db, else
 # the production db. The chosen path is recorded in every manifest.
 _DB_CANDIDATES = [
-    os.path.join(os.path.dirname(ROOT), "data", "signal.db"),   # public sample
-    os.path.join(ROOT, "data", "signal.db"),
+    os.path.join(os.path.dirname(ROOT), "data", "signal.db"),   # repo-root data dir (legacy/override)
+    os.path.join(ROOT, "data", "signal.db"),                    # public sample (bnbhack/data/signal.db)
     os.path.join(os.path.dirname(ROOT), "api", "security", "signal.db"),  # production
 ]
 
