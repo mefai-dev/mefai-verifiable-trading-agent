@@ -1252,3 +1252,8 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 
 /* skill selector keyboard focus */
 .compete-root .cp-skillcard-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; border-radius: 10px; }
+
+/* clickable stat tile (Landing labeled-outcomes -> result ledger on BscScan) */
+.cp-stat-link { display: block; text-decoration: none; color: inherit; border-radius: 14px; transition: transform .16s ease, box-shadow .16s ease; }
+.cp-stat-link:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.18); }
+.cp-stat-link:focus-visible { outline: 2px solid var(--trust); outline-offset: 3px; }
