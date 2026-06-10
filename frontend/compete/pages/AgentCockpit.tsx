@@ -112,7 +112,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
             </div>
           </div>
         </div>
-        <Btn variant="cmc" sm href={TELEGRAM_FEED_URL}>{'Join the feed'}<IconExternal /></Btn>
+        <Btn variant="cmc" sm href={TELEGRAM_FEED_URL}>{'Get trade alerts on Telegram'}<IconExternal /></Btn>
       </Card>
     </Reveal>
 

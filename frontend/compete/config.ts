@@ -14,7 +14,7 @@ export const COMPETITION = 'BNB HACK: AI Trading Agent Edition'
 // Public Telegram channel the agent broadcasts every trade leg to during the
 // judged window (read only · a BscScan link per leg · no keys, no commands).
 // Swap to a dedicated agent feed channel here without touching any page.
-export const TELEGRAM_FEED_URL = 'https://t.me/mefailegion'
+export const TELEGRAM_FEED_URL = 'https://t.me/mefainews_bot?start=agentfeed'
 
 /* Verified BSC deployments + identities, all live on BSC mainnet (chain 56):
    the result ledger, the ERC-8004 identity, the commit reveal registry, the

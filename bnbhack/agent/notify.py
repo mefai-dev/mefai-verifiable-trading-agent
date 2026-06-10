@@ -18,9 +18,18 @@ Design rules:
 
 Configuration (all via environment):
   BNBHACK_TG_BOT_TOKEN   Telegram bot token (falls back to TELEGRAM_BOT_TOKEN).
-  BNBHACK_TG_CHAT_ID     Target chat / channel id for the broadcast.
+  BNBHACK_TG_CHAT_ID     Target chat / channel id for the single-chat broadcast.
   BNBHACK_TG_PAPER       "1" (default) also announces paper legs, clearly
                          labelled PAPER; "0" announces only live executed legs.
+  BNBHACK_AGENT_FEED_URL Optional per-user fan-out endpoint (the push service
+                         /agent_feed/broadcast). When set together with
+                         BNBHACK_AGENT_FEED_KEY, each leg is also POSTed there so
+                         every personal subscriber gets a DM.
+  BNBHACK_AGENT_FEED_KEY API key for that endpoint (X-API-KEY header). Read from
+                         env only, never hardcoded, never placed in a message.
+
+Either delivery path (single chat OR per-user feed) being configured is enough
+to enable broadcasting; both can run at once.
 """
 
 from __future__ import annotations
@@ -40,10 +49,26 @@ _BOT_TOKEN = (os.getenv("BNBHACK_TG_BOT_TOKEN")
 _CHAT_ID = os.getenv("BNBHACK_TG_CHAT_ID", "").strip()
 _PAPER_OK = os.getenv("BNBHACK_TG_PAPER", "1") == "1"
 
+# Per-user fan-out via the push service. The key is read from env only.
+_FEED_URL = os.getenv(
+    "BNBHACK_AGENT_FEED_URL",
+    "https://mefai.io/push_api/agent_feed/broadcast").strip()
+_FEED_KEY = os.getenv("BNBHACK_AGENT_FEED_KEY", "").strip()
+
+
+def _single_chat_enabled() -> bool:
+    """True when the legacy single-chat broadcast is configured."""
+    return bool(_BOT_TOKEN and _CHAT_ID)
+
+
+def _feed_enabled() -> bool:
+    """True when the per-user agent-feed fan-out is configured."""
+    return bool(_FEED_URL and _FEED_KEY)
+
 
 def enabled() -> bool:
-    """True only when a bot token and a target chat are both configured."""
-    return bool(_BOT_TOKEN and _CHAT_ID)
+    """True when EITHER delivery path (single chat OR per-user feed) is set."""
+    return _single_chat_enabled() or _feed_enabled()
 
 
 def paper_enabled() -> bool:
@@ -51,8 +76,8 @@ def paper_enabled() -> bool:
     return _PAPER_OK
 
 
-def _post_sync(text: str) -> None:
-    """Blocking Telegram sendMessage. Runs in a worker thread; never raises."""
+def _post_single_chat(text: str) -> None:
+    """Blocking Telegram sendMessage to the single shared chat. Never raises."""
     try:
         url = f"https://api.telegram.org/bot{_BOT_TOKEN}/sendMessage"
         body = json.dumps({
@@ -70,6 +95,36 @@ def _post_sync(text: str) -> None:
         logger.debug("telegram broadcast failed: %s", exc)
     except Exception as exc:  # never let a notification crash the loop
         logger.debug("telegram broadcast error: %s", exc)
+
+
+def _post_feed(text: str) -> None:
+    """Blocking POST to the push-service per-user fan-out. Never raises.
+
+    Sends {"text": <message>} with the X-API-KEY header. The key comes from env
+    only and never appears in the message body.
+    """
+    try:
+        body = json.dumps({"text": text}).encode("utf-8")
+        req = urllib.request.Request(
+            _FEED_URL, data=body,
+            headers={
+                "Content-Type": "application/json",
+                "X-API-KEY": _FEED_KEY,
+            }, method="POST")
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            resp.read()
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        logger.debug("agent feed broadcast failed: %s", exc)
+    except Exception as exc:  # never let a notification crash the loop
+        logger.debug("agent feed broadcast error: %s", exc)
+
+
+def _post_sync(text: str) -> None:
+    """Deliver via every configured path. Runs in a worker thread; never raises."""
+    if _single_chat_enabled():
+        _post_single_chat(text)
+    if _feed_enabled():
+        _post_feed(text)
 
 
 async def broadcast(text: str) -> None:

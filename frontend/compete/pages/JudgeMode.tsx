@@ -249,7 +249,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn variant="gold" sm onClick={() => go('/compete/agent')}>{'Live agent cockpit'}</Btn>
           <Btn variant="trust" sm onClick={() => go('/compete/protocol')}>{'Verifiable protocol'}</Btn>
-          <Btn variant="cmc" sm href={TELEGRAM_FEED_URL}>{'Live Telegram feed'}</Btn>
+          <Btn variant="cmc" sm href={TELEGRAM_FEED_URL}>{'Get trade alerts on Telegram'}</Btn>
           <Btn variant="ghost" sm onClick={() => go('/compete/docs')}>{'Full documentation'}</Btn>
         </div>
       </Card>
