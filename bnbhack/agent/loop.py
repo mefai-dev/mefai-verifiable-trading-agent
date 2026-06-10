@@ -66,6 +66,13 @@ logger = logging.getLogger("mefai.bnbhack.loop")
 SIGNAL_DB = os.getenv("MEFAI_SIGNAL_DB",
                       "data/signal.db")
 
+# Live-execution risk floors (the agent's own preference, separate from the
+# backtested skill engine in sizing.py/tp_sl_optimizer.py which stay pinned for
+# reproducibility): a real position is never opened with a stop or target
+# tighter than these, so it is not whipsawed out inside intraday noise.
+_LIVE_MIN_STOP = float(os.getenv("BNBHACK_LIVE_MIN_STOP", "0.015"))
+_LIVE_MIN_TP = float(os.getenv("BNBHACK_LIVE_MIN_TP", "0.025"))
+
 _STATE_DIR = Path(os.getenv(
     "BNBHACK_LOOP_STATE_DIR",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "state")))
@@ -1281,8 +1288,8 @@ class AgentLoop:
             d.reasons.append(
                 "daily floor (forced past selectivity to keep >=1 trade/day)")
 
-        sd = sz.stop_distance
-        rr = sz.payoff * sd
+        sd = max(sz.stop_distance, _LIVE_MIN_STOP)
+        rr = max(sz.payoff * sd, _LIVE_MIN_TP)
         if fr.direction > 0:
             d.stop = entry * (1.0 - sd)
             d.target = entry * (1.0 + rr)
