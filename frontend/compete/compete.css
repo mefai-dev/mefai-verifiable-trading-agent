@@ -1274,3 +1274,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 /* recent-close cards: win/loss left accent + lift on hover */
 .compete-root .cp-close-card { transition: transform .15s ease, box-shadow .15s ease; }
 .compete-root .cp-close-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px var(--c-shadow-2); }
+
+/* drop the boxed grid backdrop, keep only the soft glows (orbs + wash) */
+.compete-root .cp-grid-bg { display: none !important; }
+.compete-root .cp-foot-grid { display: none !important; }

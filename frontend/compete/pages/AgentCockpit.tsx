@@ -703,6 +703,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
           <Stat label="Closed trades" value={`${n}`} tone={GOLD} sub="banked results" />
           <Stat label="Realized PnL" value={`${net >= 0 ? '+' : ''}${fmtUsd(net)}`} tone={net >= 0 ? 'var(--green)' : 'var(--red)'} sub="across all closes" />
           <Stat label="Profit factor" value={pf === Infinity ? '∞' : fmtNum(pf, 2)} tone={pf >= 1 ? 'var(--green)' : 'var(--red)'} sub="gross win / gross loss" />
+          <Stat label={'Win rate'} value={n ? fmtPct((closes.filter((c) => c.pnl_usd >= 0).length / n) * 100, 0) : '-'} tone="var(--cmc)" sub={`${closes.filter((c) => c.pnl_usd >= 0).length}/${n} ${'won'}`} />
         </div>
         <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>{'By exit reason'}</div>
         <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>
