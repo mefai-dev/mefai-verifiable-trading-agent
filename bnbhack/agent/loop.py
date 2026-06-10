@@ -1177,46 +1177,41 @@ class AgentLoop:
             self._reconcile_note = "ok: no open legs"
             self._orphans = []
             return
-        try:
-            res = await bsc_exec.balance()
-        except Exception:
-            logger.exception("reconcile: balance read failed")
-            self._reconcile_note = "balance read failed"
-            return
-        if not res.ok:
-            self._reconcile_note = f"balance read failed: {res.error or 'no data'}"
-            return
-        held = self._wallet_token_amounts(res.data or {})
-        if held is None:
-            self._reconcile_note = "balance shape unknown; reconcile skipped"
-            return
+        # RPC-primary balance: the twak balance read is flaky and a transient
+        # zero would false-orphan a real leg and wrongly skip its exit, so each
+        # leg's token balance is read straight from the chain and a leg is never
+        # orphaned on an unavailable read.
         orphans: List[Dict[str, Any]] = []
+        unknown = 0
         for p in open_rows:
             # Short legs are backed by the perp venue, not a spot token in the
-            # BSC wallet, so the wallet-balance reconcile does not apply to them
-            # (checking would false-flag every live short as orphaned).
+            # BSC wallet, so the wallet-balance reconcile does not apply to them.
             try:
                 if int(p["signal_dir"] or 1) < 0:
                     continue
             except (TypeError, ValueError, IndexError):
                 pass
-            tok = (p["token"] or "").upper()
+            tok = (p["token"] or "")
             qty = float(p["qty_token"] or 0)
             if not tok or qty <= 0:
                 continue
-            have = held.get(tok, 0.0)
-            # A leg is orphaned if the wallet holds materially less of the token
-            # than the leg claims (closed out-of-band). 1% tolerance absorbs
-            # dust / rounding so only a real shortfall trips the alert.
+            have = bsc_exec._wallet_token_balance(tok)
+            if have is None:
+                unknown += 1
+                continue  # unknown read: never orphan on a miss
+            # A leg is orphaned only if the chain shows materially less of the
+            # token than the leg claims. 1% tolerance absorbs dust / rounding.
             if have < qty * 0.01:
                 orphans.append({"symbol": p["symbol"], "token": tok,
                                 "ledger_qty": qty, "wallet_qty": have})
         self._orphans = orphans
         if orphans:
             self._reconcile_note = f"{len(orphans)} orphaned leg(s) detected"
-            logger.error("RECONCILE: wallet no longer backs %d open ledger "
+            logger.error("RECONCILE: chain no longer backs %d open ledger "
                          "leg(s): %s", len(orphans),
                          ", ".join(o["symbol"] for o in orphans))
+        elif unknown:
+            self._reconcile_note = "balance read unavailable; reconcile deferred"
         else:
             self._reconcile_note = f"ok: {len(open_rows)} leg(s) backed by wallet"
 

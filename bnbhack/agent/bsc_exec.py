@@ -102,6 +102,7 @@ _BSC_BALANCE_RPC = (os.getenv("BNBHACK_RPC_URL", "").split(",")[0].strip()
 def _wallet_token_balance(token_addr):
     """balanceOf(AGENT_WALLET) for an 18-decimal BEP-20 via one eth_call. Returns
     token units, or None on any failure (the caller then skips the clamp)."""
+    token_addr = (token_addr or "").strip().lower()
     if not _is_addr(AGENT_WALLET) or not _is_addr(token_addr):
         return None
     try:
@@ -113,7 +114,8 @@ def _wallet_token_balance(token_addr):
                                       "latest"]}).encode("utf-8")
         req = urllib.request.Request(
             _BSC_BALANCE_RPC, data=body,
-            headers={"Content-Type": "application/json"})
+            headers={"Content-Type": "application/json",
+                     "User-Agent": "Mozilla/5.0 (MEFAI-Agent)"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             r = json.loads(resp.read())
         hx = r.get("result")
