@@ -101,7 +101,6 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
     {/* ── hero ── */}
     <Reveal>
       <div className="cp-judge-hero">
-        <Chip tone={GOLD} live>{'Judge mode'}</Chip>
         <h1 className="cp-judge-h1">{'Verify the whole chain in'} <span style={{ color: GOLD }}>{'five minutes'}</span></h1>
         <p className="cp-judge-lead">
           {'One scroll, six live proofs. A real trade decision is computed, the call is committed as a hash before the outcome is known, revealed after the window, anchored to the result ledger, capped by an on-ledger circuit breaker, and rolled up into one auditable index. Open any BscScan link to check it yourself.'}
