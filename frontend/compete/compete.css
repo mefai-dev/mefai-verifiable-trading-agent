@@ -1257,3 +1257,11 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .cp-stat-link { display: block; text-decoration: none; color: inherit; border-radius: 14px; transition: transform .16s ease, box-shadow .16s ease; }
 .cp-stat-link:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.18); }
 .cp-stat-link:focus-visible { outline: 2px solid var(--trust); outline-offset: 3px; }
+
+/* gentle hover affordance for bare inline toggle/pill buttons (non-.btn) */
+.compete-root button:not([class*="btn"]):not(.cp-help):not(.cp-tab):not(.cp-iconbtn):not(.cp-pop-row):not(.cp-navlink) {
+  transition: filter .15s ease, background-color .15s ease, border-color .15s ease;
+}
+.compete-root button:not([class*="btn"]):not(.cp-help):not(.cp-tab):not(.cp-iconbtn):not(.cp-pop-row):not(.cp-navlink):hover {
+  filter: brightness(1.14);
+}
