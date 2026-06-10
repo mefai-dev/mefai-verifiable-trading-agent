@@ -25,16 +25,20 @@ Sources wired:
   CMC Regime       CMC MCP global_metrics (gate)
   CMC Technicals   CMC MCP per-asset technical_analysis (gate)
   CMC Derivatives  CMC MCP global derivatives (risk gate)
+  Perp Funding     per-asset perpetual funding, contrarian crowding tilt (gate)
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import os
 import sqlite3
 import time
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+import httpx
 
 from fusion_core import SourceReading
 
@@ -53,6 +57,15 @@ MIN_HITRATE_SAMPLES = 20
 # the floor, and the hard age past which we drop it entirely.
 SIGNAL_STALE_BARS = 4
 SIGNAL_DROP_BARS = 8
+
+# Per-asset perpetual funding contrarian thresholds (8h funding as a fraction).
+# Resting funding sits near +0.01%; only crowding beyond the deadzone tilts the
+# vote, reaching full strength at 0.06%. Keyless public endpoint, read-only.
+FUNDING_DEADZONE = 0.0001
+FUNDING_FULL = 0.0006
+FUNDING_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
+FUNDING_TTL = 60.0
+_FUNDING_CACHE: Dict[str, Tuple[float, SourceReading]] = {}
 
 _TF_SECONDS = {
     "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
@@ -620,16 +633,79 @@ async def gather_cmc_readings(symbol: str) -> List[SourceReading]:
     return [regime, tech, deriv]
 
 
+# --- Perpetual funding (per-asset, contrarian) -------------------------------
+
+def funding_contrarian(funding: float, prior: float = 0.6) -> SourceReading:
+    """Per-asset perpetual funding as a CONTRARIAN crowding tilt.
+
+    When longs pay shorts (positive funding, a crowded-long book) lean SHORT;
+    when shorts pay longs (negative funding, a crowded-short book) lean LONG.
+    A small deadzone around the resting rate abstains so ordinary funding adds
+    no noise. Gate-type source (no win/loss record): weighted by prior only.
+
+    Pure: takes the funding fraction (8h rate, e.g. 0.0005 = 0.05%) so the
+    contrarian math can be unit-tested without any network."""
+    name = "Perp Funding"
+    try:
+        f = float(funding)
+    except (TypeError, ValueError):
+        return SourceReading(name, 0, 0.0, hit_rate=None, prior=prior,
+                             available=False, detail="bad funding value")
+    if not math.isfinite(f):
+        return SourceReading(name, 0, 0.0, hit_rate=None, prior=prior,
+                             available=False, detail="non-finite funding")
+    mag = abs(f)
+    if mag <= FUNDING_DEADZONE:
+        return SourceReading(name, 0, 0.0, hit_rate=None, prior=prior,
+                             available=True,
+                             detail=f"funding {f * 100:+.4f}% neutral")
+    direction = -1 if f > 0 else 1
+    strength = _clamp((mag - FUNDING_DEADZONE) / (FUNDING_FULL - FUNDING_DEADZONE),
+                      0.0, 1.0)
+    side = "crowded long" if f > 0 else "crowded short"
+    return SourceReading(
+        name, direction, strength, hit_rate=None, prior=prior, available=True,
+        detail=f"funding {f * 100:+.4f}% {side} contrarian",
+    )
+
+
+async def _read_perp_funding(base: str) -> SourceReading:
+    """Read the per-asset perpetual funding rate from a keyless public endpoint
+    and turn it into a contrarian reading. Cached briefly; never raises."""
+    name = "Perp Funding"
+    prior = 0.6
+    sym = f"{base}USDT"
+    now = _now()
+    cached = _FUNDING_CACHE.get(sym)
+    if cached is not None and now - cached[0] < FUNDING_TTL:
+        return cached[1]
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(FUNDING_URL, params={"symbol": sym})
+            resp.raise_for_status()
+            data = resp.json()
+        reading = funding_contrarian(data.get("lastFundingRate"), prior=prior)
+        _FUNDING_CACHE[sym] = (now, reading)
+        return reading
+    except Exception as exc:
+        return _err_reading(name, prior, None, exc)
+
+
 async def gather_readings(symbol: str, timeframe: str,
                           include_cmc: bool = True) -> List[SourceReading]:
-    """Full fusion input: every DB source plus (optionally) the CMC gates.
+    """Full fusion input: every DB source, the per-asset funding tilt, plus
+    (optionally) the CMC gates.
 
-    DB reads run in a thread so they never block the event loop; CMC reads run
-    concurrently. Pass the result straight to fusion_core.fuse()."""
+    DB reads run in a thread so they never block the event loop; the funding
+    and CMC reads run concurrently. Pass the result straight to
+    fusion_core.fuse()."""
+    base = _norm_base(symbol)
     db_task = asyncio.to_thread(gather_db_readings, symbol, timeframe)
+    funding_task = _read_perp_funding(base)
     if include_cmc:
-        db_readings, cmc_readings = await asyncio.gather(
-            db_task, gather_cmc_readings(symbol)
+        db_readings, cmc_readings, funding = await asyncio.gather(
+            db_task, gather_cmc_readings(symbol), funding_task
         )
-        return list(db_readings) + list(cmc_readings)
-    return list(await db_task)
+        return list(db_readings) + list(cmc_readings) + [funding]
+    db_readings, funding = await asyncio.gather(db_task, funding_task)
+    return list(db_readings) + [funding]

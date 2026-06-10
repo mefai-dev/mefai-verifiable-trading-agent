@@ -10,14 +10,10 @@ import { GITHUB_URL } from '../config'
 function Eyebrow({ tone, children }: { tone?: string; children: ReactNode }) {
   const c = tone || 'var(--c-accent)'
   return <span style={{
-    display: 'inline-flex', alignItems: 'center', gap: 7,
-    fontSize: 11.5, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase',
+    display: 'inline-block',
+    fontSize: 11.5, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase',
     color: c,
-    padding: '5px 11px', borderRadius: 999,
-    background: `color-mix(in srgb, ${c} 11%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${c} 32%, var(--c-line))`,
   }}>
-    <span style={{ width: 6, height: 6, borderRadius: 999, background: c, flexShrink: 0 }} />
     {children}
   </span>
 }

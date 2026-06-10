@@ -152,7 +152,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
       <Reveal delay={70}>
         {st && st.decisions?.length > 0 ? (
           <div className="cp-grid-4" style={{ marginTop: 30 }}>
-            {st.decisions.slice(0, 8).map((d) => {
+            {st.decisions.filter((d) => /[a-z0-9]/i.test(cleanSym(d.symbol || ''))).slice(0, 8).map((d) => {
               const isLong = d.action.includes('LONG'), isShort = d.action.includes('SHORT')
               const acting = isLong || isShort
               const tone = isLong ? 'var(--green)' : isShort ? 'var(--red)' : 'var(--c-muted)'

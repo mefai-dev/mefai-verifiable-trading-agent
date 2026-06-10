@@ -458,6 +458,10 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 /* responsive grids */
 .compete-root .cp-grid-2 { }
 @media (max-width: 880px) { .compete-root .cp-grid-2 { grid-template-columns: 1fr !important; } }
+/* skill selector · 6 cards in even 3x2 rows so none orphans on a lower row */
+.compete-root .cp-skill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 900px) { .compete-root .cp-skill-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .compete-root .cp-skill-grid { grid-template-columns: 1fr; } }
 /* 4-up card row (the agent's sealed calls) */
 .compete-root .cp-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 @media (max-width: 900px) { .compete-root .cp-grid-4 { grid-template-columns: repeat(2, 1fr); } }

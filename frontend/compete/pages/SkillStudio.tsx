@@ -71,7 +71,7 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
     {/* skill selector · pick a skill to load its live workspace below */}
     <Reveal delay={120}>
       <div style={{ fontSize: 12, color: 'var(--c-muted)', textAlign: 'center', margin: '26px 0 12px' }}>{'Select a skill to load its live workspace'}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
+      <div className="cp-skill-grid">
         {SKILLS.map((sk) => {
           const on = skill === sk.id
           return <Card key={sk.id} hover className="cp-fx"
@@ -470,7 +470,7 @@ function MetaComposerSkill() {
     {/* pipeline stages */}
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
       {STAGES.map((s, i) => <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', padding: '5px 11px', borderRadius: 999, color: PURPLE, background: 'color-mix(in srgb, var(--purple) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--purple) 26%, transparent)' }}>{s}</span>
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', color: PURPLE }}>{s}</span>
         {i < STAGES.length - 1 && <span style={{ color: 'var(--c-muted)' }}>·</span>}
       </span>)}
     </div>

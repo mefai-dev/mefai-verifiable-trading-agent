@@ -418,12 +418,16 @@ function DecisionsTable({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     { key: 'conv', header: 'Conviction', sortValue: (r) => r.conviction, render: (r) => <span className="mono" style={{ fontWeight: 700 }}>{fmtNum(r.conviction, 0)}</span> },
     { key: 'agree', header: 'Agreement', sortValue: (r) => r.agreement, render: (r) => <PctCell value={r.agreement * 100} d={0} /> },
     { key: 'entry', header: 'Entry', sortValue: (r) => r.entry, render: (r) => <span className="mono">{fmtPrice(r.entry)}</span> },
-    { key: 'target', header: 'Target', sortValue: (r) => r.target, render: (r) => <span className="mono" style={{ color: 'var(--green)' }}>{fmtPrice(r.target)}</span> },
-    { key: 'stop', header: 'Stop', sortValue: (r) => r.stop, render: (r) => <span className="mono" style={{ color: 'var(--red)' }}>{fmtPrice(r.stop)}</span> },
-    { key: 'lev', header: 'Lev', sortValue: (r) => r.leverage, render: (r) => <span className="mono">{fmtNum(r.leverage, 2)}x</span> },
-    { key: 'wr', header: 'Win rate', sortValue: (r) => r.win_rate, render: (r) => <PctCell value={r.win_rate * 100} d={0} /> },
+    { key: 'target', header: 'Target', sortValue: (r) => r.target, render: (r) => r.target > 0 ? <span className="mono" style={{ color: 'var(--green)' }}>{fmtPrice(r.target)}</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
+    { key: 'stop', header: 'Stop', sortValue: (r) => r.stop, render: (r) => r.stop > 0 ? <span className="mono" style={{ color: 'var(--red)' }}>{fmtPrice(r.stop)}</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
+    { key: 'lev', header: 'Lev', hideSm: true, sortValue: (r) => r.leverage, render: (r) => r.leverage > 0 ? <span className="mono">{fmtNum(r.leverage, 2)}x</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
+    { key: 'wr', header: 'Win rate', hideSm: true, sortValue: (r) => r.win_rate, render: (r) => r.win_rate > 0 ? <PctCell value={r.win_rate * 100} d={0} /> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
+    { key: 'why', header: 'Read', align: 'l', hideSm: true, sortValue: (r) => r.reasons?.[r.reasons.length - 1] ?? '', render: (r) => (
+      <span style={{ color: 'var(--c-muted)', fontSize: 12, lineHeight: 1.4 }}>{r.reasons && r.reasons.length ? r.reasons[r.reasons.length - 1] : '·'}</span>
+    )},
   ]
-  return <Panel title="AGENT DECISIONS" accent="#F0B90B" right={st ? `${'cycle'} ${st.cycle}` : 'standby'}>
+  const traded = rows.filter((r) => r.action.includes('LONG') || r.action.includes('SHORT')).length
+  return <Panel title="AGENT DECISIONS" accent="#F0B90B" right={st ? `${rows.length} evaluated · ${traded} taken · cycle ${st.cycle}` : 'standby'}>
     <CmcTable columns={cols} rows={rows} empty={st ? 'agent is holding · no qualifying setups' : 'agent on standby'} defaultSort={{ key: 'conv', dir: 'desc' }} />
   </Panel>
 }

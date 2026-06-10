@@ -261,6 +261,27 @@ The full posture, threat model and disclosure process are in
 
 ---
 
+## Acknowledgements · the MEFAI open stack
+
+This agent does not stand alone. It draws on the broader MEFAI stack, published
+as open source in sibling repositories. The signal feed it fuses as its primary
+source, the indicator and risk research behind the composite read and the sizing
+engine, the walk-forward backtest tooling and the market-intelligence MCP servers
+all live in their own repos:
+
+- [`mefai-signal-engine`](https://github.com/mefai-dev/mefai-signal-engine) · the MEFAI signal feed
+- [`mefai-engine`](https://github.com/mefai-dev/mefai-engine) · the core inference engine
+- [`mefai-risk-ai`](https://github.com/mefai-dev/mefai-risk-ai) · risk and drawdown research
+- [`mefai-indicators`](https://github.com/mefai-dev/mefai-indicators) · the technical indicator library
+- [`mefai-backtest`](https://github.com/mefai-dev/mefai-backtest) · walk-forward backtest tooling
+- [`binance-intelligence-mcp`](https://github.com/mefai-dev/binance-intelligence-mcp) · market-intelligence MCP server
+- [`bnbchain-mcp`](https://github.com/mefai-dev/bnbchain-mcp) · BNB Chain MCP tooling
+- [`mefai-python-sdk`](https://github.com/mefai-dev/mefai-python-sdk) · [`mefai-cli`](https://github.com/mefai-dev/mefai-cli) · client SDK and CLI
+
+The full set is published under [github.com/mefai-dev](https://github.com/mefai-dev).
+
+---
+
 ## License
 
 Released under the MIT License. See `LICENSE`.
