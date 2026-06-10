@@ -159,7 +159,7 @@ class FeedProduct:
 
 
 # Default prices are quoted in atomic units of an 18-decimal stablecoin (BSC USDT
-# is 18 decimals): 0.01 and 0.05 units. The asset itself is supplied per request
+# is 18 decimals): 0.01 and 0.05 units (a per-request micropayment). The asset is supplied per request
 # by the deployer (payment_requirements.asset), so the same catalog works for any
 # 18-decimal token; a different-decimal asset must restate the price.
 _CATALOG: Dict[str, FeedProduct] = {

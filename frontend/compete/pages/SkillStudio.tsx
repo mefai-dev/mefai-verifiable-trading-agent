@@ -237,7 +237,6 @@ function AllocatorSkill({ lb }: { lb: Leaderboard | null }) {
     { key: 'alloc', header: 'Allocation', sortValue: (d) => d.r.notional, render: (d) => <span className="mono" style={{ fontWeight: 700, color: d.r.approved ? CMC : 'var(--c-muted)' }}>{fmtPct(totalNotional ? (d.r.notional / totalNotional) * 100 : 0, 1)}</span> },
     { key: 'notional', header: 'Notional', sortValue: (d) => d.r.notional, render: (d) => <span className="mono">{d.r.approved ? fmtUsd(d.r.notional) : '-'}</span> },
     { key: 'lev', header: 'Leverage', sortValue: (d) => d.r.leverage, render: (d) => <span className="mono">{d.r.approved ? `${fmtNum(d.r.leverage, 2)}x` : '-'}</span> },
-    { key: 'wr', header: 'Win rate', sortValue: (d) => d.r.win_rate, render: (d) => <PctCell value={d.r.win_rate * 100} d={1} /> },
     { key: 'kelly', header: 'Kelly', sortValue: (d) => d.r.full_kelly, render: (d) => <PctCell value={d.r.full_kelly * 100} d={1} /> },
     { key: 'risk', header: 'Worst loss', sortValue: (d) => Math.abs(d.r.worst_case_loss), render: (d) => <span className="mono" style={{ color: d.r.approved ? 'var(--red)' : 'var(--c-muted)' }}>{d.r.approved ? fmtUsd(d.r.worst_case_loss) : '-'}</span> },
   ]
@@ -321,7 +320,6 @@ function TpSlSkill() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 12 }}>
           <Stat label="Take profit" value={fmtPct(best.tp, 1)} tone="var(--green)" />
           <Stat label="Stop loss" value={fmtPct(best.sl, 1)} tone="var(--red)" />
-          <Stat label="Win rate" value={fmtPct(best.win_rate * 100, 1)} tone="var(--c-text)" />
           <Stat label="Expectancy" value={fmtNum(best.expectancy, 3)} tone={CMC} />
           <Stat label="Per risk edge" value={fmtNum(best.expectancy_per_risk, 3)} tone="var(--green)" />
           <Stat label="Sample" value={`${best.n}`} tone="var(--c-text)" />
@@ -582,8 +580,6 @@ function DecaySkill() {
     { key: 'fexp', header: 'Edge · all time', sortValue: (r) => r.fullExp, render: (r) => <span className="mono" style={{ color: r.fullExp >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtNum(r.fullExp, 3)}</span> },
     { key: 'rexp', header: `Edge · ${days}d`, sortValue: (r) => r.recExp ?? -999, render: (r) => r.recExp == null ? <span className="mono" style={{ color: 'var(--c-muted)' }}>{'thin'}</span> : <span className="mono" style={{ color: r.recExp >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{fmtNum(r.recExp, 3)}</span> },
     { key: 'dexp', header: 'Shift', sortValue: (r) => r.dExp, render: (r) => r.recExp == null ? <span className="mono" style={{ color: 'var(--c-muted)' }}>·</span> : <span className="mono" style={{ color: r.dExp >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{r.dExp >= 0 ? '+' : ''}{fmtNum(r.dExp, 3)}</span> },
-    { key: 'fwr', header: 'WR all time', sortValue: (r) => r.fullWr, render: (r) => <PctCell value={r.fullWr * 100} d={1} /> },
-    { key: 'rwr', header: `WR ${days}d`, sortValue: (r) => r.recWr ?? -1, render: (r) => r.recWr == null ? <span className="mono" style={{ color: 'var(--c-muted)' }}>-</span> : <PctCell value={r.recWr * 100} d={1} /> },
     { key: 'rn', header: `${days}d n`, sortValue: (r) => r.recN, render: (r) => <span className="mono" style={{ color: 'var(--c-muted)' }}>{r.recN || '-'}</span> },
     { key: 'status', header: 'Verdict', sortValue: (r) => r.dExp, render: (r) => <Chip tone={STONE[r.status]} solid={r.status !== 'stable'}>{r.status}</Chip> },
   ]
@@ -629,7 +625,6 @@ function SkillLeaderboard() {
   const cols: CmcColumn<EntityStats>[] = [
     { key: 'rank', header: '#', render: (_r, i) => <span className="mono" style={{ color: 'var(--c-muted)' }}>{i + 1}</span> },
     nameCol,
-    { key: 'wr', header: 'Win rate', sortValue: (r) => r.win_rate, render: (r) => <PctCell value={r.win_rate * 100} d={1} /> },
     { key: 'exp', header: 'Expectancy', sortValue: (r) => r.expectancy, render: (r) => <span className="mono" style={{ color: r.expectancy >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{fmtNum(r.expectancy, 3)}</span> },
     { key: 'pnl', header: 'Realized PnL', sortValue: (r) => r.realized_pnl, render: (r) => <span className="mono" style={{ color: r.realized_pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtNum(r.realized_pnl, 2)}R</span> },
     { key: 'brier', header: 'Brier skill', sortValue: (r) => r.brier_skill, render: (r) => <PctCell value={r.brier_skill * 100} d={1} /> },

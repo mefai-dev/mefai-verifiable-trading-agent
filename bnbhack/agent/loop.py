@@ -251,7 +251,7 @@ class LoopConfig:
     # equity low always forces an immediate write so the drawdown killswitch
     # stays responsive (see run_cycle).
     chain_equity_interval: float = float(
-        os.getenv("BNBHACK_CHAIN_EQUITY_INTERVAL", "300"))
+        os.getenv("BNBHACK_CHAIN_EQUITY_INTERVAL", "86400"))
     # Mark-to-market: when on, equity is the live wallet USD value (twak
     # totalUsd) instead of the static paper baseline, so the RiskGovernor
     # drawdown reflects real PnL. start_equity_usd pins the drawdown reference

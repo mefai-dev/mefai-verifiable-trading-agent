@@ -42,8 +42,8 @@ SIGNAL_DB = os.getenv("MEFAI_SIGNAL_DB", "data/signal.db")
 # Take-profit ladder: (percent, hit-column). Columns are a FIXED whitelist; the
 # percent is the realized gain when that barrier is the one that triggers.
 TP_LEVELS: List[Tuple[float, str]] = [
-    (0.5, "tp_05"),
-    (1.0, "tp_1"),
+    # Tightest targets (0.5 and 1.0 percent) excluded: a take profit closer than
+    # 1.5 percent is inside typical intraday noise and churns fees on round trips.
     (1.5, "tp_15"),
     (2.0, "tp_2"),
     (3.0, "tp_3"),

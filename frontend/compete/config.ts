@@ -56,15 +56,15 @@ export const scan = (addr: string) =>
 /* Sponsor / technology stack. Real brand marks (served from /stack) where one
    exists; the two protocol standards (ERC-8004, x402) fall back to our own
    custom SVG marks since they have no brand image. */
-export const SPONSORS: { name: string; tone: string; img?: string }[] = [
-  { name: 'BNB Chain', tone: '#F0B90B', img: '/stack/bnb.png' },
-  { name: 'Trust Wallet', tone: '#3375BB', img: '/stack/trust.png?v=2' },
-  { name: 'CoinMarketCap', tone: '#3861FB', img: '/stack/cmc.png' },
-  { name: 'PancakeSwap', tone: '#23C7C7', img: '/stack/pancake.png' },
-  { name: 'ERC-8004', tone: '#A78BFA' },
-  { name: 'x402', tone: '#16C784' },
-  { name: 'Binance Data', tone: '#FCD535', img: '/stack/bnb.png' },
-  { name: 'BscScan', tone: '#F0B90B', img: '/stack/bnb.png' },
+export const SPONSORS: { name: string; tone: string; img?: string; url: string }[] = [
+  { name: 'BNB Chain', tone: '#F0B90B', img: '/stack/bnb.png', url: 'https://www.bnbchain.org' },
+  { name: 'Trust Wallet', tone: '#3375BB', img: '/stack/trust.png?v=2', url: 'https://trustwallet.com' },
+  { name: 'CoinMarketCap', tone: '#3861FB', img: '/stack/cmc.png', url: 'https://coinmarketcap.com' },
+  { name: 'PancakeSwap', tone: '#23C7C7', img: '/stack/pancake.png', url: 'https://pancakeswap.finance' },
+  { name: 'ERC-8004', tone: '#A78BFA', url: 'https://eips.ethereum.org/EIPS/eip-8004' },
+  { name: 'x402', tone: '#16C784', url: 'https://www.x402.org' },
+  { name: 'Binance Data', tone: '#FCD535', img: '/stack/bnb.png', url: 'https://www.binance.com' },
+  { name: 'BscScan', tone: '#F0B90B', img: '/stack/bnb.png', url: 'https://bscscan.com' },
 ]
 
 export const TRACKS = [

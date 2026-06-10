@@ -18,15 +18,12 @@ const isTx = (h?: string) => /^0x[0-9a-fA-F]{6,}/.test(txHashOf(h))
 
 export default function Landing({ go }: { go: (p: string) => void }) {
   const { data: lb } = usePoll<Leaderboard>((s) => apiGet('/leaderboard?rank_by=expectancy&min_samples=30&top_n=12', s), 60_000)
-  const { data: wlb } = usePoll<Leaderboard>((s) => apiGet('/leaderboard?rank_by=win_rate&min_samples=50&top_n=3', s), 60_000)
   const { data: loop } = usePoll<LoopEnvelope>((s) => apiGet('/loop/state', s), 15_000)
 
   const ov = lb?.overall
-  const top = wlb?.entries?.[0]
   const st = loop?.available ? loop.state : undefined
   const ddBps = st ? Math.round(st.drawdown * 10000) : 0
   const capBps = st ? Math.round(st.jury_cap * 10000) : 2000
-  const exp = ov?.expectancy ?? 0
 
   return <div>
     {/* ════════ HERO ════════ */}
@@ -67,9 +64,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(155px,1fr))', gap: 12, marginTop: 50, maxWidth: 940, marginLeft: 'auto', marginRight: 'auto' }}>
             <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `${'peak'} $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
             <Stat label={'Live drawdown'} value={`${ddBps} bps`} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={`${'cap'} ${capBps} bps`} />
-            <Stat label={'Edge per signal'} value={ov ? `${exp >= 0 ? '+' : ''}${fmtNum(exp, 2)} R` : '-'} tone={exp >= 0 ? 'var(--green)' : 'var(--red)'} sub={'mean realized'} />
-            <Stat label={'Top strategy edge'} value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} ${'resolved'}` : 'edge base'} />
-            <a href={scan(ADDR.ledger)} target="_blank" rel="noopener noreferrer" className="cp-stat-link" title={'View the result ledger on BscScan'}>
+            <a href={`https://bscscan.com/txs?a=${ADDR.ledger}&p=178`} target="_blank" rel="noopener noreferrer" className="cp-stat-link" title={'View the result ledger transactions on BscScan'}>
               <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off-chain edge base · proofs anchored on the ledger ↗'} />
             </a>
           </div>
@@ -84,14 +79,14 @@ export default function Landing({ go }: { go: (p: string) => void }) {
         <div className="marquee-track">
           {[...SPONSORS, ...SPONSORS].map((s, i) => {
             const Logo = SPONSOR_LOGO[s.name]
-            return <span key={`${s.name}-${i}`} className="stack-tile" aria-hidden={i >= SPONSORS.length}>
+            return <a key={`${s.name}-${i}`} href={s.url} target="_blank" rel="noopener noreferrer" className="stack-tile" aria-hidden={i >= SPONSORS.length}>
               <span className="stack-logo">
                 {s.img
                   ? <img src={s.img} alt={`${s.name} logo`} loading="lazy" />
                   : Logo ? <span style={{ color: s.tone, display: 'inline-flex' }}><Logo size={24} /></span> : null}
               </span>
               {s.name}
-            </span>
+            </a>
           })}
         </div>
       </div>

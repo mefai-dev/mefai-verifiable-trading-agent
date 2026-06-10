@@ -58,7 +58,7 @@ INTERNAL_CAP_RATIO = 0.70    # we run to 70 percent of the jury cap, never to it
 SHRINK_PSEUDO = 25.0         # Bayesian pseudo-count for win-rate shrinkage
 PAYOFF_CAP = 20.0            # clamp on b=avg_win/avg_loss so thin buckets cannot
                              # produce a meaningless near-1 Kelly
-MIN_STOP = 0.002             # floor on stop distance (0.2 percent) to bound lev
+MIN_STOP = 0.015             # floor on stop distance (1.5 percent): below this a
 MAX_STOP = 0.50              # ceiling on stop distance sanity
 DEFAULT_VENUE_MAX_LEV = 10.0 # default leverage cap if the venue gives none
 STATS_TTL = 1800             # seconds to cache per-bucket empirical stats

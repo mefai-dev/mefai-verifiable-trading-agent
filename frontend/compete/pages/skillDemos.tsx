@@ -815,7 +815,6 @@ function LeaderboardDemo() {
     {error && <Down what="The leaderboard is not reachable right now." />}
     {ov && <div style={{ ...statGrid, marginBottom: 10 }}>
       <MiniStat label="Resolved" value={fmtNum(ov.n_resolved, 0)} tone={BNB_TONE} sub="labeled outcomes" />
-      <MiniStat label="Win rate" value={fmtPct(ov.win_rate * 100, 1)} />
       <MiniStat label="Expectancy" value={fmtNum(ov.expectancy, 4)} sub="per signal" />
     </div>}
     {data && <div style={{ display: 'grid', gap: 5 }}>

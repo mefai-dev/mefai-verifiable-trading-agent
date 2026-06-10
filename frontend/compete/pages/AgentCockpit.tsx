@@ -297,7 +297,6 @@ function SizingPanel({ sizing, tpsl }: { sizing: SizingResult | null; tpsl: TpSl
     </div>
     <div style={{ marginTop: 12, borderTop: '1px solid var(--c-line)', paddingTop: 12 }}>
       <Bar label="Full Kelly fraction" value={(sizing?.full_kelly ?? 0) * 100} tone="var(--gold)" fmt={(v) => v.toFixed(1) + '%'} />
-      <Bar label="Win rate (empirical)" value={(sizing?.win_rate ?? 0) * 100} tone="var(--green)" fmt={(v) => v.toFixed(1) + '%'} />
       <Bar label="Payoff (R:R)" value={(sizing?.payoff ?? 0) * 20} tone="var(--cmc)" fmt={() => fmtNum(sizing?.payoff, 2)} />
     </div>
     {best && <div style={{ marginTop: 12, borderTop: '1px solid var(--c-line)', paddingTop: 12 }}>
@@ -484,7 +483,6 @@ function DecisionsTable({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     { key: 'target', header: 'Target', sortValue: (r) => r.target, render: (r) => r.target > 0 ? <span className="mono" style={{ color: 'var(--green)' }}>{fmtPrice(r.target)}</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
     { key: 'stop', header: 'Stop', sortValue: (r) => r.stop, render: (r) => r.stop > 0 ? <span className="mono" style={{ color: 'var(--red)' }}>{fmtPrice(r.stop)}</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
     { key: 'lev', header: 'Lev', hideSm: true, sortValue: (r) => r.leverage, render: (r) => r.leverage > 0 ? <span className="mono">{fmtNum(r.leverage, 2)}x</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
-    { key: 'wr', header: 'Win rate', hideSm: true, sortValue: (r) => r.win_rate, render: (r) => r.win_rate > 0 ? <PctCell value={r.win_rate * 100} d={0} /> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
     { key: 'why', header: 'Read', align: 'l', hideSm: true, sortValue: (r) => r.reasons?.[r.reasons.length - 1] ?? '', render: (r) => (
       <span style={{ color: 'var(--c-muted)', fontSize: 12, lineHeight: 1.4, whiteSpace: 'normal', display: 'inline-block', minWidth: 200, maxWidth: 280 }}>{r.reasons && r.reasons.length ? r.reasons[r.reasons.length - 1] : '·'}</span>
     )},
@@ -615,7 +613,7 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
   ]
   return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="var(--gold)"
     right={st ? `${open.length}/${maxPos} ${'open'}${signedExec ? ` · ${'live signed'}` : ` · ${'proof-live · execution simulated'}`}` : 'standby'}>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14 }}>
       <Stat label="Open positions" value={`${open.length} / ${maxPos}`} tone={GOLD} sub="one per market" />
       <Stat label="Unrealized PnL" value={open.length ? `${unreal >= 0 ? '+' : ''}${fmtUsd(unreal)}` : '-'} tone={unreal >= 0 ? 'var(--green)' : 'var(--red)'} sub="open book" />
       <Stat label="Realized PnL" value={fmtUsd(realized)} tone={realized >= 0 ? 'var(--green)' : 'var(--red)'} sub="closed trades" />
@@ -664,10 +662,11 @@ function CloseCard({ c }: { c: LoopClose }) {
 /* ─────────────── performance attribution · where the realized PnL comes from ─────────────── */
 type Agg = { key: string; n: number; wins: number; pnl: number }
 function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
-  const closes = st?.positions?.closes ?? []
+  // Only count trades that actually moved the book · ignore sub-$1 noise so
+  // every number below (counts, by-reason, by-market, profit factor, realized)
+  // reflects materially realized PnL.
+  const closes = (st?.positions?.closes ?? []).filter((c) => Math.abs(c.pnl_usd) >= 1)
   const n = closes.length
-  const wins = closes.filter((c) => c.pnl_usd >= 0).length
-  const wr = n ? (wins / n) * 100 : 0
   const net = closes.reduce((a, c) => a + c.pnl_usd, 0)
   const grossWin = closes.filter((c) => c.pnl_usd > 0).reduce((a, c) => a + c.pnl_usd, 0)
   const grossLoss = Math.abs(closes.filter((c) => c.pnl_usd < 0).reduce((a, c) => a + c.pnl_usd, 0))
@@ -692,7 +691,6 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
       <span className="cmc-name"><CoinLogo symbol={r.key} /><span className="cmc-name-main">{r.key.replace('USDT', '')}</span></span>
     )},
     { key: 'n', header: 'Trades', sortValue: (r) => r.n, render: (r) => <span className="mono">{r.n}</span> },
-    { key: 'wr', header: 'Win rate', sortValue: (r) => r.wins / r.n, render: (r) => <span className="mono">{fmtPct((r.wins / r.n) * 100, 0)}</span> },
     { key: 'pnl', header: 'Net PnL', sortValue: (r) => r.pnl, render: (r) => (
       <span className="mono" style={{ color: r.pnl >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{r.pnl >= 0 ? '+' : ''}{fmtUsd(r.pnl)}</span>
     )},
@@ -705,7 +703,6 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
       : <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
           <Stat label="Closed trades" value={`${n}`} tone={GOLD} sub="banked results" />
-          <Stat label="Recent win rate" value={fmtPct(wr, 0)} tone={wr >= 50 ? 'var(--green)' : 'var(--gold)'} sub={`${wins}/${n} won`} />
           <Stat label="Realized PnL" value={`${net >= 0 ? '+' : ''}${fmtUsd(net)}`} tone={net >= 0 ? 'var(--green)' : 'var(--red)'} sub="across all closes" />
           <Stat label="Profit factor" value={pf === Infinity ? '∞' : fmtNum(pf, 2)} tone={pf >= 1 ? 'var(--green)' : 'var(--red)'} sub="gross win / gross loss" />
         </div>
@@ -742,8 +739,6 @@ function ago(ts: number): string {
 function SignalResults({ recent }: { recent: RecentSignals | null }) {
   const rows = recent?.signals ?? []
   const resolved = rows.length
-  const wins = rows.filter((r) => r.result === 'win').length
-  const wr = resolved ? (wins / resolved) * 100 : 0
   const avg = resolved ? rows.reduce((a, r) => a + r.pnl, 0) / resolved : 0
   const best = resolved ? Math.max(...rows.map((r) => r.pnl)) : 0
   return <Panel title="ENTERED TRADES · VERIFIED RESULTS" accent="var(--gold)"
@@ -752,7 +747,6 @@ function SignalResults({ recent }: { recent: RecentSignals | null }) {
       {'The exact MEFAI signals the agent reads each paired with the outcome that was recorded after the fact. Direction entry and result are the verified record not a backtest replay.'}
     </p>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
-      <Stat label="Recent win rate" value={resolved ? fmtPct(wr, 1) : '-'} tone={wr >= 50 ? 'var(--green)' : 'var(--gold)'} sub={`${wins}/${resolved} won`} />
       <Stat label="Avg outcome" value={resolved ? `${avg >= 0 ? '+' : ''}${fmtNum(avg, 2)}%` : '-'} tone={avg >= 0 ? 'var(--green)' : 'var(--red)'} sub="per signal" />
       <Stat label="Best outcome" value={resolved ? `+${fmtNum(best, 2)}%` : '-'} tone="var(--green)" sub="this batch" />
       <Stat label="Window" value={recent?.horizon ?? '24h'} tone="var(--c-text)" sub="resolution horizon" />
@@ -804,7 +798,6 @@ function LeaderboardTable({ lb }: { lb: Leaderboard | null }) {
   const cols: CmcColumn<EntityStats>[] = [
     { key: 'rank', header: '#', render: (_r, i) => <span className="mono" style={{ color: 'var(--c-muted)' }}>{i + 1}</span> },
     { key: 'name', header: 'Signal source', align: 'l', sticky: true, sortValue: (r) => r.key, render: (r) => <span className="cmc-name"><CoinLogo symbol={r.key} /><span><span className="cmc-name-main">{r.key.replace('USDT', '')}</span><span className="cmc-name-sym">{r.kind}</span></span></span> },
-    { key: 'wr', header: 'Win rate', sortValue: (r) => r.win_rate, render: (r) => <PctCell value={r.win_rate * 100} d={1} /> },
     { key: 'exp', header: 'Expectancy', sortValue: (r) => r.expectancy, render: (r) => <span className="mono" style={{ color: r.expectancy >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{fmtNum(r.expectancy, 3)}</span> },
     { key: 'pnl', header: 'Realized PnL', sortValue: (r) => r.realized_pnl, render: (r) => <span className="mono" style={{ color: r.realized_pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtNum(r.realized_pnl, 2)}R</span> },
     { key: 'brier', header: 'Brier skill', sortValue: (r) => r.brier_skill, render: (r) => <PctCell value={r.brier_skill * 100} d={1} /> },
