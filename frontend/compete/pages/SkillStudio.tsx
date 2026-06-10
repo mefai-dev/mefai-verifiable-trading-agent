@@ -63,8 +63,6 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
         <Stat label="24h volume" value={fmtUsd(vol)} tone="var(--c-text)" sub="CMC global" />
         <Stat label="BTC dominance" value={btcDom != null ? fmtPct(btcDom, 1) : '-'} tone="var(--gold)" sub="CMC global" />
         <Stat label="Backtested skills" value={<CountUp value={5} />} tone="var(--green)" sub="+1 live monitor" />
-        <Stat label="Resolved outcomes" value={lb ? <CountUp value={lb.overall.n_resolved} /> : '-'} tone="var(--trust)" sub="training base" />
-        <Stat label="Qualified sources" value={lb ? <CountUp value={lb.qualified} /> : '-'} tone="var(--c-text)" sub="leaderboard" />
       </div>
     </Reveal>
 
@@ -160,7 +158,6 @@ function BacktestVerification() {
         <Stat label="Overall" value={idx.overall} tone={idx.overall === 'PASS' ? 'var(--green)' : 'var(--red)'} mono={false} />
         <Stat label="Skills passing" value={`${passing} / ${skills.length}`} tone={CMC} />
         <Stat label="Dataset rows" value={totalRows ? totalRows.toLocaleString() : '-'} tone="var(--c-text)" sub="pinned sample" />
-        <Stat label="Python" value={idx.python} tone="var(--c-text)" mono={false} />
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14, alignItems: 'center', fontSize: 12, color: 'var(--c-muted)' }}>
         <span>{'Dataset'} <span className="mono" style={{ color: 'var(--c-text-2)' }}>{idx.dataset?.path}</span></span>
@@ -213,7 +210,7 @@ function BacktestDetail({ skill }: { skill: string }) {
 const TF_OPTS = ['15m', '30m', '1h', '4h']
 function AllocatorSkill({ lb }: { lb: Leaderboard | null }) {
   const [equity, setEquity] = useState(10000)
-  const [tf, setTf] = useState('30m')
+  const [tf, setTf] = useState('1h')
   const { data, loading } = usePoll<{ symbol: string; r: SizingResult }[]>(async (s) => {
     const out = await Promise.all(ASSETS.map(async (symbol) => {
       try {
@@ -627,7 +624,6 @@ function SkillLeaderboard() {
     nameCol,
     { key: 'exp', header: 'Expectancy', sortValue: (r) => r.expectancy, render: (r) => <span className="mono" style={{ color: r.expectancy >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>{fmtNum(r.expectancy, 3)}</span> },
     { key: 'pnl', header: 'Realized PnL', sortValue: (r) => r.realized_pnl, render: (r) => <span className="mono" style={{ color: r.realized_pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>{fmtNum(r.realized_pnl, 2)}R</span> },
-    { key: 'brier', header: 'Brier skill', sortValue: (r) => r.brier_skill, render: (r) => <PctCell value={r.brier_skill * 100} d={1} /> },
     { key: 'n', header: 'Resolved', sortValue: (r) => r.n_resolved, render: (r) => <span className="mono">{r.n_resolved}</span> },
   ]
   return <Panel title="STRATEGY LEADERBOARD" accent="#3861FB" right={lbData ? `${lbData.qualified} ${'qualified'} · ${horizon} ${'horizon'}` : loading ? 'loading…' : ''}
