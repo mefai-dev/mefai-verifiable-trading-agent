@@ -94,26 +94,6 @@ export default function CompeteApp() {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // load the real webfonts once (Inter for UI, JetBrains Mono for figures,
-  // Cinzel for the council page). Injected here so the type system only ships
-  // on the compete sub-site and never touches the host app.
-  useEffect(() => {
-    if (document.getElementById('cp-webfonts')) return
-    const mk = (rel: string, href: string, cross?: boolean) => {
-      const l = document.createElement('link')
-      l.rel = rel; l.href = href
-      if (cross) l.crossOrigin = 'anonymous'
-      return l
-    }
-    const css = mk('stylesheet', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Cinzel:wght@700;800&display=swap')
-    css.id = 'cp-webfonts'
-    document.head.append(
-      mk('preconnect', 'https://fonts.googleapis.com'),
-      mk('preconnect', 'https://fonts.gstatic.com', true),
-      css,
-    )
-  }, [])
-
   // close popovers on outside click / escape
   useEffect(() => {
     const onDown = (e: MouseEvent) => { if (navRef.current && !navRef.current.contains(e.target as Node)) setMenu(null) }
