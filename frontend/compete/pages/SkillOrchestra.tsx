@@ -15,7 +15,7 @@ import {
   apiGet, usePoll, streamTradeChat, fetchDebate, DEBATE_SYMBOLS,
   fetchArenaLeaderboard, fetchArenaPredictions,
 } from '../api'
-import type { DebateResult, DebateExpert, DebateExchange, DebateLearning, Leaderboard, UviiIndex, ArenaAgent, ArenaPrediction } from '../api'
+import type { DebateResult, DebateExpert, DebateExchange, DebateLearning, ArenaAgent, ArenaPrediction } from '../api'
 import { GITHUB_URL, scan, ADDR } from '../config'
 import { IconBot, IconSend, IconExternal, IconClose } from '../icons'
 
@@ -86,9 +86,7 @@ export default function SkillOrchestra({ go }: { go: (p: string) => void }) {
     })
   }, [debate])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* read-only aggregates (not the debate) keep the scoreboard live */
-  const { data: lb } = usePoll<Leaderboard>((s) => apiGet('/leaderboard?rank_by=expectancy&min_samples=30&top_n=6', s), 60_000)
-  const { data: uvii } = usePoll<UviiIndex>((s) => apiGet('/uvii?min_samples=30&top_n=6', s), 60_000)
+  /* read-only aggregate (not the debate) keeps the scoreboard live */
   const { data: arena } = usePoll<{ agents: ArenaAgent[] }>((s) => fetchArenaLeaderboard(s), 60_000)
 
   /* the debate only runs when the visitor convenes it */
@@ -138,8 +136,6 @@ export default function SkillOrchestra({ go }: { go: (p: string) => void }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginTop: 28 }}>
         <Stat label="MEFAI agents seated" value={<CountUp value={6} />} tone="var(--gold)" sub="one vote each" />
         <Stat label="Arena gladiators" value={arena ? <CountUp value={arena.agents.length} /> : '-'} tone="var(--cmc)" sub="verifiable roster" />
-        <Stat label="Resolved outcomes" value={lb ? <CountUp value={lb.overall.n_resolved} /> : '-'} tone="var(--green)" sub="training base" />
-        <Stat label="Global UVII" value={uvii ? <CountUp value={uvii.global_index.score} decimals={1} /> : '-'} tone="var(--trust)" sub="0 to 100" />
       </div>
     </Reveal>
 

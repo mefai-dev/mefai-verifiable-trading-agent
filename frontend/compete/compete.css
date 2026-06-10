@@ -681,7 +681,29 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .cp-drawer.open { display: block; }
 .compete-root .cp-drawer-scrim { position: absolute; inset: 0; background: rgba(8, 20, 40, 0.45); }
 .compete-root .cp-drawer-panel { position: absolute; top: 0; right: 0; bottom: 0; width: min(82vw, 320px);
-  background: var(--c-panel); border-left: 1px solid var(--c-line); box-shadow: -18px 0 50px var(--c-shadow-2); padding: 16px; overflow-y: auto; }
+  background: var(--c-panel); border-left: 1px solid var(--c-line); box-shadow: -18px 0 50px var(--c-shadow-2);
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); overflow-y: auto;
+  display: flex; flex-direction: column; }
+/* keep menu items snug under the header · no stray vertical gap */
+.compete-root .cp-drawer-panel > * { margin-top: 0; }
+.compete-root .cp-drawer-panel > .cp-pop-label:first-of-type { padding-top: 10px; }
+
+/* mobile bottom tab bar · native app style, shown only <=760px */
+.compete-root .cp-tabbar { display: none; }
+@media (max-width: 760px) {
+  .compete-root .cp-tabbar { display: grid; grid-template-columns: repeat(5, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+    background: var(--c-panel); border-top: 1px solid var(--c-line);
+    box-shadow: 0 -8px 24px var(--c-shadow); padding-bottom: env(safe-area-inset-bottom); }
+  .compete-root .cp-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: 0; cursor: pointer; padding: 8px 2px 7px; color: var(--c-text-2);
+    font-size: 10.5px; font-weight: 700; line-height: 1; transition: color .14s; min-height: 54px; }
+  .compete-root .cp-tab .cp-tab-label { letter-spacing: .1px; }
+  .compete-root .cp-tab.active { color: var(--c-primary); }
+  .compete-root .cp-tab:active { background: var(--c-fill); }
+  /* clear the bar so page content + footer are never hidden behind it */
+  .compete-root .cp-footer { margin-bottom: calc(58px + env(safe-area-inset-bottom)); }
+}
 
 /* ─────────────── logo marquee (the stack we build on) ─────────────── */
 .compete-root .marquee { overflow: hidden; width: 100%;
@@ -741,8 +763,17 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .cp-foot-link { display: block; font-size: 13.5px; color: var(--c-text-2); cursor: pointer; padding: 5px 0;
   font-weight: 600; transition: color .14s, transform .14s; width: fit-content; }
 .compete-root .cp-foot-link:hover { color: var(--c-primary); transform: translateX(3px); }
+/* desktop: the col2 wrapper is transparent so Built-with + Resources stay separate grid cells */
+.compete-root .cp-foot-col2-wrap { display: contents; }
 @media (max-width: 820px) { .compete-root .cp-foot-cols { grid-template-columns: 1fr 1fr !important; } }
-@media (max-width: 480px) { .compete-root .cp-foot-cols { grid-template-columns: 1fr !important; } }
+/* mobile (<=760px): clean 2-column footer · col1 Product, col2 Built-with + Resources stacked.
+   brand spans both columns on top. */
+@media (max-width: 760px) {
+  .compete-root .cp-foot-cols { grid-template-columns: 1fr 1fr !important; gap: 28px 24px !important; }
+  .compete-root .cp-foot-cols > .cp-foot-brand { grid-column: 1 / -1; }
+  .compete-root .cp-foot-col2-wrap { display: flex; flex-direction: column; gap: 22px; }
+  .compete-root .cp-foot-resources { margin-top: 0; }
+}
 
 /* ─────────────── agent track · nav + footer wear gold ─────────────── */
 .compete-root[data-track="agent"] .cp-nav {

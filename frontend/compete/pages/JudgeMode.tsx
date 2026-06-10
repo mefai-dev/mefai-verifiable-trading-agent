@@ -8,7 +8,7 @@
 
 import type { ReactNode } from 'react'
 import {
-  Btn, Card, Chip, Gauge, Reveal, Stat, CountUp, CoinLogo,
+  Btn, Chip, Gauge, Reveal, Stat, CountUp, CoinLogo,
   fmtNum, shortAddr,
 } from '../ui'
 import { usePoll, fetchLoopState, fetchLeaderboard, fetchUvii } from '../api'
@@ -242,20 +242,20 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
       </TourStep>
     </div>
 
-    {/* ── close ── */}
+    {/* ── close · prose lead, then a row of identical actions ── */}
     <Reveal>
-      <Card className="cp-judge-close">
+      <div className="cp-judge-close">
         <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{'That is the whole loop, verified.'}</h3>
         <p style={{ color: 'var(--c-text-2)', lineHeight: 1.65, fontSize: 14, margin: '10px 0 16px' }}>
           {'A decision you can reproduce, a commit you can check before the outcome, a reveal that has to match, a ledger that cannot be edited, a circuit breaker that cannot be talked past, and an index built only from proven calls. Want to watch it happen in real time? Start @mefainews_bot in Telegram and it sends you a direct message for every trade leg during the judged window, each with a BscScan link · read only. Explore the live cockpit or read the protocol in full.'}
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn variant="gold" sm onClick={() => go('/compete/agent')}>{'Live agent cockpit'}</Btn>
-          <Btn variant="trust" sm onClick={() => go('/compete/protocol')}>{'Verifiable protocol'}</Btn>
-          <Btn variant="cmc" sm href={TELEGRAM_FEED_URL}>{'Get trade alerts on Telegram'}</Btn>
-          <Btn variant="ghost" sm onClick={() => go('/compete/docs')}>{'Full documentation'}</Btn>
+          <Btn variant="gold" sm onClick={() => go('/compete/protocol')}>{'Verifiable protocol'}</Btn>
+          <Btn variant="gold" sm href={TELEGRAM_FEED_URL}>{'Get trade alerts on Telegram'}</Btn>
+          <Btn variant="gold" sm onClick={() => go('/compete/docs')}>{'Full documentation'}</Btn>
         </div>
-      </Card>
+      </div>
     </Reveal>
   </div>
 }

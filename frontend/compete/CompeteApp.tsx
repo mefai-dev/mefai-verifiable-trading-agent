@@ -3,11 +3,12 @@
    theme switcher, a font picker, a mobile drawer and a footer. Everything
    lives under .compete-root so its theme never touches the terminal. */
 
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import './compete.css'
 import { GITHUB_URL } from './config'
 import {
   BrandLogo, IconMenu, IconClose, IconPalette, IconType, IconLang, IconCheck, IconCaret,
+  IconRadar, IconBot, IconBolt, IconShield, IconGavel,
 } from './icons'
 
 // Each page is a separate chunk so a first visit only downloads the page it lands on.
@@ -35,6 +36,14 @@ const STACK = [
   { path: '/compete/trust', label: 'Trust Wallet' },
   { path: '/compete/cmc', label: 'CoinMarketCap' },
   { path: '/compete/bnb', label: 'BNB Chain' },
+]
+// Mobile bottom tab bar: 5 primary destinations with short labels + icons.
+const BOTTOM_NAV: { path: string; label: string; Icon: (p: { size?: number }) => ReactNode }[] = [
+  { path: '/compete', label: 'Overview', Icon: IconRadar },
+  { path: '/compete/agent', label: 'Agent', Icon: IconBot },
+  { path: '/compete/skills', label: 'Skills', Icon: IconBolt },
+  { path: '/compete/protocol', label: 'Protocol', Icon: IconShield },
+  { path: '/compete/judge', label: 'Judge', Icon: IconGavel },
 ]
 const THEMES: { id: string; label: string; swatch: string }[] = [
   { id: 'ocean', label: 'Daylight', swatch: '#0071c2' },
@@ -239,6 +248,19 @@ export default function CompeteApp() {
       </div>
     </div>
 
+    {/* ════════ mobile bottom tab bar (<=760px) ════════ */}
+    <nav className="cp-tabbar" aria-label="Primary">
+      {BOTTOM_NAV.map((n) => {
+        const active = path === n.path
+        return (
+          <button key={n.path} className={`cp-tab ${active ? 'active' : ''}`} onClick={() => go(n.path)} aria-current={active ? 'page' : undefined}>
+            <n.Icon size={20} />
+            <span className="cp-tab-label">{n.label}</span>
+          </button>
+        )
+      })}
+    </nav>
+
     <Suspense fallback={<div className="cp-route-loading" aria-busy="true"><span className="cp-spinner" /></div>}>
       {render()}
     </Suspense>
@@ -249,7 +271,7 @@ export default function CompeteApp() {
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1320, margin: '0 auto', padding: '52px 22px 26px' }}>
         <div className="cp-foot-cols" style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1.6fr) repeat(3, minmax(130px, 1fr))', gap: 32 }}>
           {/* brand column */}
-          <div>
+          <div className="cp-foot-brand">
             <BrandLogo height={26} />
             <p style={{ fontSize: 13.5, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '16px 0 0', maxWidth: 360 }}>
               The verifiable autonomous trader. Every call is sealed to the BSC ledger before the outcome is known and a chain anchored circuit breaker makes the risk cap unbreakable.
@@ -259,26 +281,27 @@ export default function CompeteApp() {
             </div>
           </div>
           {/* product column */}
-          <div>
+          <div className="cp-foot-col-product">
             <div className="cp-foot-col-h">Product</div>
             {NAV.map((n) => <span key={n.path} className="cp-foot-link" onClick={() => go(n.path)}>{n.label}</span>)}
           </div>
-          {/* built with column */}
-          <div>
-            <div className="cp-foot-col-h">Built with</div>
-            {STACK.map((n) => <span key={n.path} className="cp-foot-link" onClick={() => go(n.path)}>{n.label}</span>)}
-          </div>
-          {/* resources column */}
-          <div>
-            <div className="cp-foot-col-h">Resources</div>
-            <span className="cp-foot-link" onClick={() => go('/compete/docs')}>Documentation</span>
-            <a className="cp-foot-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
-            <span className="cp-foot-link" onClick={() => go('/compete/protocol')}>Verifiable protocol</span>
-            <span className="cp-foot-link" onClick={() => go('/compete/orchestra')}>AI council</span>
+          {/* built with + resources · single grid cell on mobile, two cells on desktop */}
+          <div className="cp-foot-col2-wrap">
+            <div>
+              <div className="cp-foot-col-h">Built with</div>
+              {STACK.map((n) => <span key={n.path} className="cp-foot-link" onClick={() => go(n.path)}>{n.label}</span>)}
+            </div>
+            <div className="cp-foot-resources">
+              <div className="cp-foot-col-h">Resources</div>
+              <span className="cp-foot-link" onClick={() => go('/compete/docs')}>Documentation</span>
+              <a className="cp-foot-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+              <span className="cp-foot-link" onClick={() => go('/compete/protocol')}>Verifiable protocol</span>
+              <span className="cp-foot-link" onClick={() => go('/compete/orchestra')}>AI council</span>
+            </div>
           </div>
         </div>
         <div style={{ marginTop: 36, paddingTop: 20, borderTop: '1px solid var(--c-line)', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>MEFAI · BNB HACK: AI Trading Agent Edition</span>
+          <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>MEFAI · BNB HACK | AI Trading Agent Edition</span>
           <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>Built to bring the power of AI to trading · does not constitute financial advice.</span>
         </div>
       </div>

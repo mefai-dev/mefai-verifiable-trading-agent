@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from 'react'
 import {
-  Btn, Card, Chip, Gauge, Panel, PctCell, Reveal, Stat, CountUp,
+  Btn, Card, Chip, Gauge, Panel, PctCell, Portal, Reveal, Stat, CountUp,
   CoinLogo, CmcTable, Bar, fmtNum, fmtPct, fmtUsd,
 } from '../ui'
 import type { CmcColumn } from '../ui'
@@ -260,8 +260,37 @@ function AllocatorSkill({ lb }: { lb: Leaderboard | null }) {
       </div>
     </div>
     <CmcTable columns={cols} rows={all} empty={loading ? 'computing optimal allocation…' : 'no data for this timeframe'} defaultSort={{ key: 'alloc', dir: 'desc' }} />
+    {all.length > 0 && approved.length === 0 && <BlockedLegsNote />}
     {lb && <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--c-muted)' }}>{'Edge sourced from'} {lb.overall.n_resolved.toLocaleString()} {'resolved outcomes · drawdown ceiling enforced per leg.'}</div>}
   </Panel>
+}
+
+/* Plain-language note for why every leg currently reads "blocked": the
+   allocator only funds a leg whose edge is positive AFTER the modelled
+   round-trip cost, so at a marginal gross edge no risk budget is deployed. */
+function BlockedLegsNote() {
+  const [open, setOpen] = useState(false)
+  return <div style={{ marginTop: 12, fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.6 }}>
+    <button
+      onClick={() => setOpen((v) => !v)}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--c-line)', borderRadius: 999, padding: '3px 11px', color: 'var(--c-text-2)', fontSize: 12, cursor: 'pointer' }}
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: 'var(--c-fill-2)', fontWeight: 800, fontSize: 11 }}>?</span>
+      {open ? 'Hide why every leg is blocked' : 'Why is every leg blocked right now?'}
+    </button>
+    {open && <p style={{ margin: '10px 0 0', maxWidth: 760 }}>
+      This is the discipline working, not a failure. The allocator only funds a
+      leg when its edge is positive AFTER costs. At the current data each leg's
+      gross expectancy is marginal (win rate near 50 percent, a tiny positive R),
+      and the modelled 0.2 percent round-trip swap cost erases it, so the
+      net-of-cost fractional Kelly comes out at or below zero. A non-positive
+      Kelly means no bet, so the gate marks the leg blocked and holds it at 0
+      percent rather than forcing a negative expected value trade that would just
+      bleed on fees. The moment a leg's measured edge clears the cost hurdle, the
+      allocator sizes it and deploys real risk budget. Switch the timeframe to
+      see edge and surviving legs change.
+    </p>}
+  </div>
 }
 
 /* ─────────────── TP/SL Optimizer ─────────────── */

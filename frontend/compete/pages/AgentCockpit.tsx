@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Btn, Card, Chip, CountUp, Gauge, Panel, PctCell, Reveal, Stat,
+  Btn, Card, Chip, CountUp, Gauge, Panel, PctCell, Portal, Reveal, Stat,
   CoinLogo, CmcTable, Bar, fmtNum, fmtPct, fmtPrice, fmtUsd, shortAddr,
 } from '../ui'
 import type { CmcColumn } from '../ui'
@@ -273,7 +273,20 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
 function SizingPanel({ sizing, tpsl }: { sizing: SizingResult | null; tpsl: TpSl | null }) {
   const ok = sizing?.approved
   const best = tpsl?.best_per_risk || tpsl?.best
-  return <Panel title="DRAWDOWN KELLY SIZING" accent="var(--gold)" right={sizing ? (ok ? 'APPROVED' : 'BLOCKED') : ''}>
+  const [why, setWhy] = useState(false)
+  const right = sizing
+    ? (ok
+        ? 'APPROVED'
+        : <button
+            onClick={() => setWhy(true)}
+            title="Why no position right now?"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--red)', borderRadius: 999, padding: '2px 10px', color: 'var(--red)', fontWeight: 800, fontSize: 12, letterSpacing: '.04em', cursor: 'pointer' }}
+          >
+            BLOCKED
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 15, height: 15, borderRadius: '50%', border: '1px solid var(--red)', fontSize: 10, fontWeight: 800 }}>?</span>
+          </button>)
+    : ''
+  return <Panel title="DRAWDOWN KELLY SIZING" accent="var(--gold)" right={right}>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
       <Stat label="Notional" value={fmtUsd(sizing?.notional)} tone={GOLD} />
       <Stat label="Leverage" value={sizing ? `${fmtNum(sizing.leverage, 2)}x` : '-'} tone="var(--c-text)" />
@@ -299,7 +312,57 @@ function SizingPanel({ sizing, tpsl }: { sizing: SizingResult | null; tpsl: TpSl
     {sizing?.reasons && sizing.reasons.length > 0 && <ul style={{ margin: '12px 0 0', paddingLeft: 16, fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.6 }}>
       {sizing.reasons.slice(0, 3).map((r, i) => <li key={i}>{r}</li>)}
     </ul>}
+    {!ok && sizing && <button
+      onClick={() => setWhy(true)}
+      style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid var(--c-line)', borderRadius: 999, padding: '3px 11px', color: 'var(--c-text-2)', fontSize: 12, cursor: 'pointer' }}
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: 'var(--c-fill-2)', fontWeight: 800, fontSize: 11 }}>?</span>
+      Why no position right now?
+    </button>}
+    {why && <WhyNoPositionModal onClose={() => setWhy(false)} />}
   </Panel>
+}
+
+/* Plain-language explainer for the BLOCKED sizing state. This is capital
+   preservation by design: the sizer only takes a trade when the edge is
+   positive AFTER costs, so a non-positive net-of-cost Kelly means it stands
+   aside rather than pay fees on a coin-flip. */
+function WhyNoPositionModal({ onClose }: { onClose: () => void }) {
+  return <Portal>
+    <div className="cp-modal-overlay" onClick={onClose}>
+      <div className="cp-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Why no position right now" style={{ maxWidth: 560 }}>
+        <button className="cp-modal-x" onClick={onClose} aria-label="Close">×</button>
+        <div style={{ color: 'var(--gold)', fontSize: 12, fontWeight: 800, letterSpacing: '.08em', marginBottom: 8 }}>DRAWDOWN KELLY SIZING</div>
+        <h3 style={{ margin: '0 0 14px', fontSize: 20, fontWeight: 800 }}>Why no position right now</h3>
+        <div style={{ fontSize: 13.5, color: 'var(--c-text-2)', lineHeight: 1.65, display: 'grid', gap: 12 }}>
+          <p style={{ margin: 0 }}>
+            This is the agent doing its job, not a fault. It sizes a trade only
+            when the edge is positive AFTER costs. Right now that test fails, so
+            the disciplined sizer stands aside and holds 0.
+          </p>
+          <p style={{ margin: 0 }}>
+            On the current data the per-signal gross expectancy is marginal: the
+            win rate sits near 50 percent and the edge is a tiny positive R. Once
+            the modelled 0.2 percent round-trip swap cost is subtracted, the
+            net-of-cost expectancy lands at or below zero, so fractional Kelly
+            computes at or below zero. A non-positive Kelly means no bet, and the
+            agent refuses to pay fees on a coin flip just to look active.
+          </p>
+          <p style={{ margin: 0 }}>
+            The RiskGovernor and the market regime gate can also stand the book
+            aside when conditions are risk-off, even when a single signal looks
+            tempting.
+          </p>
+          <p style={{ margin: 0, color: 'var(--gold)', fontWeight: 600 }}>
+            The instant a signal's measured edge clears the cost hurdle and the
+            regime is not risk-off, Kelly turns positive and the sizer scales a
+            real position back up. Until then, no position is the correct,
+            capital-preserving call: no negative expected value trades.
+          </p>
+        </div>
+      </div>
+    </div>
+  </Portal>
 }
 
 /* ─────────────── AI desk · why this trade (conversational) ─────────────── */

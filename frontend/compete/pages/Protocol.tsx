@@ -53,7 +53,6 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
         <Stat label={'Discipline'} value={gi ? fmtNum(gi.discipline_score, 1) : '-'} tone="var(--gold)" sub={'drawdown'} />
         <Stat label={'Skill'} value={gi ? fmtNum(gi.skill_score, 1) : '-'} tone="var(--cmc)" sub={'win rate'} />
         <Stat label={'Uptime'} value={gi ? fmtNum(gi.uptime_score, 1) : '-'} tone="var(--c-text)" sub={'keeper'} />
-        <Stat label={'Resolved'} value={gi ? <CountUp value={gi.n_resolved} /> : '-'} tone="var(--c-text)" sub={'outcomes'} />
       </div>
     </Reveal>
 
