@@ -270,7 +270,11 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
    is the only intentional exception). */
 .compete-root button, .compete-root input, .compete-root select,
 .compete-root textarea, .compete-root optgroup { font-family: inherit; }
-.compete-root .mono { font-family: "JetBrains Mono", "Fira Code", ui-monospace, Menlo, monospace !important; font-variant-numeric: tabular-nums; }
+/* one typeface across the whole sub-site: .mono now follows the selected page
+   font (tabular figures kept for aligned numbers). Genuine code (addresses,
+   hashes, invoke snippets) opts into .cp-code for a true monospace face. */
+.compete-root .mono { font-family: var(--cp-font) !important; font-variant-numeric: tabular-nums; }
+.compete-root .cp-code { font-family: "JetBrains Mono", "Fira Code", ui-monospace, Menlo, monospace !important; font-variant-numeric: tabular-nums; }
 /* Keep a section title on one line on wide screens, wrap naturally on mobile. */
 .compete-root .cp-sec-1line { white-space: nowrap; }
 @media (max-width: 980px) { .compete-root .cp-sec-1line { white-space: normal; } }
@@ -509,7 +513,14 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .btn-ghost:hover { background: var(--c-panel-2); border-color: var(--c-primary); box-shadow: inset 0 0 0 1px var(--c-primary); }
 .compete-root .btn-sm { padding: 8px 14px; font-size: 12.5px; border-radius: 7px; }
 /* uniform CTA row · shine sweep on hover */
-.compete-root .cp-cta-btns .btn { overflow: hidden; min-width: 148px; }
+.compete-root .cp-cta-btns .btn { min-width: 148px; }
+/* hover shine sweep on every button site-wide (a light bar glides across) */
+.compete-root .btn { overflow: hidden; }
+.compete-root .btn::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 60%;
+  background: linear-gradient(110deg, transparent 38%, color-mix(in srgb, #fff 42%, transparent) 50%, transparent 62%);
+  transform: translateX(-160%) skewX(-12deg); pointer-events: none; }
+.compete-root .btn:hover::after { transform: translateX(320%) skewX(-12deg); transition: transform .7s cubic-bezier(.2,.7,.2,1); }
+@media (prefers-reduced-motion: reduce) { .compete-root .btn::after { display: none; } }
 .compete-root .cp-cta-btns .btn::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 60%;
   background: linear-gradient(110deg, transparent 38%, color-mix(in srgb, #fff 42%, transparent) 50%, transparent 62%);
   transform: translateX(-160%) skewX(-12deg); pointer-events: none; }

@@ -767,7 +767,7 @@ function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
             <span style={{ color: 'var(--c-muted)' }}>{'signal · conf'}</span>
-            <span className="mono">{fmtNum(p.signal, 0)} · {fmtPct(p.confidence * 100, 0)}</span>
+            <span className="mono">{fmtNum(p.signal, 0)} · {fmtPct(p.confidence, 0)}</span>
           </div>
           {txHashOf(p.commit_tx) && <a className="cp-a" href={`https://bscscan.com/tx/${txHashOf(p.commit_tx)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>{'commit'} {shortAddr(txHashOf(p.commit_tx))} <IconExternal size={12} /></a>}
           {txHashOf(p.reveal_tx) && <a className="cp-a" href={`https://bscscan.com/tx/${txHashOf(p.reveal_tx)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>{'reveal'} {shortAddr(txHashOf(p.reveal_tx))} <IconExternal size={12} /></a>}
