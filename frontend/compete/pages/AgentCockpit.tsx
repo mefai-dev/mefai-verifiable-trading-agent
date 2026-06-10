@@ -70,7 +70,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
     {/* live equity + drawdown budget */}
     <Reveal delay={80}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginTop: 30 }}>
-        <Stat label="Agent equity" value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone={GOLD} sub={st ? `peak $${(st.peak_equity ?? 0).toFixed(0)}` : 'standby'} />
+        <Stat label="Agent equity" value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone={GOLD} sub={st ? `peak $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
         <Stat label="Drawdown used" value={`${ddBps} bps`} tone={ddPct >= 90 ? 'var(--red)' : ddPct >= 60 ? 'var(--gold)' : 'var(--green)'} sub={`cap ${capBps} bps`} />
         <Stat label="Net edge / signal" value={ov ? `${ov.expectancy >= 0 ? '+' : ''}${fmtNum(ov.expectancy, 3)} R` : '-'} tone={ov && ov.expectancy >= 0 ? 'var(--green)' : 'var(--red)'} sub="positive expectancy" />
         <Stat label="Proven on" value={ov ? `${(ov.n_resolved / 1000).toFixed(0)}k` : '-'} tone="var(--cmc)" sub="resolved signals" />
@@ -144,7 +144,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </Reveal>
 
       {/* why this trade · AI desk */}
-      <Reveal delay={60}>
+      <Reveal delay={60} style={{ gridColumn: '1 / -1' }}>
         <WhyThisTrade symbol={symbol} fusion={fusion} sizing={sizing} active={active} />
       </Reveal>
     </div>
@@ -219,7 +219,7 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
   const tone = dir > 0 ? 'var(--green)' : dir < 0 ? 'var(--red)' : 'var(--c-muted)'
   const conv = fusion?.conviction ?? 0
   const [why, setWhy] = useState(false)
-  return <Panel title="OMNI SIGNAL FUSION" accent="#F0B90B" right={fusion ? `${fusion.n_sources} ${'sources'}` : ''}>
+  return <Panel title="OMNI SIGNAL FUSION" accent="var(--gold)" right={fusion ? `${fusion.n_sources} ${'sources'}` : ''}>
     <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
       <Gauge value={conv} max={100} label={fusion?.label || 'NEUTRAL'} tone={tone} size={138} sub={`${'agree'} ${fmtPct((fusion?.agreement ?? 0) * 100, 0)}`} />
       <div style={{ flex: 1, minWidth: 180 }}>
@@ -273,7 +273,7 @@ function FusionPanel({ symbol, fusion, active }: { symbol: string; fusion: Fusio
 function SizingPanel({ sizing, tpsl }: { sizing: SizingResult | null; tpsl: TpSl | null }) {
   const ok = sizing?.approved
   const best = tpsl?.best_per_risk || tpsl?.best
-  return <Panel title="DRAWDOWN KELLY SIZING" accent="#F0B90B" right={sizing ? (ok ? 'APPROVED' : 'BLOCKED') : ''}>
+  return <Panel title="DRAWDOWN KELLY SIZING" accent="var(--gold)" right={sizing ? (ok ? 'APPROVED' : 'BLOCKED') : ''}>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
       <Stat label="Notional" value={fmtUsd(sizing?.notional)} tone={GOLD} />
       <Stat label="Leverage" value={sizing ? `${fmtNum(sizing.leverage, 2)}x` : '-'} tone="var(--c-text)" />
@@ -364,7 +364,7 @@ function WhyThisTrade({ symbol, fusion, sizing, active }: {
 
   const SUGGEST = [`${'Why this'} ${sym} ${'decision?'}`, 'What is the biggest risk?', 'Why this size and leverage?']
 
-  return <Panel title="WHY THIS TRADE · AI DESK" accent="#F0B90B" right={'AI desk'}>
+  return <Panel title="WHY THIS TRADE · AI DESK" accent="var(--gold)" right={'AI desk'}>
     <div ref={scrollRef} style={{ minHeight: 150, maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
       {msgs.length === 0 && (
         <div style={{ color: 'var(--c-muted)', fontSize: 13, lineHeight: 1.6 }}>
@@ -423,11 +423,11 @@ function DecisionsTable({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     { key: 'lev', header: 'Lev', hideSm: true, sortValue: (r) => r.leverage, render: (r) => r.leverage > 0 ? <span className="mono">{fmtNum(r.leverage, 2)}x</span> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
     { key: 'wr', header: 'Win rate', hideSm: true, sortValue: (r) => r.win_rate, render: (r) => r.win_rate > 0 ? <PctCell value={r.win_rate * 100} d={0} /> : <span style={{ color: 'var(--c-muted-2)' }}>·</span> },
     { key: 'why', header: 'Read', align: 'l', hideSm: true, sortValue: (r) => r.reasons?.[r.reasons.length - 1] ?? '', render: (r) => (
-      <span style={{ color: 'var(--c-muted)', fontSize: 12, lineHeight: 1.4 }}>{r.reasons && r.reasons.length ? r.reasons[r.reasons.length - 1] : '·'}</span>
+      <span style={{ color: 'var(--c-muted)', fontSize: 12, lineHeight: 1.4, whiteSpace: 'normal', display: 'inline-block', minWidth: 200, maxWidth: 280 }}>{r.reasons && r.reasons.length ? r.reasons[r.reasons.length - 1] : '·'}</span>
     )},
   ]
   const traded = rows.filter((r) => r.action.includes('LONG') || r.action.includes('SHORT')).length
-  return <Panel title="AGENT DECISIONS" accent="#F0B90B" right={st ? `${rows.length} evaluated · ${traded} taken · cycle ${st.cycle}` : 'standby'}>
+  return <Panel title="AGENT DECISIONS" accent="var(--gold)" right={st ? `${rows.length} evaluated · ${traded} taken · cycle ${st.cycle}` : 'standby'}>
     <CmcTable columns={cols} rows={rows} empty={st ? 'agent is holding · no qualifying setups' : 'agent on standby'} defaultSort={{ key: 'conv', dir: 'desc' }} />
   </Panel>
 }
@@ -540,7 +540,7 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
       </span>
     }},
   ]
-  return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="#F0B90B"
+  return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="var(--gold)"
     right={st ? `${open.length}/${maxPos} ${'open'}${paper ? ` · ${'simulated'}` : ` · ${'live'}`}` : 'standby'}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 14 }}>
       <Stat label="Open positions" value={`${open.length} / ${maxPos}`} tone={GOLD} sub="one per market" />
@@ -625,7 +625,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
     )},
   ]
 
-  return <Panel title="PERFORMANCE ATTRIBUTION · WHERE PNL COMES FROM" accent="#F0B90B"
+  return <Panel title="PERFORMANCE ATTRIBUTION · WHERE PNL COMES FROM" accent="var(--gold)"
     right={st ? `${n} ${'closed trades'}` : 'standby'}>
     {n === 0
       ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'no closed trades yet · attribution builds as the agent banks results'}</div>
@@ -673,7 +673,7 @@ function SignalResults({ recent }: { recent: RecentSignals | null }) {
   const wr = resolved ? (wins / resolved) * 100 : 0
   const avg = resolved ? rows.reduce((a, r) => a + r.pnl, 0) / resolved : 0
   const best = resolved ? Math.max(...rows.map((r) => r.pnl)) : 0
-  return <Panel title="ENTERED TRADES · VERIFIED RESULTS" accent="#F0B90B"
+  return <Panel title="ENTERED TRADES · VERIFIED RESULTS" accent="var(--gold)"
     right={recent ? `${resolved} ${'signals'} · ${recent.horizon}` : ''}>
     <p style={{ color: 'var(--c-muted)', fontSize: 12.5, lineHeight: 1.6, margin: '0 0 14px' }}>
       {'The exact MEFAI signals the agent reads each paired with the outcome that was recorded after the fact. Direction entry and result are the verified record not a backtest replay.'}
@@ -738,7 +738,7 @@ function LeaderboardTable({ lb }: { lb: Leaderboard | null }) {
     { key: 'dd', header: 'Worst DD', sortValue: (r) => r.worst_drawdown, render: (r) => <span className="mono" style={{ color: 'var(--red)' }}>{fmtNum(r.worst_drawdown, 2)}R</span> },
     { key: 'n', header: 'Resolved', sortValue: (r) => r.n_resolved, render: (r) => <span className="mono">{r.n_resolved}</span> },
   ]
-  return <Panel title="VERIFIED SIGNAL LEADERBOARD" accent="#F0B90B" right={lb ? `${lb.qualified} ${'qualified'} · ${'rank by'} ${lb.rank_by}` : ''}>
+  return <Panel title="VERIFIED SIGNAL LEADERBOARD" accent="var(--gold)" right={lb ? `${lb.qualified} ${'qualified'} · ${'rank by'} ${lb.rank_by}` : ''}>
     <CmcTable columns={cols} rows={rows} empty="loading leaderboard…" maxHeight={420} defaultSort={{ key: 'exp', dir: 'desc' }} />
   </Panel>
 }
@@ -746,7 +746,7 @@ function LeaderboardTable({ lb }: { lb: Leaderboard | null }) {
 /* ─────────────── proofs ─────────────── */
 function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
   const rows = st?.proofs ?? []
-  return <Panel title="COMMIT REVEAL PROOFS" accent="#F0B90B" right={'BSC mainnet'}>
+  return <Panel title="COMMIT REVEAL PROOFS" accent="var(--gold)" right={'BSC mainnet'}>
     {rows.length === 0
       ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'No proofs this cycle · registry'} {shortAddr(ADDR.registry)}</div>
       : <div className="cp-cards cp-cards-wide">
@@ -775,7 +775,7 @@ function X402ConsumePanel({ st }: { st?: LoopEnvelope['state'] }) {
   const price = x ? Number(x.price_atomic) / 1e18 : 0
   const gi = x?.feed?.global_index
   const score = typeof gi?.score === 'number' ? gi.score : undefined
-  return <Panel title="NATIVE x402 CONSUMPTION · AGENT AS BUYER" accent="#F0B90B"
+  return <Panel title="NATIVE x402 CONSUMPTION · AGENT AS BUYER" accent="var(--gold)"
     right={x ? <Chip tone={ok ? 'var(--green)' : 'var(--c-muted)'}>{ok ? 'verified' : 'standby'}</Chip> : ''}>
     {!x
       ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'No feed bought yet this run · runs on a low cadence'}</div>
@@ -785,7 +785,7 @@ function X402ConsumePanel({ st }: { st?: LoopEnvelope['state'] }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
           <Stat label={'product'} value={x.product_id} tone={GOLD} />
-          <Stat label={'price'} value={`${price} USD`} tone="var(--c-text)" />
+          <Stat label={'price'} value={`${fmtPrice(price)} USD`} tone="var(--c-text)" />
           <Stat label={'network'} value={`${x.network}${x.chain_id ? ` · ${x.chain_id}` : ''}`} tone="var(--cmc)" />
           <Stat label={'settlement'} value={x.settlement_deferred ? 'deferred' : (x.settled ? 'settled' : '-')} tone="var(--trust)" />
           {typeof score === 'number' && <Stat label={'UVII index'} value={fmtNum(score, 1)} tone="var(--green)" />}

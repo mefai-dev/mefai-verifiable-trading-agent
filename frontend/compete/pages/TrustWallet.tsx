@@ -111,7 +111,7 @@ function SafetyGate() {
   }, [token, amount, slip])
 
   const go = verdict?.go
-  return <Panel title={'PRE TRADE SAFETY GATE'} accent="#3375BB" right={verdict ? `${'score'} ${verdict.score}` : 'self custody'}>
+  return <Panel title={'PRE TRADE SAFETY GATE'} accent="var(--trust)" right={verdict ? `${'score'} ${verdict.score}` : 'self custody'}>
     {/* controls */}
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {PRESETS.map((p) => (
@@ -218,7 +218,7 @@ function ExecutionPipeline() {
   const q = data?.quote
   const v = data?.verdict
   const go = data?.go
-  return <Panel title={'LIVE EXECUTION PIPELINE'} accent="#3375BB" right={data ? (go ? `${'verdict'} GO` : `${'verdict'} BLOCK`) : 'quote · gate · sign'}>
+  return <Panel title={'LIVE EXECUTION PIPELINE'} accent="var(--trust)" right={data ? (go ? `${'verdict'} GO` : `${'verdict'} BLOCK`) : 'quote · gate · sign'}>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {PAIRS.map((p, i) => (
         <button key={p.label} className={`cp-pill ${pair === i ? 'on' : ''}`} onClick={() => setPair(i)}>{p.label}</button>
@@ -280,7 +280,7 @@ function ExecutionPipeline() {
 
 function PipeStep({ n, title, tone, right, children }: { n: number; title: string; tone: string; right?: ReactNode; children: ReactNode }) {
   return <div style={{ display: 'flex', gap: 11, padding: '11px 13px', borderRadius: 11, background: 'var(--c-fill)', border: '1px solid var(--c-line)' }}>
-    <span style={{ flex: '0 0 auto', width: 24, height: 24, borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, color: '#000', background: tone }}>{n}</span>
+    <span style={{ flex: '0 0 auto', width: 24, height: 24, borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800, color: tone === TONE ? '#fff' : '#000', background: tone }}>{n}</span>
     <div style={{ minWidth: 0, flex: 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
         <span style={{ fontSize: 13, fontWeight: 700 }}>{title}</span>

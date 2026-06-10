@@ -193,6 +193,7 @@ function TokenTable({ intel, error }: { intel: CmcIntel | null; error?: boolean 
   const all = intel?.tokens ?? []
   const [q, setQ] = useState('')
   const [verdict, setVerdict] = useState('all')
+  const [showAll, setShowAll] = useState(false)
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -233,7 +234,12 @@ function TokenTable({ intel, error }: { intel: CmcIntel | null; error?: boolean 
         ))}
       </div>
     </div>
-    <CmcTable columns={cols} rows={rows} defaultSort={{ key: 'rank', dir: 'asc' }}
+    <CmcTable columns={cols} rows={showAll ? rows : rows.slice(0, 100)} defaultSort={{ key: 'rank', dir: 'asc' }}
       empty={empty} maxHeight={520} />
+    {rows.length > 100 && <div style={{ textAlign: 'center', marginTop: 12 }}>
+      <button className="cp-pill" onClick={() => setShowAll(!showAll)}>
+        {showAll ? 'Show top 100' : `Show all ${rows.length}`}
+      </button>
+    </div>}
   </Panel>
 }

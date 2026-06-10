@@ -8,7 +8,7 @@ import { IconExternal } from '../icons'
 import { GITHUB_URL } from '../config'
 
 function Eyebrow({ tone, children }: { tone?: string; children: ReactNode }) {
-  const c = tone || 'var(--c-accent)'
+  const c = tone || 'var(--c-primary)'
   return <span style={{
     display: 'inline-block',
     fontSize: 11.5, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase',

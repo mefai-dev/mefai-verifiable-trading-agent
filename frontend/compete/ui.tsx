@@ -135,7 +135,7 @@ export function CountUp({ value, decimals = 0, prefix = '', suffix = '', dur = 1
     io.observe(el)
     return () => io.disconnect()
   }, [target, dur])
-  return <span ref={ref} className="mono">{prefix}{v.toFixed(decimals)}{suffix}</span>
+  return <span ref={ref} className="mono">{prefix}{v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</span>
 }
 
 /* ─────────────── buttons ─────────────── */
@@ -324,7 +324,7 @@ export function CmcTable<R>({ columns, rows, empty = 'no data', maxHeight, defau
         {sorted.length === 0
           ? <tr><td className="l" colSpan={columns.length} style={{ textAlign: 'center', color: 'var(--c-muted)', padding: 34 }}>{empty}</td></tr>
           : sorted.map((row, i) => <tr key={i}>
-              {columns.map((c) => <td key={c.key} className={`${c.align === 'l' ? 'l' : ''}${c.hideSm ? ' cmc-hide-sm' : ''}`}>{c.render(row, i)}</td>)}
+              {columns.map((c) => <td key={c.key} className={`${c.align === 'l' ? 'l' : ''}${c.sticky ? ' sticky-name' : ''}${c.hideSm ? ' cmc-hide-sm' : ''}`}>{c.render(row, i)}</td>)}
             </tr>)}
       </tbody>
     </table>

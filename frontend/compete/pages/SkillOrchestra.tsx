@@ -657,7 +657,7 @@ function ArenaScene() {
             const pnlTone = a.total_pnl_pct >= 0 ? 'var(--green)' : 'var(--red)'
             return <div key={a.agent_id || a.name} className="cp-podium-step" style={{ minHeight: stepMin[idx], boxShadow: `inset 0 3px 0 0 ${m}` }}>
               <span style={{ width: 46, height: 46, borderRadius: 13, background: `color-mix(in srgb, ${m} 20%, transparent)`, border: `1.5px solid ${m}`, color: m, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><IconBot size={24} /></span>
-              <span style={{ fontSize: 11, fontWeight: 900, color: m, letterSpacing: .5 }}>{'RANK'} {podiumRank[idx]}</span>
+              <span style={{ fontSize: 11, fontWeight: 900, background: m, color: '#1a1d24', padding: '2px 8px', borderRadius: 6, letterSpacing: .5 }}>{'RANK'} {podiumRank[idx]}</span>
               <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: .2 }}>{a.name}</span>
               <span className="mono" style={{ fontSize: 15, fontWeight: 800, color: pnlTone }}>{a.total_pnl_pct >= 0 ? '+' : ''}{fmtNum(a.total_pnl_pct, 1)}%</span>
               <span style={{ fontSize: 10.5, color: 'var(--c-muted)' }}>{fmtNum(a.accuracy_pct, 0)}% {'acc'} · {a.correct}/{a.total_predictions}</span>

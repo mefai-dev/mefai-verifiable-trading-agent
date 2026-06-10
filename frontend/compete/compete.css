@@ -31,8 +31,8 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   --c-fill-2:    rgba(16, 53, 110, 0.085);
   --c-text:      #0f2747;
   --c-text-2:    #41557a;
-  --c-muted:     #6b7c9c;
-  --c-muted-2:   #93a1ba;
+  --c-muted:     #5d6f8e;
+  --c-muted-2:   #7e8ba6;
   --c-shadow:    rgba(20, 50, 100, 0.10);
   --c-shadow-2:  rgba(20, 50, 100, 0.16);
 
@@ -65,22 +65,28 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   --c-on-primary: #ffffff;
 }
 
-/* ═══════════════ brand accents (constant across palettes) ═══════════════ */
+/* ═══════════════ brand accents (theme-aware where contrast demands) ═══════════════ */
 .compete-root {
-  /* BNB / Binance gold */
-  --gold:        #d99e00;
-  --gold-2:      #f0b90b;
+  /* BNB / Binance gold · darkened on the light surface so 11px panel titles
+     pass AA (the true brand hue returns on the midnight palette below) */
+  --gold:        #8f6a00;
+  --gold-2:      #b98a00;
   --gold-soft:   rgba(217, 158, 0, 0.12);
-  /* Trust Wallet blue */
-  --trust:       #2563b8;
+  /* Trust Wallet blue (brand #3375BB) */
+  --trust:       #3375BB;
   --trust-2:     #0500ff;
-  --trust-soft:  rgba(37, 99, 184, 0.12);
+  --trust-soft:  rgba(51, 117, 187, 0.12);
   /* CoinMarketCap */
   --cmc:         #3861fb;
   --cmc-soft:    rgba(56, 97, 251, 0.12);
   --green:       #0ea66b;
   --red:         #e0394a;
   --purple:      #8b5cf6;
+}
+/* dark surface carries the true Binance gold (plenty of contrast there) */
+.compete-root[data-theme="midnight"] {
+  --gold:        #F0B90B;
+  --gold-2:      #FCD535;
 
   /* type · selectable via [data-font] */
   --cp-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -120,7 +126,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .mono { font-family: "JetBrains Mono", "Fira Code", ui-monospace, Menlo, monospace !important; font-variant-numeric: tabular-nums; }
 /* Keep a section title on one line on wide screens, wrap naturally on mobile. */
 .compete-root .cp-sec-1line { white-space: nowrap; }
-@media (max-width: 760px) { .compete-root .cp-sec-1line { white-space: normal; } }
+@media (max-width: 980px) { .compete-root .cp-sec-1line { white-space: normal; } }
 
 /* ── scrollbar ── */
 .compete-root ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -373,6 +379,13 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   border: 1px solid var(--c-line); border-radius: 12px; box-shadow: 0 1px 2px var(--c-shadow); overflow: hidden; }
 .compete-root .card-hover { transition: transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s, border-color .2s; }
 .compete-root .card-hover:hover { transform: translateY(-3px); border-color: var(--c-line-2); box-shadow: 0 14px 30px var(--c-shadow); }
+/* glow card · a soft top halo in the panel tone the caller sets via --glow */
+.compete-root .card-glow {
+  background:
+    radial-gradient(120% 90% at 50% -12%, color-mix(in srgb, var(--glow, var(--c-primary)) 9%, transparent), transparent 58%),
+    var(--c-panel);
+  border-color: color-mix(in srgb, var(--glow, var(--c-line)) 26%, var(--c-line));
+}
 /* panel box effect · the same glow halo + shine sweep + lift the home deck uses,
    tuned lighter so data panels feel alive without jumping. --glow set per panel. */
 .compete-root .cp-fx { position: relative; isolation: isolate;
@@ -421,6 +434,9 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root table.cmc thead th.sticky-name { left: 0; z-index: 3; }
 .compete-root table.cmc tbody td { padding: 13px 14px; border-bottom: 1px solid var(--c-line); text-align: right; white-space: nowrap; color: var(--c-text); font-weight: 600; }
 .compete-root table.cmc tbody td.l { text-align: left; }
+/* keep the market column pinned in body rows too, matching its sticky header */
+.compete-root table.cmc tbody td.sticky-name { position: sticky; left: 0; z-index: 1; background: var(--c-panel); }
+.compete-root table.cmc tbody tr:hover td.sticky-name { background: var(--c-panel-2); }
 .compete-root table.cmc tbody tr { transition: background .12s; }
 .compete-root table.cmc tbody tr:hover { background: var(--c-fill); }
 .compete-root table.cmc tbody tr:last-child td { border-bottom: none; }
@@ -613,24 +629,21 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .cp-orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: .55;
   animation: cp-float-orb 14s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .compete-root .cp-orb { animation: none; } }
-.compete-root .cp-stagger > * { opacity: 0; animation: cp-rise .7s cubic-bezier(.2,.7,.2,1) forwards; }
-.compete-root .cp-stagger > *:nth-child(1) { animation-delay: .05s; }
-.compete-root .cp-stagger > *:nth-child(2) { animation-delay: .14s; }
-.compete-root .cp-stagger > *:nth-child(3) { animation-delay: .23s; }
-.compete-root .cp-stagger > *:nth-child(4) { animation-delay: .32s; }
-.compete-root .cp-stagger > *:nth-child(5) { animation-delay: .41s; }
-.compete-root .cp-stagger > *:nth-child(6) { animation-delay: .50s; }
-@media (prefers-reduced-motion: reduce) { .compete-root .cp-stagger > * { opacity: 1; animation: none; } }
-
 /* link */
 .compete-root .cp-a { color: var(--c-primary); text-decoration: none; font-weight: 600; transition: color .14s; }
 .compete-root .cp-a:hover { color: var(--c-primary-2); text-decoration: underline; }
 
+/* docs table of contents rows · hover affordance */
+.compete-root .cp-toc-row { transition: background .14s; border-radius: 8px; cursor: pointer; }
+.compete-root .cp-toc-row:hover { background: var(--c-fill); }
+
 /* ─────────────── responsive ─────────────── */
-@media (max-width: 760px) {
+/* the full link row needs ~1150px before it wraps to a second line, so the
+   drawer takes over well before that instead of a scruffy two-row header */
+@media (max-width: 1100px) {
   .compete-root .cp-nav-desktop { display: none !important; }
 }
-@media (min-width: 761px) {
+@media (min-width: 1101px) {
   .compete-root .cp-nav-mobile { display: none !important; }
 }
 
@@ -1047,3 +1060,6 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   .compete-root .cp-judge-gov-stats,
   .compete-root .cp-judge-uvii-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* skill selector keyboard focus */
+.compete-root .cp-skillcard-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; border-radius: 10px; }

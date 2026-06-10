@@ -55,7 +55,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
         <Reveal delay={210}>
           <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap', justifyContent: 'center', marginTop: 32 }}>
             <Btn variant="primary" onClick={() => go('/compete/agent')}>{'Enter the live agent'}</Btn>
-            <Btn variant="gold" onClick={() => go('/compete/judge')}>{'Judge mode · verify in 5 min'}</Btn>
+            <Btn variant="amber" onClick={() => go('/compete/judge')}>{'Judge mode · verify in 5 min'}</Btn>
             <Btn variant="ghost" onClick={() => go('/compete/orchestra')}>{'Talk to the AI council'}</Btn>
             <Btn variant="ghost" href={GITHUB_URL}>{'Open source'}</Btn>
           </div>
@@ -64,7 +64,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
         {/* live heartbeat strip · honest headline metrics */}
         <Reveal delay={290}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(155px,1fr))', gap: 12, marginTop: 50, maxWidth: 940, marginLeft: 'auto', marginRight: 'auto' }}>
-            <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `${'peak'} $${(st.peak_equity ?? 0).toFixed(0)}` : 'standby'} />
+            <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `${'peak'} $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
             <Stat label={'Live drawdown'} value={`${ddBps} bps`} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={`${'cap'} ${capBps} bps`} />
             <Stat label={'Edge per signal'} value={ov ? `${exp >= 0 ? '+' : ''}${fmtNum(exp, 2)} R` : '-'} tone={exp >= 0 ? 'var(--green)' : 'var(--red)'} sub={'mean realized'} />
             <Stat label={'Top strategy edge'} value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} ${'resolved'}` : 'verified'} />

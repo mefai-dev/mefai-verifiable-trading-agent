@@ -74,7 +74,7 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
     {/* commit reveal + circuit breaker */}
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }} className="cp-grid-2">
       <Reveal delay={60}>
-        <Panel title={'COMMIT REVEAL REGISTRY'} accent="#3375BB" right={'cannot be backfilled'}>
+        <Panel title={'COMMIT REVEAL REGISTRY'} accent="var(--trust)" right={'cannot be backfilled'}>
           <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--c-text-2)', marginTop: 0 }}>
             {'Before any entry the agent writes'} <span className="mono" style={{ color: TRUST }}>keccak256(symbol, direction, entry, target, stop, expiry, salt)</span> {'to the registry. After the window it reveals the preimage. The hash binds the call before the outcome is known so the track record cannot be rewritten.'}
           </p>
@@ -98,7 +98,7 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
       </Reveal>
 
       <Reveal delay={120}>
-        <Panel title={'RISK GOVERNOR · CIRCUIT BREAKER'} accent="#3375BB" right={st?.governor?.ok === false ? 'HALTED' : 'ARMED'}
+        <Panel title={'RISK GOVERNOR · CIRCUIT BREAKER'} accent="var(--trust)" right={st?.governor?.ok === false ? 'HALTED' : 'ARMED'}
           help={<>{'DD USED reads'} <b style={{ color: 'var(--c-text)' }}>{'realised'}</b> {'drawdown against the internal cap. It currently shows'}
             <b style={{ color: 'var(--c-text)' }}> {ddBps} / {capBps} bps</b>{ddBps === 0 ? <>{' '}{'because equity has not drawn down: the breaker is armed and the floor has never been touched, so'} <span className="mono">canTrade()</span> {'stays true.'}</> : <>{' '}{'of realised drawdown against the cap.'} <span className="mono">canTrade()</span> {'stays true while it sits below the internal cap.'}</>} {'The number only climbs when a live loss eats into the budget; at the internal cap the contract refuses the next entry before the jury DQ line is ever reached.'}</>}>
           <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -192,7 +192,7 @@ function UviiTable({ uvii }: { uvii: UviiIndex | null }) {
     { key: 'up', header: 'Uptime', sortValue: (r) => r.uptime_score, render: (r) => <span className="mono">{fmtNum(r.uptime_score, 1)}</span> },
     { key: 'n', header: 'Resolved', sortValue: (r) => r.n_resolved, render: (r) => <span className="mono">{r.n_resolved}</span> },
   ]
-  return <Panel title={'UNIFIED VERIFIABLE INTELLIGENCE INDEX'} accent="#3375BB" right={uvii ? `${rows.length} ${'entities'}` : ''}
+  return <Panel title={'UNIFIED VERIFIABLE INTELLIGENCE INDEX'} accent="var(--trust)" right={uvii ? `${rows.length} ${'entities'}` : ''}
     help={<>{'One fused 0 to 100 score per market blending PnL win rate (Skill) Discipline Integrity and Uptime. Click any column header to sort · the caret marks the active sort. Ranked by UVII by default; the same math drives the global score above.'}</>}>
     <CmcTable columns={cols} rows={rows} empty={'computing UVII…'} maxHeight={440} defaultSort={{ key: 'score', dir: 'desc' }} />
   </Panel>
@@ -201,7 +201,7 @@ function UviiTable({ uvii }: { uvii: UviiIndex | null }) {
 /* ─────────────── x402 ─────────────── */
 function X402Panel({ x402 }: { x402: X402Catalog | null }) {
   const products = x402?.products ?? []
-  return <Panel title={'x402 MACHINE PAYABLE FEED'} accent="#3375BB" right={x402 ? x402.network : ''}
+  return <Panel title={'x402 MACHINE PAYABLE FEED'} accent="var(--trust)" right={x402 ? x402.network : ''}
     help={<>{'Each card is a paywalled endpoint priced in stablecoin. A calling agent hits the URL receives HTTP 402 pays the exact quoted amount with an EIP-3009 authorization then re-requests and gets the signed payload. Prices and the payment network below are read live from the running catalog.'}</>}>
     <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--c-text-2)', marginTop: 0 }}>
       {'The verified signal feed is served over HTTP 402. Payment is bound with EIP-3009 to the exact token and chain charged so one agent can pay another for proven alpha without a human in the loop.'}
@@ -251,7 +251,7 @@ function X402Handshake({ productId }: { productId: string }) {
       {data.steps.map((s) => {
         const tone = s.name === 'verify' ? (s.valid ? 'var(--green)' : 'var(--red)') : s.name === 'serve' ? 'var(--green)' : TRUST
         return <div key={s.n} style={{ display: 'flex', gap: 10, alignItems: 'baseline', padding: '8px 11px', borderRadius: 9, background: 'var(--c-panel)', border: '1px solid var(--c-line)' }}>
-          <span style={{ flex: '0 0 auto', width: 20, height: 20, borderRadius: 6, display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 800, color: '#000', background: tone }}>{s.n}</span>
+          <span style={{ flex: '0 0 auto', width: 20, height: 20, borderRadius: 6, display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 800, color: tone === TRUST ? '#fff' : '#000', background: tone }}>{s.n}</span>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, fontWeight: 700 }}>{s.title}</span>
@@ -284,7 +284,7 @@ function ProofsTable({ st }: { st?: LoopEnvelope['state'] }) {
     { key: 'reveal', header: 'Reveal tx', render: (r) => r.reveal_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--green)' }}>{shortAddr(r.reveal_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
     { key: 'pid', header: 'Pred ID', render: (r) => <span className="mono">{r.prediction_id ?? '-'}</span> },
   ]
-  return <Panel title={'COMMIT REVEAL PROOFS'} accent="#3375BB" right={st ? `${'cycle'} ${st.cycle}` : 'standby'}
+  return <Panel title={'COMMIT REVEAL PROOFS'} accent="var(--trust)" right={st ? `${'cycle'} ${st.cycle}` : 'standby'}
     help={<>{'The agent’s live calls this cycle. Commit tx seals the hashed prediction before the trade; Reveal tx publishes the preimage after the window. Both link straight to BscScan so the call cannot be edited after the fact.'}</>}>
     <CmcTable columns={cols} rows={rows} empty={st ? 'no proofs this cycle' : 'agent on standby'} />
   </Panel>

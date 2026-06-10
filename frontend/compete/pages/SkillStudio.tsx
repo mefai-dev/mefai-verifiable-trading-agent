@@ -76,7 +76,7 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
           const on = skill === sk.id
           return <Card key={sk.id} hover className="cp-fx"
             style={{ padding: '20px 18px', cursor: 'pointer', textAlign: 'center', ['--glow' as any]: `color-mix(in srgb, ${sk.tone} 22%, transparent)`, borderColor: on ? sk.tone : undefined, boxShadow: on ? `0 0 0 1px ${sk.tone}, 0 10px 30px var(--c-shadow)` : undefined }}>
-            <div onClick={() => setSkill(sk.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSkill(sk.id) }}>
+            <div className="cp-skillcard-btn" onClick={() => setSkill(sk.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSkill(sk.id) }}>
               <h3 style={{ fontSize: 16.5, fontWeight: 800, margin: '0 0 8px', color: on ? sk.tone : 'var(--c-text)' }}>{sk.name}</h3>
               <p style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--c-text-2)', margin: '0 0 13px' }}>{sk.blurb}</p>
               <span style={{ display: 'inline-block', fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', padding: '4px 12px', borderRadius: 999, color: on ? '#08131f' : sk.tone, background: on ? sk.tone : `color-mix(in srgb, ${sk.tone} 14%, transparent)` }}>{on ? 'Active' : 'Open skill'}</span>
@@ -204,7 +204,7 @@ function BacktestDetail({ skill }: { skill: string }) {
     </div>}
     {m.stdout_tail && <div>
       <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginBottom: 6 }}>{'Backtest console'}</div>
-      <pre className="mono" style={{ fontSize: 11.5, background: 'var(--c-bg-2, rgba(0,0,0,.25))', borderRadius: 10, padding: 12, margin: 0, overflowX: 'auto', color: 'var(--c-text-2)', lineHeight: 1.5 }}>{m.stdout_tail}</pre>
+      <pre className="mono" style={{ fontSize: 11.5, background: 'var(--c-fill-2)', borderRadius: 10, padding: 12, margin: 0, overflowX: 'auto', color: 'var(--c-text-2)', lineHeight: 1.5 }}>{m.stdout_tail}</pre>
     </div>}
   </Card>
 }
@@ -253,10 +253,10 @@ function AllocatorSkill({ lb }: { lb: Leaderboard | null }) {
       {TF_OPTS.map((t) => (
         <button key={t} className={`cp-pill ${tf === t ? 'on' : ''}`} onClick={() => setTf(t)}>{t}</button>
       ))}
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: 18 }}>
-        <Stat label="Deployed" value={fmtUsd(totalNotional)} tone={CMC} />
-        <Stat label="Margin" value={fmtUsd(totalMargin)} tone="var(--c-text)" />
-        <Stat label="Budget at risk" value={fmtUsd(totalRisk)} tone="var(--red)" />
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="mono" style={{ fontSize: 12.5 }}><span style={{ color: 'var(--c-muted)' }}>Deployed </span><b>{fmtUsd(totalNotional)}</b></span>
+        <span className="mono" style={{ fontSize: 12.5 }}><span style={{ color: 'var(--c-muted)' }}>Margin </span><b>{fmtUsd(totalMargin)}</b></span>
+        <span className="mono" style={{ fontSize: 12.5 }}><span style={{ color: 'var(--c-muted)' }}>Budget at risk </span><b>{fmtUsd(totalRisk)}</b></span>
       </div>
     </div>
     <CmcTable columns={cols} rows={all} empty={loading ? 'computing optimal allocation…' : 'no data for this timeframe'} defaultSort={{ key: 'alloc', dir: 'desc' }} />
@@ -271,7 +271,7 @@ function TpSlSkill() {
   const { data: tpsl } = usePoll<TpSl>((s) => apiGet(`/tp-sl?symbol=${symbol}&timeframe=${tf}&signal_type=buy`, s), 60_000, [symbol, tf])
   const best = tpsl?.best_per_risk || tpsl?.best
 
-  return <Panel title="TP/SL OPTIMIZER" accent="#16C784" right={tpsl ? `${tpsl.n_total} ${'outcomes'}` : ''}
+  return <Panel title="TP/SL OPTIMIZER" accent="#3861FB" right={tpsl ? `${tpsl.n_total} ${'outcomes'}` : ''}
     help={<>{'A grid search over every take profit and stop loss pair scored on realised outcomes at the chosen timeframe. The gauge reads expectancy per unit of risk for the best bracket; a cell only qualifies once it clears the minimum sample of 30 trades. Higher timeframes hold fewer completed brackets so 15m and 30m are the data rich frames; sparse frames show a thin warning instead of a forced answer.'}</>}>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {ASSETS.slice(0, 6).map((s) => (
@@ -287,7 +287,7 @@ function TpSlSkill() {
       ))}
     </div>
     {best ? <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 24, alignItems: 'center' }} className="cp-grid-2">
-      <Gauge value={Math.max(0, Math.min(100, (best.expectancy_per_risk + 0.5) * 100))} max={100} label="EDGE" tone="var(--green)" size={150} sub={`R:R ${fmtNum(best.rr, 2)}`} />
+      <Gauge value={Math.max(0, Math.min(100, (best.expectancy_per_risk + 0.5) * 100))} max={100} label="EDGE" tone="var(--green)" size={150} sub={`edge ${fmtNum(best.expectancy_per_risk, 3)}/R · R:R ${fmtNum(best.rr, 2)}`} />
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 10, marginBottom: 12 }}>
           <Stat label="Take profit" value={fmtPct(best.tp, 1)} tone="var(--green)" />
@@ -339,7 +339,7 @@ function RotationSkill({ intel, lb }: { intel: CmcIntel | null; lb: Leaderboard 
     { key: 'rotate', header: 'Signal', sortValue: (r) => r.chg, render: (r) => <Chip tone={r.chg > 0 ? 'var(--green)' : 'var(--red)'}>{r.chg > 2 ? 'ROTATE IN' : r.chg < -2 ? 'ROTATE OUT' : 'HOLD'}</Chip> },
   ]
 
-  return <Panel title="NARRATIVE ROTATION" accent="#F0B90B" right={'CMC ecosystems'}
+  return <Panel title="NARRATIVE ROTATION" accent="#3861FB" right={'CMC ecosystems'}
     help={<>{'Live CoinMarketCap tokens are grouped by ecosystem then each narrative is ranked by its average 24h move (only ecosystems with at least two tokens count). ROTATE IN flags accelerating narratives ROTATE OUT flags fading ones. Sort any column; before exposure actually shifts the call is confirmed against the verified signal leaderboard below.'}</>}>
     {rows.length === 0
       ? <div style={{ color: 'var(--c-muted)', padding: 30, textAlign: 'center' }}>{'CMC ecosystem feed warming up · confirmed against the verified leaderboard before any rotation.'}</div>
@@ -368,7 +368,7 @@ function RegimeSkill({ intel, cmcG }: { intel: CmcIntel | null; cmcG: CmcGlobal 
   const alignWord = reg ? (reg.alignment > 0 ? 'BACKS' : reg.alignment < 0 ? 'OPPOSES' : 'NEUTRAL') : '-'
   const alignTone = reg && reg.alignment > 0 ? 'var(--green)' : reg && reg.alignment < 0 ? 'var(--red)' : 'var(--c-muted)'
 
-  return <Panel title="REGIME GOVERNOR" accent="#3375BB" right={reg ? (reg.deploy ? 'DEPLOY' : 'STAND DOWN') : ''}
+  return <Panel title="REGIME GOVERNOR" accent="#3861FB" right={reg ? (reg.deploy ? 'DEPLOY' : 'STAND DOWN') : ''}
     help={<>{'The live CMC global regime (direction and strength) is overlaid on the asset\u2019s best bracket. Alignment reads BACKS when the regime agrees with the long bias, OPPOSES when it cuts against it, and NEUTRAL in chop. Risk scale shrinks the bracket as alignment or strength weakens; the governor only returns DEPLOY when both the empirical edge and the regime clear the gate.'}</>}>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
       {ASSETS.slice(0, 6).map((s) => (
@@ -451,7 +451,7 @@ function MetaComposerSkill() {
     <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11.5, color: 'var(--c-muted)' }}>
         {'Account equity'}
-        <input type="number" min={500} max={1_000_000} step={1000} value={equity} onChange={(e) => setEquity(Math.max(500, Math.min(1_000_000, Number(e.target.value) || 0)))} style={{ width: 120, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--c-line)', background: 'var(--c-bg-2)', color: 'var(--c-text)', fontFamily: 'inherit' }} />
+        <input type="number" min={500} max={1_000_000} step={1000} value={equity} onChange={(e) => setEquity(Math.max(500, Math.min(1_000_000, Number(e.target.value) || 0)))} style={{ width: 120, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--c-line)', background: 'var(--c-panel)', color: 'var(--c-text)', fontFamily: 'inherit' }} />
       </label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>{'Current drawdown'}</span>
@@ -489,7 +489,7 @@ function MetaComposerSkill() {
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--c-muted)', marginBottom: 5 }}>
         <span>{'Drawdown budget used'}</span><span className="mono">{fmtNum(usePct, 1)}%</span>
       </div>
-      <div style={{ height: 8, borderRadius: 999, background: 'var(--c-bg-2)', overflow: 'hidden' }}>
+      <div style={{ height: 8, borderRadius: 999, background: 'var(--c-fill-2)', overflow: 'hidden' }}>
         <div style={{ width: `${usePct}%`, height: '100%', background: usePct > 90 ? 'var(--red)' : PURPLE, transition: 'width .4s ease' }} />
       </div>
     </div>}
@@ -559,16 +559,16 @@ function DecaySkill() {
     { key: 'status', header: 'Verdict', sortValue: (r) => r.dExp, render: (r) => <Chip tone={STONE[r.status]} solid={r.status !== 'stable'}>{r.status}</Chip> },
   ]
 
-  return <Panel title="EDGE DECAY MONITOR" accent="#EA3943" right={loading ? 'comparing windows…' : `${nUp} ${'up'} · ${nDown} ${'decaying'}`}
+  return <Panel title="EDGE DECAY MONITOR" accent="#3861FB" right={loading ? 'comparing windows…' : `${nUp} ${'up'} · ${nDown} ${'decaying'}`}
     help={<>{'Each source\u2019s realised edge over its full verified record is compared against its edge in the recent window you pick (30, 90 or 180 days). Changing the window refetches the recent column and the Shift, so the Edge, WR and verdict columns all move. A positive Shift means the edge is holding live; a negative Shift is an early warning to down weight that source. Sources with too few recent outcomes are marked thin rather than scored.'}</>}>
     <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
       <span style={{ fontSize: 12.5, color: 'var(--c-muted)' }}>{'Recent window'}</span>
       {[30, 90, 180].map((d) => (
         <button key={d} className={`cp-pill ${days === d ? 'on' : ''}`} onClick={() => setDays(d)}>{d}d</button>
       ))}
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: 18 }}>
-        <Stat label="Strengthening" value={`${nUp}`} tone="var(--green)" />
-        <Stat label="Decaying" value={`${nDown}`} tone="var(--red)" />
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span className="mono" style={{ fontSize: 12.5 }}><span style={{ color: 'var(--c-muted)' }}>Strengthening </span><b>{`${nUp}`}</b></span>
+        <span className="mono" style={{ fontSize: 12.5 }}><span style={{ color: 'var(--c-muted)' }}>Decaying </span><b>{`${nDown}`}</b></span>
       </div>
     </div>
     <p style={{ fontSize: 12, color: 'var(--c-muted)', margin: '0 0 12px', lineHeight: 1.55 }}>

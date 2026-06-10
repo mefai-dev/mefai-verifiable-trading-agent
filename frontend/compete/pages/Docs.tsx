@@ -334,9 +334,9 @@ export default function Docs({ go }: { go: (p: string) => void }) {
         <p style={{ color: 'var(--c-text-2)', marginTop: 8, fontSize: 14 }}>{'Registered for'} {COMPETITION}. {'Open source · live terminal and the verifiable BNB Chain proofs.'}</p>
         <div className="cp-cta-btns" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 18 }}>
           <Btn variant="primary" href={GITHUB_URL}>{'Open source'}</Btn>
-          <Btn variant="primary" href={TERMINAL_URL}>{'Live terminal'}</Btn>
-          <Btn variant="primary" onClick={() => go('/compete/orchestra')}>{'AI Council'}</Btn>
-          <Btn variant="primary" href={AGENT_CARD_URL}>{'Agent card'}</Btn>
+          <Btn variant="ghost" href={TERMINAL_URL}>{'Live terminal'}</Btn>
+          <Btn variant="ghost" onClick={() => go('/compete/orchestra')}>{'AI Council'}</Btn>
+          <Btn variant="ghost" href={AGENT_CARD_URL}>{'Agent card'}</Btn>
         </div>
       </Card>
     </Reveal>
