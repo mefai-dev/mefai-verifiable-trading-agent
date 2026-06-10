@@ -585,6 +585,13 @@ class AgentLoop:
         # that rounds to the same integer vault units must still force a write so
         # the killswitch tracks real PnL, not the quantised value.
         self._last_equity_raw: Optional[float] = None
+        # Debounce for a SHARP single-cycle equity drop. A transient partial
+        # wallet read (twak momentarily omits a held token) looks like a large
+        # one-cycle loss and would latch the on-chain RiskGovernor halt. We
+        # require such a sharp drop to persist across two consecutive reads
+        # before it is written on-chain; a real drawdown persists (writes within
+        # a cycle), a transient artifact recovers and is discarded.
+        self._sharp_drop_streak: int = 0
         # Rolling equity history for the live equity curve. Seeded from the last
         # published snapshot so a restart continues the same curve rather than
         # resetting it. Each entry is [ts, equity] and the ring is capped.
@@ -1700,7 +1707,30 @@ class AgentLoop:
                        or equity_units < self._last_equity_recorded
                        or (self._last_equity_raw is not None
                            and equity < self._last_equity_raw))
-            do_record = new_low or elapsed >= self.cfg.chain_equity_interval
+            # Debounce a SHARP drop (>8% below the last recorded units) before it
+            # reaches the killswitch: a real drawdown persists for >=2 reads and
+            # then writes; a transient partial-read artifact recovers next cycle
+            # and is discarded, so it can never latch the halt. Normal/gradual
+            # lows (<=8%) write immediately, keeping the killswitch responsive.
+            sharp = (self._last_equity_recorded is not None
+                     and self._last_equity_recorded > 0
+                     and equity_units
+                     < self._last_equity_recorded * 0.92)
+            hold_suspect = False
+            if sharp:
+                self._sharp_drop_streak += 1
+                if self._sharp_drop_streak < 2:
+                    hold_suspect = True
+                    logger.warning(
+                        "suspect sharp equity drop %s -> %s units; holding "
+                        "last-good (debounce %d/2)", self._last_equity_recorded,
+                        equity_units, self._sharp_drop_streak)
+            else:
+                self._sharp_drop_streak = 0
+            # A held suspect reading is written by NEITHER the new-low nor the
+            # interval path, so a one-cycle artifact can never reach the ledger.
+            do_record = ((new_low or elapsed >= self.cfg.chain_equity_interval)
+                         and not hold_suspect)
         else:
             do_record = True
         if do_record:
