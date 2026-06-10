@@ -1270,3 +1270,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .cp-drawer-panel .cp-navlink { color: var(--c-text); }
 .compete-root .cp-drawer-panel .cp-navlink:hover,
 .compete-root .cp-drawer-panel .cp-navlink.active { color: var(--c-text); }
+
+/* recent-close cards: win/loss left accent + lift on hover */
+.compete-root .cp-close-card { transition: transform .15s ease, box-shadow .15s ease; }
+.compete-root .cp-close-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px var(--c-shadow-2); }

@@ -72,10 +72,8 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginTop: 30 }}>
         <Stat label="Agent equity" value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone={GOLD} sub={st ? `peak $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
         <Stat label="Drawdown used" value={`${ddBps} bps`} tone={ddPct >= 90 ? 'var(--red)' : ddPct >= 60 ? 'var(--gold)' : 'var(--green)'} sub={`cap ${capBps} bps`} />
-        <Stat label="Net edge / signal" value={ov ? `${ov.expectancy >= 0 ? '+' : ''}${fmtNum(ov.expectancy, 3)} R` : '-'} tone={ov && ov.expectancy >= 0 ? 'var(--green)' : 'var(--red)'} sub="positive expectancy" />
         <Stat label="Proven on" value={ov ? `${(ov.n_resolved / 1000).toFixed(0)}k` : '-'} tone="var(--cmc)" sub="resolved signals" />
         <Stat label="Agent UVII" value={uvii ? <CountUp value={uvii.global_index.score} decimals={1} /> : '-'} tone="var(--trust)" sub="0 to 100" />
-        <Stat label="Uptime" value={st ? `${Math.floor(st.uptime_s / 3600)}h` : '-'} tone="var(--c-text)" sub={st ? 'live' : 'offline'} />
       </div>
     </Reveal>
 
@@ -565,7 +563,7 @@ const CLOSE_TONE: Record<string, string> = {
 function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s: string) => void }) {
   const pos = st?.positions
   const open = pos?.open ?? []
-  const closes = pos?.closes ?? []
+  const closes = (pos?.closes ?? []).filter((c) => Math.abs(c.pnl_usd) >= 1)
   // A swap only counts as live-signed once a position actually carries an on-chain
   // open_tx. The commit reveal proofs are real on-chain regardless; the execution
   // is simulated until a real open_tx lands, so do not assert a signed swap early.
@@ -643,7 +641,7 @@ function CloseCard({ c }: { c: LoopClose }) {
   const win = c.pnl_usd >= 0
   const rcol = win ? 'var(--green)' : 'var(--red)'
   const rtone = CLOSE_TONE[c.reason] ?? 'var(--c-muted)'
-  return <div style={{ padding: 13, borderRadius: 12, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
+  return <div className="cp-close-card" style={{ padding: 13, borderRadius: 12, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)', borderLeft: `3px solid ${rcol}` }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CoinLogo symbol={c.symbol} size={20} /><b style={{ fontSize: 13.5 }}>{c.symbol.replace('USDT', '')}</b></span>
       <Chip tone={rtone}>{c.reason}</Chip>
