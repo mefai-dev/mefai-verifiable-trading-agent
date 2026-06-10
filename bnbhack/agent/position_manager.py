@@ -327,6 +327,10 @@ class ExitRules:
     trail_arm_pct: float = float(os.getenv("BNBHACK_TRAIL_ARM_PCT", "0.8"))
     trail_lock_pct: float = float(os.getenv("BNBHACK_TRAIL_LOCK_PCT", "0.75"))
     slippage_pct: float = float(os.getenv("BNBHACK_SLIPPAGE_PCT", "1.0"))
+    # Exits use a wider slippage than entries: guaranteeing the leg can close
+    # matters more than the fill price, so a thin or moving pool never traps a
+    # position (a tight exit slippage reverts with too-little-received).
+    exit_slippage_pct: float = float(os.getenv("BNBHACK_EXIT_SLIPPAGE_PCT", "3.0"))
     # Estimated PancakeSwap round-trip cost as a percent of position notional.
     # Majors route through V3 0.05% fee pools, so the round-trip fee is ~0.10%
     # (2 x 0.05) and a deep-pool slippage plus BSC gas buffer brings the modelled
@@ -603,7 +607,7 @@ class PositionManager:
             try:
                 sw = await bsc_exec.swap(
                     close_qty, token, "USDT",
-                    slippage_pct=self.rules.slippage_pct, execute=True,
+                    slippage_pct=self.rules.exit_slippage_pct, execute=True,
                     approx_usd=close_qty * mark)
                 executed = bool(sw.executed)
                 detail = sw.detail
@@ -683,7 +687,7 @@ class PositionManager:
             try:
                 sw = await bsc_exec.swap(
                     qty, token, "USDT",
-                    slippage_pct=self.rules.slippage_pct,
+                    slippage_pct=self.rules.exit_slippage_pct,
                     execute=True,
                     approx_usd=qty * mark)
                 executed = bool(sw.executed)

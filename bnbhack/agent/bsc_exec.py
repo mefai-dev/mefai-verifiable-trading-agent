@@ -36,6 +36,7 @@ import math
 import os
 import re
 import shutil
+import urllib.request
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Iterable, List, Optional
@@ -89,6 +90,38 @@ MAX_NATIVE_PER_SWAP: Dict[str, float] = {
 # Stablecoins whose unit value is ~1 USD, used to derive a swap notional from the
 # quote without an external price feed.
 _USD_STABLES = {"USDT", "USDC", "BUSD"}
+
+# Live balance backstop: never sign a sell for more of the source token than the
+# wallet actually holds. An open swap's fee/slippage leaves the received amount a
+# hair under the ledger estimate, so a close that sells the recorded qty verbatim
+# reverts with 'transfer amount exceeds balance' and the leg can never exit.
+_BSC_BALANCE_RPC = (os.getenv("BNBHACK_RPC_URL", "").split(",")[0].strip()
+                    or "https://bsc-rpc.publicnode.com")
+
+
+def _wallet_token_balance(token_addr):
+    """balanceOf(AGENT_WALLET) for an 18-decimal BEP-20 via one eth_call. Returns
+    token units, or None on any failure (the caller then skips the clamp)."""
+    if not _is_addr(AGENT_WALLET) or not _is_addr(token_addr):
+        return None
+    try:
+        data = ("0x70a08231"
+                + "000000000000000000000000"
+                + AGENT_WALLET.lower().replace("0x", ""))
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_call",
+                           "params": [{"to": token_addr, "data": data},
+                                      "latest"]}).encode("utf-8")
+        req = urllib.request.Request(
+            _BSC_BALANCE_RPC, data=body,
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            r = json.loads(resp.read())
+        hx = r.get("result")
+        if not hx or hx == "0x":
+            return None
+        return int(hx, 16) / 1e18
+    except Exception:
+        return None
 
 _ADDR_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 # Symbols we will ever name to the CLI. A symbol outside this set must be given
@@ -481,6 +514,20 @@ async def swap(amount: float, from_token: str, to_token: str,
     if src_addr is None or dst_addr is None:
         return SwapOutcome(False, False, None,
                            detail=f"unrecognised token: {from_token!r}/{to_token!r}")
+
+    # Never sign a sell for more of the source token than the wallet holds: clamp
+    # the amount to the live balance minus a tiny dust haircut. Best-effort, so an
+    # RPC miss leaves the amount unchanged. A stable spent on a buy is unaffected
+    # (we always hold more than the quoted spend); this only trims a sell that
+    # would otherwise revert with 'transfer amount exceeds balance'.
+    if execute:
+        _bal = _wallet_token_balance(src_addr)
+        if _bal is not None and _bal > 0 and amt > _bal:
+            _clamped = _bal * 0.999
+            logger.info("swap: clamp sell %.10g %s to live wallet balance %.10g",
+                        amt, from_token, _clamped)
+            amt = _clamped
+            amount = _clamped
 
     # Absolute native-unit backstop on the SOLD token, independent of any USD
     # figure, so a missing/low approx_usd cannot authorise an oversized order.
