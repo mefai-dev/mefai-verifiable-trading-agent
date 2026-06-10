@@ -127,11 +127,11 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ HONEST AND SAFE · no icons ════════ */}
     <section style={{ maxWidth: 1180, margin: '0 auto', padding: '52px 22px 22px' }}>
-      <Reveal><SectionHead nowrap title={'Built so it cannot cheat and cannot blow up'} sub={'Every guarantee below is structural not a promise. You can audit each one yourself.'} /></Reveal>
+      <Reveal><SectionHead nowrap title={'Built so it cannot cheat and cannot exceed its risk cap'} sub={'Every guarantee below is structural not a promise. You can audit each one yourself.'} /></Reveal>
       <div className="cp-deck" style={{ marginTop: 30, maxWidth: 1160, marginLeft: 'auto', marginRight: 'auto' }}>
         {[
           { t: 'Commit before reveal', d: 'Each trade is committed as keccak(symbol direction entry target stop expiry salt) to the BSC registry before entry then revealed after. The track record cannot be backfilled by construction.' },
-          { t: 'Circuit breaker on the ledger', d: 'A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent physically cannot blow past its own risk limit.' },
+          { t: 'Circuit breaker on the ledger', d: 'A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.' },
           { t: 'Empirical Kelly sizing', d: 'Win rate and optimal TP/SL come from real labeled outcomes not guesses. Size shrinks as the drawdown budget shrinks so the agent maximizes Sharpe while it physically cannot breach the cap.' },
           { t: 'Omni signal fusion', d: 'One conviction score unions every MEFAI capability: signals, expert debate, whale tracking, smart money, accumulation, derivatives risk and the full CoinMarketCap regime, each weighted by its own hit rate.' },
           { t: 'Pre trade security gate', d: 'Honeypot, contract scan, slippage, approval, preflight and MEV checks run before any spend. A GO or BLOCK verdict gates execution. Every spend is quote bounded and capped.' },

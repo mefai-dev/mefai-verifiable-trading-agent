@@ -73,7 +73,7 @@ function SkillDossier({ s, tone, onJump }: { s: SkillDef; tone: string; onJump: 
       <span className="cp-sk-kind" style={{ color: tone }}>{KIND_LABEL[s.kind]}</span>
       <UsedDot used={s.used} tone={tone} />
     </div>
-    <h3 className="cp-sk-modal-name mono">{s.name}</h3>
+    <h3 className="cp-sk-modal-name">{s.name}</h3>
     <p className="cp-sk-modal-sum">{s.summary}</p>
     <SkillBody s={s} tone={tone} onJump={onJump} lazy />
   </article>
@@ -89,7 +89,7 @@ export function SkillModal({ s, tone, onClose, onJump }: {
         <div className="cp-sk-modal-head">
           <span className="cp-sk-kind" style={{ color: tone }}>{KIND_LABEL[s.kind]}</span>
         </div>
-        <h3 className="cp-sk-modal-name mono">{s.name}</h3>
+        <h3 className="cp-sk-modal-name">{s.name}</h3>
         <p className="cp-sk-modal-sum">{s.summary}</p>
         <SkillBody s={s} tone={tone} onJump={onJump} />
       </div>

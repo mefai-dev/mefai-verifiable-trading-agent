@@ -45,7 +45,7 @@ const SECTIONS: Section[] = [
       'Four rules shape every part of the system.',
       { list: [
         'Prove before you act. The agent seals each prediction as a hash before entry then reveals it after the window. The past cannot be rewritten.',
-        'Risk is enforced not promised. A circuit breaker contract halts trading at the drawdown cap. The agent literally cannot blow past its own limit.',
+        'Risk is enforced not promised. A circuit breaker contract halts trading at the drawdown cap. The agent cannot exceed its own risk limit.',
         'No fabricated numbers. Every figure shown comes from a live endpoint or a verifiable ledger. When a feed is down the surface says so rather than inventing a value.',
         'Open and attributable. The agent carries a verifiable identity. Its signatures are public. The source is open.',
       ] },

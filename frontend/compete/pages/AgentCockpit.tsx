@@ -57,7 +57,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
             <span style={{ color: GOLD }}>{'Autonomous'}</span> {'Trading Agent'}
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 660, marginTop: 10, lineHeight: 1.6, fontSize: 14.5 }}>
-            {'One conviction engine and a drawdown budget the agent cannot breach. It reads the same MEFAI signals shown below sizes each by its own payoff and writes a sealed proof before every entry. The edge is not a high hit rate. It is positive expectancy compounded under a hard risk cap, so the agent keeps growing while it physically cannot blow up.'}
+            {'One conviction engine and a drawdown budget the agent cannot breach. It reads the same MEFAI signals shown below sizes each by its own payoff and writes a sealed proof before every entry. The edge is not a high hit rate. It is positive expectancy compounded under a hard risk cap, so the agent compounds while its drawdown stays structurally capped.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>

@@ -19,7 +19,7 @@ const TONE = 'var(--gold)'
 /* plain-language explanations of each contract, so a non-developer gets it */
 const CONTRACTS: { label: string; plain: string; addr: string }[] = [
   { label: 'Prediction notebook', plain: 'A public notebook where the agent writes down every call (sealed) before the outcome is known then reveals it after. Nobody can edit the past.', addr: ADDR.registry },
-  { label: 'Automatic circuit breaker', plain: 'A contract that halts trading the instant losses approach the limit. The agent literally cannot blow past its own risk cap.', addr: ADDR.governor },
+  { label: 'Automatic circuit breaker', plain: 'A contract that halts trading the instant losses approach the limit. The agent cannot exceed its own risk cap.', addr: ADDR.governor },
   { label: 'Verified scoreboard', plain: 'The result ledger that records thousands of real outcomes to the BSC ledger so the track record is auditable not just a screenshot.', addr: ADDR.ledger },
   { label: 'Agent identity card', plain: 'An ERC-8004 identity proving the agent you talk to is the real audited MEFAI agent and not an impersonator.', addr: ADDR.erc8004 },
   { label: 'Agent wallet', plain: 'The wallet the agent signs its commit and reveal proofs with. Every signature is public and traceable.', addr: ADDR.agent },

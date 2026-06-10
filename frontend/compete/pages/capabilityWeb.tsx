@@ -88,6 +88,10 @@ export function CapabilityWeb() {
   const [hover, setHover] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const touches = (id: string, e: [string, string]) => e[0] === id || e[1] === id
+  /* highlight the focused path: hover drives it on pointer devices, the open
+     (selected) node drives it on tap / no-hover so the whole upstream to
+     downstream path lights up even without a mouse. */
+  const focus = hover || open
   const active = open ? skillById(open) : undefined
   const activeTone = active ? (LANES.find((l) => l.ids.includes(active.id))?.tone || GROUP_TONE[active.group]) : ''
 
@@ -106,16 +110,16 @@ export function CapabilityWeb() {
         {SPINE.map(([a, b]) => {
           const pa = POS[a], pb = POS[b]
           if (!pa || !pb) return null
-          const on = hover === a || hover === b
+          const on = focus === a || focus === b
           return <path key={`sp-${a}-${b}`} d={spinePath(pa, pb)} className="cp-web-spine"
-            stroke={pa.tone} style={{ opacity: hover && !on ? 0.12 : 0.4 }} />
+            stroke={pa.tone} style={{ opacity: focus && !on ? 0.12 : 0.4 }} />
         })}
 
         {/* cross stage flow edges */}
         {EDGES.map(([a, b]) => {
           const pa = POS[a], pb = POS[b]
           if (!pa || !pb) return null
-          const on = !hover || touches(hover, [a, b])
+          const on = !focus || touches(focus, [a, b])
           return <path key={`e-${a}-${b}`} d={edgePath(pa, pb)} className={`cp-web-edge ${on ? 'on' : ''}`}
             stroke={pa.tone} style={{ opacity: on ? 0.55 : 0.08 }} />
         })}
@@ -124,8 +128,8 @@ export function CapabilityWeb() {
         {LANES.flatMap((lane) => lane.ids.map((id) => {
           const p = POS[id]; const sk = skillById(id)
           if (!p || !sk) return null
-          const dim = hover && hover !== id && !EDGES.some((e) => touches(hover, e) && touches(id, e))
-            && !SPINE.some((e) => touches(hover, e) && touches(id, e))
+          const dim = focus && focus !== id && !EDGES.some((e) => touches(focus, e) && touches(id, e))
+            && !SPINE.some((e) => touches(focus, e) && touches(id, e))
           return <g key={id} className="cp-web-node" transform={`translate(${p.x},${p.y})`}
             role="button" tabIndex={0} aria-label={`${sk.name} · open dossier`}
             onMouseEnter={() => setHover(id)} onMouseLeave={() => setHover(null)}
@@ -133,7 +137,7 @@ export function CapabilityWeb() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(id) } }}
             onClick={() => setOpen(id)} style={{ opacity: dim ? 0.32 : 1 }}>
             <rect width={NODE_W} height={NODE_H} rx={10} className="cp-web-rect"
-              style={{ stroke: hover === id ? p.tone : 'var(--c-line)' }} />
+              style={{ stroke: focus === id ? p.tone : 'var(--c-line)' }} />
             <rect width={3.5} height={NODE_H} rx={2} fill={p.tone} opacity={sk.used ? 1 : 0.4} />
             <circle cx={NODE_W - 14} cy={13} r={3} fill={sk.used ? p.tone : 'var(--c-muted-2)'} />
             <text x={NODE_W / 2 + 4} y={NODE_H / 2 + 5} textAnchor="middle" className="cp-web-node-t">{LABEL[id] || sk.name}</text>
