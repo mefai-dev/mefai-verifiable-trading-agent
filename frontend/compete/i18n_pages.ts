@@ -7,6 +7,9 @@
 type Table = Record<string, string>
 
 const zh: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "链下优势基底 · 证明锚定于账本 ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "经验证的信号数据流通过 HTTP 402 提供。每个产品以 EIP-3009 授权将其确切价格绑定到所收取的代币与链上。调用方智能体访问该 URL，收到 402，为报价金额签署授权，再次请求即获得已签名的载荷。所交付的结算器仅做验证:它证明一份真实的支付授权,而结算交易则延后交由一个有资金的促成方处理,因此本证明中无资金流动。智能体为已被证明的阿尔法向智能体付费，全程无需人工介入。",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · 已交付经验证的信息流",
   "402 Payment Required": "402 需要支付",
@@ -2038,6 +2041,9 @@ const zh: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "一个 RiskGovernor 合约强制执行 1400 bps 的回撤上限。当权益突破预算时,金库停机且 canTrade 返回 false。代理无法超出自身的风险上限。",
 }
 const ru: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "внецепочечная база преимущества · доказательства, закреплённые в реестре ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "Проверенный поток сигналов отдаётся по HTTP 402. Каждый продукт привязывает свою точную цену авторизацией EIP-3009 к взимаемому токену и цепочке. Вызывающий агент обращается к URL. Получает 402. Подписывает авторизацию на указанную сумму. Запрашивает повторно и получает подписанную полезную нагрузку. Поставляемый расчётчик только проверяет: он доказывает реальную авторизацию платежа, а расчётная транзакция отложена и передана фондированному фасилитатору, поэтому в этом доказательстве средства не перемещаются. Агенты платят агентам за доказанную альфу без человека в контуре.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · проверенный поток выдан",
   "402 Payment Required": "402 Требуется оплата",
@@ -4069,6 +4075,9 @@ const ru: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "Контракт RiskGovernor обеспечивает лимит просадки 1400 б.п. Когда капитал нарушает бюджет, хранилище останавливается, а canTrade возвращает false. Агент не может превысить собственный лимит риска.",
 }
 const es: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "base de ventaja fuera de cadena · pruebas ancladas en el libro ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "El flujo de señales verificado se sirve sobre HTTP 402. Cada producto vincula su precio exacto con una autorización EIP-3009 al token y la cadena cobrados. Un agente que llama accede a la URL. Recibe un 402. Firma la autorización por el monto cotizado. Vuelve a solicitar y obtiene la carga firmada. El liquidador entregado solo verifica: prueba una autorización de pago real y la transacción de liquidación se difiere a un facilitador financiado, por lo que en esta prueba no se mueven fondos. Los agentes pagan a los agentes por alfa probada sin ningún humano en el bucle.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · feed verificado entregado",
   "402 Payment Required": "402 Pago requerido",
@@ -6100,6 +6109,9 @@ const es: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "Un contrato RiskGovernor impone un límite de drawdown de 1400 bps. Cuando el capital incumple el presupuesto, la bóveda se detiene y canTrade devuelve false. El agente no puede superar su propio límite de riesgo.",
 }
 const tr: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "zincir dışı avantaj tabanı · deftere sabitlenmiş kanıtlar ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "Doğrulanmış sinyal akışı HTTP 402 üzerinden sunulur. Her ürün, tam fiyatını ücretlendirilen token ve zincire bir EIP-3009 yetkilendirmesiyle bağlar. Çağıran bir ajan URL'ye erişir. Bir 402 alır. Belirtilen tutar için yetkilendirmeyi imzalar. Yeniden istek yapar ve imzalı yükü alır. Teslim edilen takas birimi yalnızca doğrular: gerçek bir ödeme yetkilendirmesini kanıtlar ve takas işlemi fonlanmış bir kolaylaştırıcıya ertelenir, bu nedenle bu kanıtta hiçbir fon hareket etmez. Ajanlar, döngüde insan olmadan kanıtlanmış alfa için ajanlara ödeme yapar.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · doğrulanmış akış sunuldu",
   "402 Payment Required": "402 Ödeme Gerekli",
@@ -8131,6 +8143,9 @@ const tr: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "Bir RiskGovernor sözleşmesi 1400 bps'lik bir düşüş üst sınırını uygular. Özsermaye bütçeyi ihlal ettiğinde kasa durur ve canTrade false döndürür. Ajan kendi risk sınırını aşamaz.",
 }
 const vi: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "nền tảng lợi thế ngoài chuỗi · bằng chứng được neo trên sổ cái ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "Luồng tín hiệu đã xác minh được phục vụ qua HTTP 402. Mỗi sản phẩm ràng buộc giá chính xác của nó bằng một ủy quyền EIP-3009 với token và chuỗi được tính phí. Một tác nhân gọi truy cập URL. Nó nhận một 402. Nó ký ủy quyền cho số tiền được báo giá. Nó yêu cầu lại và nhận tải trọng đã ký. Bộ quyết toán được cung cấp chỉ xác minh: nó chứng minh một ủy quyền thanh toán thực và giao dịch quyết toán được hoãn lại cho một bên điều phối có vốn, nên không có khoản tiền nào di chuyển trong bằng chứng này. Các tác nhân trả cho các tác nhân vì alpha đã được chứng minh mà không có con người trong vòng lặp.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · đã phục vụ nguồn cấp đã xác minh",
   "402 Payment Required": "402 Yêu cầu thanh toán",
@@ -10162,6 +10177,9 @@ const vi: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "Một hợp đồng RiskGovernor thực thi giới hạn sụt giảm 1400 bps. Khi vốn vi phạm ngân sách, kho dừng lại và canTrade trả về false. Tác nhân không thể vượt quá giới hạn rủi ro của chính nó.",
 }
 const ko: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "오프체인 엣지 기반 · 원장에 앵커링된 증명 ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "검증된 신호 피드는 HTTP 402로 제공됩니다. 각 제품은 청구되는 토큰과 체인에 대한 EIP-3009 권한 부여로 정확한 가격을 묶습니다. 호출 에이전트가 URL에 접근합니다. 402를 받습니다. 견적 금액에 대한 권한 부여에 서명합니다. 다시 요청하여 서명된 페이로드를 받습니다. 제공되는 정산기는 검증만 수행합니다: 실제 결제 권한 부여를 증명하며 정산 트랜잭션은 자금이 충전된 퍼실리테이터로 연기되므로, 이 증명에서는 자금이 이동하지 않습니다. 에이전트는 루프에 사람 없이 검증된 알파에 대해 에이전트에게 지불합니다.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · 검증된 피드 제공됨",
   "402 Payment Required": "402 결제 필요",
@@ -12193,6 +12211,9 @@ const ko: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "RiskGovernor 컨트랙트가 1400 bps 드로다운 상한을 강제합니다. 자본이 예산을 위반하면 볼트가 정지하고 canTrade는 false를 반환합니다. 에이전트는 자신의 리스크 한도를 초과할 수 없습니다.",
 }
 const ja: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "オフチェーンのエッジ基盤 · 台帳にアンカーされた証明 ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "検証済みシグナルフィードは HTTP 402 で提供されます。各プロダクトは、請求されるトークンとチェーンに対する EIP-3009 認可で正確な価格を結び付けます。呼び出し側エージェントが URL にアクセスします。402 を受け取ります。提示額に対する認可に署名します。再リクエストして署名済みペイロードを取得します。提供される決済器は検証のみを行います:実際の支払い認可を証明し、決済トランザクションは資金供給されたファシリテーターへ繰り延べられるため、この証明では資金は動きません。エージェントはループに人を介さず、実証済みのアルファに対してエージェントへ支払います。",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · 検証済みフィードを配信",
   "402 Payment Required": "402 支払いが必要",
@@ -14224,6 +14245,9 @@ const ja: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "RiskGovernor 契約が 1400 bps のドローダウン上限を強制します。資産が予算を超過すると、ボールトは停止し canTrade は false を返します。エージェントは自身のリスク上限を超えることはできません。",
 }
 const fr: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "base d'avantage hors chaîne · preuves ancrées au registre ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "Le flux de signaux vérifié est servi via HTTP 402. Chaque produit lie son prix exact par une autorisation EIP-3009 au token et à la chaîne facturés. Un agent appelant atteint l'URL. Il reçoit un 402. Il signe l'autorisation pour le montant indiqué. Il redemande et obtient la charge utile signée. Le règleur livré ne fait que vérifier : il prouve une autorisation de paiement réelle et la transaction de règlement est différée vers un facilitateur financé, de sorte qu'aucun fonds ne bouge dans cette preuve. Les agents paient les agents pour de l'alpha prouvé, sans humain dans la boucle.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · flux vérifié servi",
   "402 Payment Required": "402 Paiement requis",
@@ -16255,6 +16279,9 @@ const fr: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "Un contrat RiskGovernor impose un plafond de drawdown de 1400 bps. Lorsque le capital enfreint le budget, le coffre s'arrête et canTrade renvoie false. L'agent ne peut pas dépasser sa propre limite de risque.",
 }
 const pt: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "base de vantagem fora da cadeia · provas ancoradas no livro ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "O fluxo de sinais verificado é servido por HTTP 402. Cada produto vincula seu preço exato com uma autorização EIP-3009 ao token e à cadeia cobrados. Um agente chamador acessa a URL. Recebe um 402. Assina a autorização pelo valor cotado. Solicita novamente e obtém a carga assinada. O liquidante entregue apenas verifica: ele prova uma autorização de pagamento real e a transação de liquidação é adiada para um facilitador financiado, de modo que nenhum fundo se move nesta prova. Agentes pagam a agentes por alfa comprovado, sem nenhum humano no ciclo.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · feed verificado servido",
   "402 Payment Required": "402 Pagamento Necessário",
@@ -18286,6 +18313,9 @@ const pt: Table = {
   "A RiskGovernor contract enforces a 1400 bps drawdown cap. When equity breaches the budget the vault halts and canTrade returns false. The agent cannot exceed its own risk limit.": "Um contrato RiskGovernor impõe um limite de drawdown de 1400 bps. Quando o patrimônio viola o orçamento, o cofre é interrompido e canTrade retorna false. O agente não pode exceder seu próprio limite de risco.",
 }
 const de: Table = {
+  /* compete · x402 + ledger rewording · added 2026-06-10 */
+  "off-chain edge base · proofs anchored on the ledger ↗": "Off-Chain-Edge-Basis · im Ledger verankerte Nachweise ↗",
+  "The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.": "Der verifizierte Signal-Feed wird über HTTP 402 ausgeliefert. Jedes Produkt bindet seinen genauen Preis mit einer EIP-3009-Autorisierung an den belasteten Token und die Chain. Ein aufrufender Agent ruft die URL auf. Er erhält ein 402. Er signiert die Autorisierung über den angegebenen Betrag. Er fragt erneut an und erhält die signierte Nutzlast. Der ausgelieferte Abwickler verifiziert nur: Er weist eine echte Zahlungsautorisierung nach, und die Abwicklungstransaktion wird an einen finanzierten Facilitator aufgeschoben, sodass in diesem Nachweis keine Gelder bewegt werden. Agenten bezahlen Agenten für bewiesenes Alpha, ohne Mensch in der Schleife.",
   /* compete · i18n completeness sweep · added 2026-06-10 */
   "200 OK · verified feed served": "200 OK · verifizierter Feed ausgeliefert",
   "402 Payment Required": "402 Zahlung erforderlich",

@@ -957,7 +957,9 @@ def consume_feed(product_id: str, cfg: RequirementsConfig, *,
             "feed": feed,
         }
     except Exception as exc:  # a feed purchase must never crash the loop
-        return {"ok": False, "error": str(exc), "product_id": product_id}
+        # Publish only the error type, never the raw message (it can embed a
+        # local path); the full exception stays in the process logs.
+        return {"ok": False, "error": type(exc).__name__, "product_id": product_id}
 
 
 def _selftest() -> int:

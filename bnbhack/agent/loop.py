@@ -1162,8 +1162,9 @@ class AgentLoop:
             return
         try:
             open_rows = self.pm.store.open_rows()
-        except Exception as exc:
-            self._reconcile_note = f"ledger read failed: {exc}"
+        except Exception:
+            logger.exception("reconcile: ledger read failed")
+            self._reconcile_note = "ledger read failed"
             return
         if not open_rows:
             self._reconcile_note = "ok: no open legs"
@@ -1171,8 +1172,9 @@ class AgentLoop:
             return
         try:
             res = await bsc_exec.balance()
-        except Exception as exc:
-            self._reconcile_note = f"balance read failed: {exc}"
+        except Exception:
+            logger.exception("reconcile: balance read failed")
+            self._reconcile_note = "balance read failed"
             return
         if not res.ok:
             self._reconcile_note = f"balance read failed: {res.error or 'no data'}"

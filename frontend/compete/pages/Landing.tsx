@@ -70,7 +70,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
             <Stat label={'Edge per signal'} value={ov ? `${exp >= 0 ? '+' : ''}${fmtNum(exp, 2)} R` : '-'} tone={exp >= 0 ? 'var(--green)' : 'var(--red)'} sub={'mean realized'} />
             <Stat label={'Top strategy edge'} value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} ${'resolved'}` : 'edge base'} />
             <a href={scan(ADDR.ledger)} target="_blank" rel="noopener noreferrer" className="cp-stat-link" title={'View the result ledger on BscScan'}>
-              <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off-chain edge base · on-chain result ledger ↗'} />
+              <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off-chain edge base · proofs anchored on the ledger ↗'} />
             </a>
           </div>
         </Reveal>
