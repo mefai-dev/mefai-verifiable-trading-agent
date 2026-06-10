@@ -1226,12 +1226,14 @@ class AgentLoop:
                 logger.warning("pending store mark_committed failed: %s", exc)
 
         # Trade leg: a LONG is expressed directly on PancakeSwap spot. A SHORT
-        # cannot be expressed on spot (no borrow), so a live short would need a
-        # perp venue (ApolloX) which is not wired for signing; a live short is
-        # therefore an honest no-go that records nothing, while a PAPER short is
-        # simulated (signal_dir=-1, no swap) so the two-sided book earns in down
-        # weeks too. 'open' starts a new ladder, 'add' fills the next rung of an
-        # existing one; either way one rung = total size / ladder_rungs of
+        # cannot be expressed on spot (no borrow), so the live short routes
+        # through the gated USDT-M futures adapter (perp_exec, Binance-first)
+        # when BNBHACK_EXECUTE_PERP=1 and venue keys are present; it is OFF by
+        # default, so a live short is an honest no-go that records nothing until
+        # enabled, while a PAPER short is simulated (signal_dir=-1, no swap) so
+        # the two-sided book earns in down weeks too. 'open' starts a new ladder,
+        # 'add' fills the next rung of an existing one; either way one rung =
+        # total size / ladder_rungs of
         # exposure this tick (so the full position is built over a few confirming
         # cycles and the total notional matches a single open). A blocked trade
         # ('') still keeps the verifiable commit above; it just takes no exposure.

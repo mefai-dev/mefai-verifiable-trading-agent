@@ -13,7 +13,7 @@ import {
 } from '../ui'
 import { usePoll, fetchLoopState, fetchLeaderboard, fetchUvii } from '../api'
 import type { LoopEnvelope, Leaderboard, UviiIndex } from '../api'
-import { ADDR, AGENT_ID, GITHUB_URL, TELEGRAM_FEED_URL, scan, chainLabel, chainOf } from '../config'
+import { ADDR, AGENT_ID, ERC8004_AGENT_ID, GITHUB_URL, TELEGRAM_FEED_URL, scan, chainLabel, chainOf, txHashOf } from '../config'
 import { IconExternal } from '../icons'
 import { OmniSignalPanel } from './omniSignal'
 
@@ -21,9 +21,10 @@ const GOLD = 'var(--gold)'
 const TRUST = 'var(--trust)'
 const TOTAL = 6
 
-/* a transaction explorer link on the same chain as the anchoring contract */
+/* a transaction explorer link on the same chain as the anchoring contract.
+   hash may arrive as a full BscScan URL, so normalize to a bare hash first */
 const txUrl = (hash: string, addr: string) =>
-  `https://${chainOf(addr) === 97 ? 'testnet.bscscan.com' : 'bscscan.com'}/tx/${hash}`
+  `https://${chainOf(addr) === 97 ? 'testnet.bscscan.com' : 'bscscan.com'}/tx/${txHashOf(hash)}`
 
 const STEP_KEYS = [
   'Live trade decision', 'Commit the call', 'Reveal the preimage',
@@ -65,13 +66,14 @@ function StatusChip({ ok, loading }: { ok: boolean; loading: boolean }) {
 }
 
 function HashRow({ label, hash, addr }: { label: string; hash: string; addr: string }) {
-  const placeholder = !hash || /^0x0+$/.test(hash)
+  const h = txHashOf(hash)
+  const placeholder = !h || !/^0x[0-9a-fA-F]+$/.test(h) || /^0x0+$/.test(h)
   return <div className="cp-judge-hashrow">
     <span className="cp-judge-hash-l">{label}</span>
     {placeholder
       ? <span className="cp-judge-hash-pending mono">{'pending broadcast'}</span>
-      : <a className="cp-a mono cp-judge-hash" href={txUrl(hash, addr)} target="_blank" rel="noopener noreferrer">
-          {shortAddr(hash)} <IconExternal size={11} />
+      : <a className="cp-a mono cp-judge-hash" href={txUrl(h, addr)} target="_blank" rel="noopener noreferrer">
+          {shortAddr(h)} <IconExternal size={11} />
         </a>}
   </div>
 }
@@ -84,7 +86,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
 
   const st = loop.data?.available ? loop.data.state : undefined
   /* prefer proofs that already carry a real broadcast tx; paper/pending ones follow */
-  const hasTx = (h?: string) => !!h && !/^0x0+$/.test(h)
+  const hasTx = (h?: string) => { const x = txHashOf(h); return !!x && /^0x[0-9a-fA-F]+$/.test(x) && !/^0x0+$/.test(x) }
   const proofs = [...(st?.proofs || [])]
     .sort((a, b) => Number(hasTx(b.commit_tx)) - Number(hasTx(a.commit_tx))).slice(0, 4)
   const reveals = [...(st?.reveals || [])]
@@ -170,7 +172,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
           ))}
         </div>}
         {reveals.length === 0 && proofs.length > 0 && <div className="cp-judge-proofs">
-          {proofs.filter((p) => p.reveal_tx && !/^0x0+$/.test(p.reveal_tx)).map((p, i) => (
+          {proofs.filter((p) => hasTx(p.reveal_tx)).map((p, i) => (
             <div key={`${p.symbol}-${i}`} className="cp-judge-proof">
               <div className="cp-judge-proof-top"><span style={{ fontWeight: 700 }}>{p.symbol}</span><Chip tone="var(--green)">{'revealed'}</Chip></div>
               <HashRow label="Reveal tx" hash={p.reveal_tx} addr={ADDR.registry} />
@@ -185,8 +187,9 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
         verify={'Each resolved outcome is written to the result ledger on BSC mainnet, where it cannot be deleted or rewritten. This is the same mainnet ledger the project has been writing trade outcomes to, so the track record predates the contest.'}>
         <div className="cp-judge-ledger">
           <Stat label={'Result ledger'} value={shortAddr(ADDR.ledger)} tone={GOLD} sub={'BSC mainnet · immutable'} mono />
-          <Stat label={'Agent identity'} value={shortAddr(ADDR.agent)} sub={'ERC-8004 on mainnet'} mono />
-          <Stat label={'Identity id'} value={shortAddr(AGENT_ID)} sub={'agent registration'} mono />
+          <Stat label={'Agent wallet'} value={shortAddr(ADDR.agent)} sub={'holds the mainnet identity'} mono />
+          <Stat label={'ERC-8004 token id'} value={`#${ERC8004_AGENT_ID}`} tone={TRUST} sub={'minted on chain 56'} mono />
+          <Stat label={'Commit id'} value={shortAddr(AGENT_ID)} sub={'internal registry seed'} mono />
         </div>
         <p className="cp-judge-note">{'The agent writes its judged commit reveal record on BSC mainnet so the contest record stays un backfillable, and anchors resolved outcomes to the mainnet result ledger. Both are linked from this tour.'}</p>
       </TourStep>
@@ -203,7 +206,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
           <div className="cp-judge-gov-stats">
             <Stat label={'Governor'} value={gov.ok ? 'OK' : 'HALT'} tone={gov.ok ? 'var(--green)' : 'var(--red)'} sub={'live state'} />
             <Stat label={'Drawdown'} value={`${fmtNum(ddBps, 0)} bps`} tone={GOLD} sub={`${'internal cap'} ${fmtNum(internalBps, 0)}`} />
-            {st && <Stat label={'Equity'} value={<CountUp value={st.equity} prefix="$" decimals={2} />} sub={'paper book'} />}
+            {st && <Stat label={'Equity'} value={<CountUp value={st.equity} prefix="$" decimals={2} />} sub={'simulated book · real proofs'} />}
             {gov.record && <Stat label={'Record'} value={gov.record} sub={'keeper feed'} mono />}
           </div>
         </div>}
@@ -244,7 +247,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
       <Card className="cp-judge-close">
         <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{'That is the whole loop, verified.'}</h3>
         <p style={{ color: 'var(--c-text-2)', lineHeight: 1.65, fontSize: 14, margin: '10px 0 16px' }}>
-          {'A decision you can reproduce, a commit you can check before the outcome, a reveal that has to match, a ledger that cannot be edited, a circuit breaker that cannot be talked past, and an index built only from proven calls. Want to watch it happen in real time? The agent posts every trade leg to a public Telegram during the judged window, each with a BscScan link. Explore the live cockpit or read the protocol in full.'}
+          {'A decision you can reproduce, a commit you can check before the outcome, a reveal that has to match, a ledger that cannot be edited, a circuit breaker that cannot be talked past, and an index built only from proven calls. Want to watch it happen in real time? Start @mefainews_bot in Telegram and it sends you a direct message for every trade leg during the judged window, each with a BscScan link · read only. Explore the live cockpit or read the protocol in full.'}
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn variant="gold" sm onClick={() => go('/compete/agent')}>{'Live agent cockpit'}</Btn>

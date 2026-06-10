@@ -254,11 +254,11 @@ MEFAI can move money, so it is built to fail safe. It signs nothing until two
 separate flags are set, clears every spend through a fail-closed security gate,
 talks only to a loopback proxy and an allowlisted set of RPC hosts, and anchors
 its equity to a contract that halts trading when a drawdown budget is breached.
-For transparency during the judged window, the agent also posts every trade leg
-to a public Telegram channel, each message carrying a BscScan link and nothing
-else · the feed is read-only, carries no keys or commands, and is broadcast by
-`bnbhack/agent/notify.py`. Anyone can subscribe and watch the record build in
-real time.
+For transparency during the judged window, you can subscribe to the agent's
+trade feed via `@mefainews_bot` (start `?start=agentfeed`). Each leg is then
+delivered to your own Telegram chat with a BscScan link and nothing else · the
+feed is read-only, carries no keys or commands, and is fanned out per subscriber
+by `bnbhack/agent/notify.py`.
 The full posture, threat model and disclosure process are in
 [`SECURITY.md`](SECURITY.md). Verified contract addresses are in
 [`bnbhack/contracts/DEPLOYMENTS.md`](bnbhack/contracts/DEPLOYMENTS.md).

@@ -107,17 +107,24 @@ cases) that runs entirely on a local network with no key, no RPC and no funds.
 The cockpit API (`bnbhack/api/backend.py`) treats every request as hostile at the
 boundary:
 
-- **API-key auth** on all data endpoints via a constant-time comparison
-  (`hmac.compare_digest`); a missing or wrong key returns `401`. Only liveness
-  (`/health`), the public agent card and the read-only live `/loop/state`
-  snapshot are unauthenticated, so the judged window can be rendered without a key.
+- **Open read surface for the judged window.** So a juror or another agent can
+  verify the live system directly with `curl` (no header, no referer), the
+  read-only endpoints are intentionally public: `/health`, the agent card,
+  `/agent/identity`, `/loop/state`, `/leaderboard`, `/uvii`, `/tp-sl`,
+  `/backtest` reports, `/x402/products`, `/x402/cmc-challenge`, `/signals/recent`
+  and `/cmc/`. They are still per-IP rate limited.
+- **Referer-gated compute.** The expensive compute/POST routes (`/fusion`,
+  `/sizing`, `/compose`, `/security/evaluate`, `/backtest` detail and the `/twak`
+  previews) are gated in production to an `mefai.io` Referer so off-site bots
+  cannot spin up compute; an off-site request to them returns `403`. No secret or
+  key is ever exposed to the client either way.
 - **Per-IP sliding-window rate limit** (`429` on breach). The socket peer is
   authoritative for the limiter; an `X-Forwarded-For` header is honored only from
   a configured trusted-proxy set, so the limiter cannot be dodged by spoofing it.
 - **Input bounds and choice validation** on query parameters before any work runs.
 
-In production the key is injected server-side by the reverse proxy, so it is
-never present in the browser or in client-shipped code.
+In production the reverse proxy enforces the referer gate above and never exposes
+any secret or backend key to the browser or to client-shipped code.
 
 ---
 

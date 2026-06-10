@@ -132,7 +132,7 @@ def build_agent_card() -> Dict[str, Any]:
         # Non-standard extension fields live under a single x-* namespace so a
         # strict registration-v1 validator (additionalProperties:false) accepts
         # the card. Proof anchors: the mainnet result ledger and the verified
-        # testnet commit-reveal registry + risk governor.
+        # mainnet commit-reveal registry + risk governor.
         "x-mefai": {
             "track": "BNBHACK-T1",
             "proofs": {

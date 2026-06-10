@@ -6,14 +6,15 @@
 import { Btn, Card, CountUp, Reveal, Stat, StarField, fmtNum, shortAddr } from '../ui'
 import { apiGet, usePoll } from '../api'
 import type { Leaderboard, LoopEnvelope } from '../api'
-import { ADDR, AGENT_ID, AGENT_CARD_URL, COMPETITION, GITHUB_URL, SPONSORS, TRACKS, scan, chainOf } from '../config'
+import { ADDR, AGENT_ID, AGENT_CARD_URL, COMPETITION, GITHUB_URL, SPONSORS, TRACKS, scan, chainOf, txHashOf } from '../config'
 import { SPONSOR_LOGO, IconExternal } from '../icons'
 import { CapabilityWeb } from './capabilityWeb'
 
 const cleanSym = (s: string) => s.replace('USDT.P', '').replace('USDT', '').replace('.P', '') || s
 // Commit / reveal seals are written to the mainnet registry during the judged window.
-const txUrl = (h: string) => `https://bscscan.com/tx/${h}`
-const isTx = (h?: string) => !!h && /^0x[a-fA-F0-9]{6,}/.test(h)
+// commit_tx may arrive as a full BscScan URL, so normalize to a bare hash first
+const txUrl = (h: string) => `https://bscscan.com/tx/${txHashOf(h)}`
+const isTx = (h?: string) => /^0x[0-9a-fA-F]{6,}/.test(txHashOf(h))
 
 export default function Landing({ go }: { go: (p: string) => void }) {
   const { data: lb } = usePoll<Leaderboard>((s) => apiGet('/leaderboard?rank_by=expectancy&min_samples=30&top_n=12', s), 60_000)
@@ -210,7 +211,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
           })}
         </div>
         <div className="mono" style={{ marginTop: 18, fontSize: 13, color: 'var(--c-muted)', textAlign: 'center' }}>
-          agentId {shortAddr(AGENT_ID)} · {'mainnet identity · contracts source verified on BscScan'}
+          commit id {shortAddr(AGENT_ID)} · {'mainnet identity · contracts source verified on BscScan'}
         </div>
         <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', fontSize: 13, color: 'var(--c-text-2)' }}>
           <span>{'Registered for'} {COMPETITION}.</span>

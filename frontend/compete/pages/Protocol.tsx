@@ -10,7 +10,7 @@ import {
 import type { CmcColumn } from '../ui'
 import { apiGet, usePoll, fetchX402Roundtrip } from '../api'
 import type { UviiIndex, Uvii, X402Catalog, LoopEnvelope, X402Roundtrip } from '../api'
-import { ADDR, AGENT_ID, scan, chainOf } from '../config'
+import { ADDR, AGENT_ID, scan, chainOf, txHashOf } from '../config'
 import { IconExternal } from '../icons'
 
 const TRUST = 'var(--trust)'
@@ -172,7 +172,7 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
             </a>
           })}
         </div>
-        <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · {'BscScan + Sourcify verified'}</div>
+        <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>commit id {shortAddr(AGENT_ID)} · {'BscScan source verified'}</div>
       </Card>
     </Reveal>
   </div>
@@ -280,8 +280,8 @@ function ProofsTable({ st }: { st?: LoopEnvelope['state'] }) {
     { key: 'status', header: 'Status', render: (r) => <Chip tone={r.status === 'revealed' ? 'var(--green)' : 'var(--gold)'}>{r.status}</Chip> },
     { key: 'signal', header: 'Signal', render: (r) => <span className="mono">{fmtNum(r.signal, 0)}</span> },
     { key: 'conf', header: 'Confidence', render: (r) => <PctCell value={r.confidence * 100} d={0} /> },
-    { key: 'commit', header: 'Commit tx', render: (r) => r.commit_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{shortAddr(r.commit_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
-    { key: 'reveal', header: 'Reveal tx', render: (r) => r.reveal_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--green)' }}>{shortAddr(r.reveal_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
+    { key: 'commit', header: 'Commit tx', render: (r) => txHashOf(r.commit_tx) ? <a className="cp-a" href={`https://bscscan.com/tx/${txHashOf(r.commit_tx)}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{shortAddr(txHashOf(r.commit_tx))} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
+    { key: 'reveal', header: 'Reveal tx', render: (r) => txHashOf(r.reveal_tx) ? <a className="cp-a" href={`https://bscscan.com/tx/${txHashOf(r.reveal_tx)}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--green)' }}>{shortAddr(txHashOf(r.reveal_tx))} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
     { key: 'pid', header: 'Pred ID', render: (r) => <span className="mono">{r.prediction_id ?? '-'}</span> },
   ]
   return <Panel title={'COMMIT REVEAL PROOFS'} accent="var(--trust)" right={st ? `${'cycle'} ${st.cycle}` : 'standby'}

@@ -82,7 +82,7 @@ const SECTIONS: Section[] = [
     body: [
       'Before any spend a security solver runs six checks. It probes for a honeypot. It reads the contract. It models slippage. It inspects the approval. It runs a preflight. It checks for MEV exposure.',
       'The verdict is a simple GO or BLOCK. A blocked plan never reaches the chain. This gate is the same one a Trust Wallet user can run on any token before they sign.',
-      'For transparency the agent also posts every trade leg to a public Telegram channel during the judged window. Each message carries a BscScan link and nothing else. The feed is read only and anyone can subscribe and watch the record build in real time.',
+      'For transparency a judge can subscribe to the agent trade feed in Telegram. Start @mefainews_bot and it sends you a direct message for every trade leg during the judged window. Each message carries a BscScan link and nothing else. The feed is read only and per subscriber.',
     ],
   },
   {
@@ -298,7 +298,7 @@ export default function Docs({ go }: { go: (p: string) => void }) {
           <Reveal delay={80}>
             <Card style={{ padding: 22, marginTop: 8 }}>
               <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14, lineHeight: 1.9, color: 'var(--c-text-2)' }}>
-                <li>{'Open the contracts below on the matching explorer and confirm they are verified.'}</li>
+                <li>{'Open the contracts below on the matching explorer and confirm the verified source on BscScan.'}</li>
                 <li>{'Watch the live agent commit a prediction hash then reveal the preimage after the window.'}</li>
                 <li>{'Confirm the RiskGovernor cap sits below the hard floor so'} <span className="mono" style={{ color: 'var(--trust)' }}>canTrade()</span> {'halts first.'}</li>
                 <li>{'Cross check the leaderboard expectancy against the result ledger.'}</li>
@@ -320,7 +320,7 @@ export default function Docs({ go }: { go: (p: string) => void }) {
                   </a>
                 })}
               </div>
-              <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · {'mainnet identity'}</div>
+              <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>commit id {shortAddr(AGENT_ID)} · {'mainnet identity'}</div>
             </Card>
           </Reveal>
         )}

@@ -11,9 +11,9 @@ export const TERMINAL_URL = 'https://mefai.io'
 // served card from drifting, so it doubles as the agent's public registration.
 export const AGENT_CARD_URL = 'https://mefai.io/bnbhack-api/agent-card'
 export const COMPETITION = 'BNB HACK: AI Trading Agent Edition'
-// Public Telegram channel the agent broadcasts every trade leg to during the
-// judged window (read only · a BscScan link per leg · no keys, no commands).
-// Swap to a dedicated agent feed channel here without touching any page.
+// Per-user Telegram bot subscription for the agent's trade feed. A judge starts
+// @mefainews_bot and it sends them a direct message for every trade leg during
+// the judged window (read only · a BscScan link per leg · no keys, no commands).
 export const TELEGRAM_FEED_URL = 'https://t.me/mefainews_bot?start=agentfeed'
 
 /* Verified BSC deployments + identities, all live on BSC mainnet (chain 56):
@@ -29,7 +29,18 @@ export const ADDR = {
   ledger:    '0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744', // result ledger (mainnet)
   erc8004:   '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432', // ERC-8004 Identity Registry (mainnet)
 }
+// The internal commit id: the keccak identity seed the commit reveal registry
+// binds predictions under. This is NOT the ERC-8004 token id (see below).
 export const AGENT_ID = '0x7069f5fdcd64bcfa682ebd4d6654229c39b40753dc81f609fb6e9c34c4a246d4'
+// The minted ERC-8004 identity token id, an integer, live on chain 56 and
+// returned by /agent/identity as registry.agent_id. Prefer reading it live.
+export const ERC8004_AGENT_ID = '131181'
+
+/* Normalize a commit/reveal tx field to a bare hash. The backend now serves
+   commit_tx / reveal_tx as full BscScan URLs (https://bscscan.com/tx/0x..),
+   so strip any explorer prefix before building a link or shortening it. */
+export const txHashOf = (v?: string): string =>
+  !v ? '' : (v.includes('/tx/') ? v.split('/tx/').pop()! : v)
 
 /* Every contract above is on BSC mainnet (chain 56), so the explorer link and
    the chain label always resolve to mainnet. */

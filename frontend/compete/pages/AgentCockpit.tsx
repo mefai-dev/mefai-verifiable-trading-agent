@@ -15,7 +15,7 @@ import type {
   TpSl, EntityStats, LoopEnvelope, LoopDecision, RecentSignals, ResolvedSignal,
   LoopPosition, LoopClose,
 } from '../api'
-import { ADDR, AGENT_ID, scan, TELEGRAM_FEED_URL } from '../config'
+import { ADDR, AGENT_ID, scan, TELEGRAM_FEED_URL, txHashOf } from '../config'
 import { IconExternal, IconSend } from '../icons'
 
 const GOLD = 'var(--gold)'
@@ -100,7 +100,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </Card>
     </Reveal>
 
-    {/* live transparency feed · the agent broadcasts every trade leg to a public Telegram */}
+    {/* live transparency feed · per-user Telegram bot DM, one message per trade leg */}
     <Reveal delay={140}>
       <Card glow="var(--cmc)" style={{ padding: '14px 18px', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -108,7 +108,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
           <div>
             <div style={{ fontWeight: 700, fontSize: 13.5 }}>{'Live transparency feed'}</div>
             <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>
-              {'The agent posts every trade leg to a public Telegram during the judged window · each message carries a BscScan link · read only.'}
+              {'Start @mefainews_bot and it sends you a direct message for every trade leg during the judged window · each with a BscScan link · read only.'}
             </div>
           </div>
         </div>
@@ -505,7 +505,11 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
   const pos = st?.positions
   const open = pos?.open ?? []
   const closes = pos?.closes ?? []
-  const paper = (st?.mode ?? 'paper').startsWith('paper')
+  // A swap only counts as live-signed once a position actually carries an on-chain
+  // open_tx. The commit reveal proofs are real on-chain regardless; the execution
+  // is simulated until a real open_tx lands, so do not assert a signed swap early.
+  const signedExec = open.some((p) => !!txHashOf(p.open_tx))
+  const paper = !signedExec
   const maxPos = st?.config?.max_positions ?? 3
   const realized = pos?.realized_usd ?? 0
   const unreal = pos?.unrealized_usd ?? 0
@@ -541,7 +545,7 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     }},
   ]
   return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="var(--gold)"
-    right={st ? `${open.length}/${maxPos} ${'open'}${paper ? ` · ${'simulated'}` : ` · ${'live'}`}` : 'standby'}>
+    right={st ? `${open.length}/${maxPos} ${'open'}${signedExec ? ` · ${'live signed'}` : ` · ${'proof-live · execution simulated'}`}` : 'standby'}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 14 }}>
       <Stat label="Open positions" value={`${open.length} / ${maxPos}`} tone={GOLD} sub="one per market" />
       <Stat label="Unrealized PnL" value={open.length ? `${unreal >= 0 ? '+' : ''}${fmtUsd(unreal)}` : '-'} tone={unreal >= 0 ? 'var(--green)' : 'var(--red)'} sub="open book" />
@@ -550,7 +554,7 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
       <Stat label="Scale in" value={rungs > 1 ? `${rungs} ${'rungs'}` : 'single'} tone="var(--cmc)" sub={rungs > 1 ? 'laddered entry' : 'one-shot entry'} />
       <Stat label="Time stop" value={maxHoldH > 0 ? `${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h` : 'off'} tone={GOLD} sub="bank the edge beat decay" />
       <Stat label="Risk gate" value={regimeOn ? 'regime + cost' : `${'cost'} ${fmtNum(costPct, 1)}%`} tone="var(--cmc)" sub={regimeOn ? 'flat in risk-off' : 'fee-modelled'} />
-      <Stat label="Two-sided" value={perp?.enabled ? 'long + short live' : 'long live · short paper'} tone={perp?.enabled ? 'var(--green)' : GOLD} sub={perp?.enabled ? `short · ${perp.venue ?? 'perp'} ${perp.leverage ?? 1}x` : 'long spot · short perp venue'} />
+      <Stat label="Two-sided" value={perp?.enabled ? 'long + short live' : 'long spot · short perp'} tone={perp?.enabled ? 'var(--green)' : GOLD} sub={perp?.enabled ? `short · ${perp.venue ?? 'perp'} ${perp.leverage ?? 1}x` : 'long spot · short perp venue'} />
     </div>
     <CmcTable columns={cols} rows={open}
       empty={st ? 'flat · no open position · agent waiting for a qualifying buy signal' : 'agent on standby'}
@@ -563,8 +567,8 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     </div>}
     <p style={{ color: 'var(--c-muted-2)', fontSize: 11, lineHeight: 1.6, margin: '12px 0 0' }}>
       {paper
-        ? `${'Paper mode · positions are simulated off the live mark price against real entries (no signing), with a'} ${fmtNum(costPct, 1)}% ${'round-trip swap cost charged to every close so the paper book is honest against the live venue. Entries scale in over rungs on persistent buy signals; at the first target the agent books a TP1 partial (only when the move clears the cost), pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`
-        : `${'Live mode · each leg routes through the security gate. Entries scale in over rungs on persistent buy signals; at the first target the agent sells a TP1 partial back to USDT, pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`}
+        ? `${'Proof-live · execution simulated. The on-chain commit reveal proof for every call is real, but no signed swap is recorded yet for the open positions, so the book is marked off the live mark price against real entries (no swap signed), with a'} ${fmtNum(costPct, 1)}% ${'round-trip swap cost charged to every close so the book is honest against the live venue. Entries scale in over rungs on persistent buy signals; at the first target the agent books a TP1 partial (only when the move clears the cost), pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`
+        : `${'Live signed execution · each leg routes through the security gate and a real swap is signed on chain, recorded as the open tx. Entries scale in over rungs on persistent buy signals; at the first target the agent sells a TP1 partial back to USDT, pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`}
     </p>
   </Panel>
 }
@@ -759,11 +763,11 @@ function ProofsPanel({ st }: { st?: LoopEnvelope['state'] }) {
             <span style={{ color: 'var(--c-muted)' }}>{'signal · conf'}</span>
             <span className="mono">{fmtNum(p.signal, 0)} · {fmtPct(p.confidence * 100, 0)}</span>
           </div>
-          {p.commit_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>{'commit'} {shortAddr(p.commit_tx)} <IconExternal size={12} /></a>}
-          {p.reveal_tx && <a className="cp-a" href={`https://bscscan.com/tx/${p.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>{'reveal'} {shortAddr(p.reveal_tx)} <IconExternal size={12} /></a>}
+          {txHashOf(p.commit_tx) && <a className="cp-a" href={`https://bscscan.com/tx/${txHashOf(p.commit_tx)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--cmc)' }}>{'commit'} {shortAddr(txHashOf(p.commit_tx))} <IconExternal size={12} /></a>}
+          {txHashOf(p.reveal_tx) && <a className="cp-a" href={`https://bscscan.com/tx/${txHashOf(p.reveal_tx)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--green)' }}>{'reveal'} {shortAddr(txHashOf(p.reveal_tx))} <IconExternal size={12} /></a>}
         </div>)}
       </div>}
-    <div className="mono" style={{ marginTop: 12, fontSize: 11, color: 'var(--c-muted)' }}>agentId {shortAddr(AGENT_ID)} · registry {shortAddr(ADDR.registry)}</div>
+    <div className="mono" style={{ marginTop: 12, fontSize: 11, color: 'var(--c-muted)' }}>commit id {shortAddr(AGENT_ID)} · registry {shortAddr(ADDR.registry)}</div>
   </Panel>
 }
 
