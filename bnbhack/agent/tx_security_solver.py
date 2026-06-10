@@ -488,10 +488,16 @@ async def check_preflight(plan: TradePlan) -> CheckResult:
         return CheckResult("preflight_sim", SKIP, "tx missing valid from/to")
     call: Dict[str, Any] = {"from": frm, "to": to}
     data_field = tx.get("data")
-    # Only forward well-formed, length-bounded calldata to the node.
-    if (isinstance(data_field, str) and len(data_field) <= _MAX_CALLDATA_HEX
-            and _HEX_RE.match(data_field)):
-        call["data"] = data_field
+    # Calldata that is PRESENT but malformed/oversized must FAIL, never be
+    # silently dropped: an empty eth_call would PASS a tx that was never
+    # actually simulated. Absent calldata keeps the prior behavior.
+    if data_field is not None:
+        if (isinstance(data_field, str) and len(data_field) <= _MAX_CALLDATA_HEX
+                and _HEX_RE.match(data_field)):
+            call["data"] = data_field
+        else:
+            return CheckResult("preflight_sim", FAIL,
+                               "calldata malformed or oversized, not simulated")
     value = _to_int(tx.get("value"))
     if value is not None and value > 0:
         call["value"] = hex(value)

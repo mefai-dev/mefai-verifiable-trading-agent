@@ -21,7 +21,11 @@ Model (documented so the cockpit can explain every number):
   notional   = (rho * equity) / s     so that notional * s == rho * equity
   leverage   = notional / equity      (capped at the venue maximum; capping
                                        leverage only lowers risk, never raises it)
-  margin     = notional / leverage
+  margin     = capital actually committed: the full notional for an unlevered
+               (spot) leg, notional / leverage only when leverage > 1. The old
+               notional / leverage form reduced algebraically to `equity` in
+               every branch, which let a consumer of margin spend the whole
+               account on one leg.
 
 As R -> 0 the budget rho -> 0 and sizes shrink to zero, so the agent physically
 cannot trade itself past the drawdown cap. This is the on-chain RiskGovernor's
@@ -397,7 +401,14 @@ def size_position(inp: SizingInput) -> SizingResult:
             f"leverage capped at venue max {venue_max_lev:.0f}x "
             f"(realised risk below budget)"
         )
-    margin = notional / leverage if leverage > 0 else 0.0
+    # Capital actually committed to the leg. An unlevered (spot) leg ties up the
+    # full notional, so margin == notional there; only a genuinely levered leg
+    # posts notional / leverage. The previous notional / leverage form was an
+    # identity for equity in EVERY branch (leverage is defined as
+    # notional / equity), so margin never reflected the Kelly/drawdown budget
+    # and a downstream consumer treating margin as the spend would deploy the
+    # whole account on a single leg.
+    margin = notional if leverage <= 1.0 else notional / leverage
     worst_case_loss = notional * stop
 
     result.notional = notional

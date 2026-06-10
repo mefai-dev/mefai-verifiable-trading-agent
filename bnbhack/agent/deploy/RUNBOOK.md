@@ -75,13 +75,15 @@ secrets EnvironmentFile (`secrets/agent-secrets.env` in the service template):
 ## Two-sided execution · live SHORT leg (perp venue, all optional)
 
 A LONG is expressed directly on PancakeSwap spot (`bsc_exec`). A SHORT has no
-spot borrow leg, so it routes through the audited USDT-M futures adapter (the
+spot borrow leg, so it routes through the USDT-M futures adapter that ships
+with the private MEFAI deployment running alongside this repo (an
 `autotrade/exchange_adapter.py` package deployed next to the agent, Binance
-first) via `perp_exec`. This is fully opt-in and **OFF by default**: with the
-flag off (or no venue keys) a LIVE short stays an honest no-go and a PAPER short
-is simulated · the loop signs nothing, holds no key and moves no funds. ApolloX
-is deliberately not wired as a raw leveraged-DEX signer (twak exposes no perp
-primitive); the audited CEX futures adapter is the supported, gated venue.
+first) via `perp_exec`. The public tree ships this short leg disabled by
+default · without that adapter and venue keys a LIVE short stays an honest
+no-go and a PAPER short is simulated; the loop signs nothing, holds no key and
+moves no funds. ApolloX is deliberately not wired as a raw leveraged-DEX signer
+(twak exposes no perp primitive); the gated CEX futures adapter is the
+supported venue.
 
 When enabled, the perp venue's account equity (margin + open uPnL) is folded
 into mark-to-market equity, so the short leg's risk is VISIBLE to the

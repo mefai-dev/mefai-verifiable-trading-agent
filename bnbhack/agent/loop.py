@@ -57,7 +57,7 @@ import x402_feed
 from chain_writer import SIGNAL_BUY, SIGNAL_SELL
 from fusion_core import fuse
 from fusion_providers import gather_readings
-from position_manager import PositionManager, PositionStore
+from position_manager import PositionManager, PositionStore, _amount_from_result
 from sizing import SizingInput, size_position
 
 logger = logging.getLogger("mefai.bnbhack.loop")
@@ -120,6 +120,21 @@ _ELIGIBLE_BASES = frozenset({
 _BSC_SPOT = {"ETH": "ETH", "XRP": "XRP", "ADA": "ADA", "DOGE": "DOGE",
              "CAKE": "CAKE", "LINK": "LINK", "AVAX": "AVAX", "AAVE": "AAVE",
              "ATOM": "ATOM", "LTC": "LTC"}
+
+# Entry freshness gate: a stored signal row older than this many timeframe bars
+# is never a NEW entry trigger. 8 bars matches the SIGNAL_DROP_BARS convention
+# fusion_providers already uses to drop a stale MEFAI reading, so the row gate
+# and the fusion source agree on what stale means; a tighter cutoff (for example
+# 2 bars on a quiet 5m book) would starve both normal entries and the daily
+# floor for hours after the last alert.
+SIGNAL_MAX_AGE_BARS = int(os.getenv("BNBHACK_SIGNAL_MAX_AGE_BARS", "8"))
+
+# Daily-floor last resort: liquidity preference order for the one minimal swap
+# placed when the relaxed floor pass still found nothing late in the UTC day.
+_FLOOR_LASTRESORT_PREFERENCE = ("ETH", "XRP", "ADA")
+# Stop/target fraction applied to the last-resort leg (no sizer bucket backs
+# it, so a fixed modest envelope bounds the risk on the tiny floor notional).
+_FLOOR_LASTRESORT_STOP_FRAC = 0.02
 
 
 def _now() -> int:
@@ -244,6 +259,16 @@ class LoopConfig:
     # The forced floor trade is sized down to this small notional (USD), so it
     # satisfies the rule with minimal capital at risk rather than a full bet.
     daily_floor_usd: float = float(os.getenv("BNBHACK_DAILY_FLOOR_USD", "8"))
+    # True last resort for the >=1 trade/day rule. The relaxed floor pass above
+    # still needs a fused LONG that clears the sizer's bucket-edge gate, so an
+    # all-sell day (or a cold signal book) could retry until midnight and DQ
+    # the wallet. From this UTC hour, if the floor is still unmet, the loop
+    # places ONE minimal daily_floor_usd swap on the most liquid routable
+    # eligible base, bypassing only the fusion-direction and bucket-edge
+    # SELECTIVITY gates; the full security gate and the RiskGovernor halt check
+    # still run, so it can never trade through a halt or a blocked token.
+    daily_floor_lastresort_hour_utc: int = int(
+        os.getenv("BNBHACK_DAILY_FLOOR_LASTRESORT_HOUR_UTC", "23"))
     # Native x402 consumption: the agent itself buys a premium verified-record
     # feed (the UVII trust index) over the x402 micropayment protocol as part of
     # its own cycle, proving it acts as an agentic-commerce CONSUMER and not only
@@ -436,8 +461,52 @@ class Decision:
     is_floor: bool = False      # forced daily-floor trade (kept >=1 trade/day)
 
 
+def _signal_fresh(ts_raw: Any, tf: str, now: float,
+                  max_bars: Optional[int] = None) -> bool:
+    """True when a signal row is fresh enough to act on: age at most max_bars
+    timeframe bars (default SIGNAL_MAX_AGE_BARS). The signals table stores the
+    timestamp as an epoch number; a row whose timestamp cannot be parsed is
+    treated as STALE (fail closed: an unreadable age must never trigger a fresh
+    entry). Pure so the freshness gate is unit-testable without a database."""
+    bars = SIGNAL_MAX_AGE_BARS if max_bars is None else max_bars
+    if bars <= 0:  # gate disabled
+        return True
+    try:
+        ts = float(ts_raw)
+    except (TypeError, ValueError):
+        return False
+    if not math.isfinite(ts) or ts <= 0:
+        return False
+    bar = _TF_SECONDS.get(tf, 3600)
+    age = max(0.0, float(now) - ts)
+    return age <= bars * bar
+
+
+def _pick_lastresort_base(spot_map: Dict[str, str], unroutable: Any = (),
+                          excluded: Any = ()) -> Optional[Tuple[str, str]]:
+    """Pick the base for the daily-floor last-resort swap: the most liquid
+    routable eligible base, preference order ETH then XRP then ADA, then the
+    remaining spot-map bases alphabetically. `unroutable` is the audit result
+    from bsc_exec (bases with no token route); `excluded` removes bases the
+    book already holds. Returns (base, token) or None when nothing qualifies.
+    Pure so the selection is unit-testable without the chain adapter."""
+    bad = {str(b).upper() for b in (unroutable or ())}
+    bad |= {str(b).upper() for b in (excluded or ())}
+    ordered = [b for b in _FLOOR_LASTRESORT_PREFERENCE if b in spot_map]
+    ordered += sorted(b for b in spot_map
+                      if b not in _FLOOR_LASTRESORT_PREFERENCE)
+    for base in ordered:
+        if base not in bad and spot_map.get(base):
+            return base, spot_map[base]
+    return None
+
+
 def _signals_now(watchlist: List[str], tf: str) -> List[Dict[str, Any]]:
-    """Latest buy/sell signal per watchlist symbol (read-only)."""
+    """Latest FRESH buy/sell signal per watchlist symbol (read-only). A row
+    older than SIGNAL_MAX_AGE_BARS timeframe bars is skipped: acting on a
+    days-old stored price would enter at a level the market has long left.
+    The daily-floor last resort (see _daily_floor_lastresort) intentionally
+    does NOT depend on these rows, so this gate cannot starve the floor."""
     out: List[Dict[str, Any]] = []
     try:
         db = sqlite3.connect(f"file:{SIGNAL_DB}?mode=ro", uri=True, timeout=5)
@@ -445,6 +514,7 @@ def _signals_now(watchlist: List[str], tf: str) -> List[Dict[str, Any]]:
     except Exception as exc:
         logger.warning("signal db open failed: %s", exc)
         return out
+    now = time.time()
     try:
         for pair in watchlist:
             sym = pair if pair.endswith(".P") else f"{pair}.P"
@@ -459,6 +529,8 @@ def _signals_now(watchlist: List[str], tf: str) -> List[Dict[str, Any]]:
                 continue
             side = str(row["signal"] or "").strip().lower()
             if side not in ("buy", "sell"):
+                continue
+            if not _signal_fresh(row["timestamp"], tf, now):
                 continue
             try:
                 price = float(row["price"] or 0)
@@ -641,6 +713,48 @@ class AgentLoop:
             return False
         return time.gmtime(now).tm_hour >= self.cfg.daily_floor_hour_utc
 
+    def _floor_lastresort_due(self, now: int) -> bool:
+        """True when the floor is due AND the day is so late that waiting for a
+        signal-driven candidate risks the daily-minimum DQ outright."""
+        return (self._floor_due(now)
+                and time.gmtime(now).tm_hour
+                >= self.cfg.daily_floor_lastresort_hour_utc)
+
+    def _unroutable_bases(self, bases: List[str]) -> List[str]:
+        """Bases the bsc_exec token registry cannot route to a spot token.
+        Prefers the adapter's own assert_routable audit when present; falls
+        back to resolving each base's mapped spot token through the registry.
+        Best-effort: an adapter fault returns [] and never blocks the loop."""
+        ups = sorted({str(b).upper() for b in bases if b})
+        try:
+            fn = getattr(bsc_exec, "assert_routable", None)
+            if callable(fn):
+                return sorted({str(b).upper() for b in (fn(ups) or [])})
+            return [b for b in ups
+                    if bsc_exec._resolve_token(_BSC_SPOT.get(b, b)) is None]
+        except Exception as exc:
+            logger.warning("routability audit failed: %s", exc)
+            return []
+
+    def _audit_routability(self) -> None:
+        """Startup audit: LOUDLY flag every configured base (spot map plus
+        watchlist) that has no route in the bsc_exec token registry, so a
+        symbol that can only ever produce commit-only decisions (and can never
+        satisfy the daily floor) is visible on day one, not on the night the
+        floor fails. Advisory only; the loop never crashes over it."""
+        bases = sorted(set(_BSC_SPOT)
+                       | {_base_of(p) for p in self.cfg.watchlist})
+        bad = self._unroutable_bases(bases)
+        if bad:
+            logger.error(
+                "ROUTABILITY WARNING: %d configured base(s) have NO spot route "
+                "in the bsc_exec token registry and can never take a live spot "
+                "leg (decisions there stay commit-only): %s",
+                len(bad), ", ".join(bad))
+        else:
+            logger.info("routability audit: all %d configured bases route",
+                        len(bases))
+
     async def _daily_floor_trade(self, equity: float, drawdown: float,
                                  sigs: List[Dict[str, Any]]) -> Decision:
         """Force ONE minimal long to keep the wallet at >=1 trade/day. Relaxes
@@ -693,6 +807,83 @@ class AgentLoop:
             else f"daily floor attempted {best.symbol}: "
                  f"{(best.security or {}).get('detail', 'no fill')}")
         return best
+
+    async def _daily_floor_lastresort(self, equity: float) -> Optional[Decision]:
+        """TRUE last resort for the >=1 trade/day rule, run only after the
+        relaxed floor pass kept failing into the final UTC hours. The relaxed
+        pass still needs a fused LONG that clears the sizer's bucket-edge gate,
+        so an all-sell day would otherwise retry until midnight and forfeit the
+        wallet's ranking. This branch places ONE minimal daily_floor_usd swap
+        on the most liquid routable eligible base (preference ETH, XRP, ADA),
+        with NO dependency on signal rows. It bypasses ONLY the
+        fusion-direction and bucket-edge selectivity gates; the RiskGovernor
+        halt check runs here and again pre-swap, and the swap goes through
+        bsc_exec.swap, i.e. the exact tx_security_solver evaluate path every
+        normal leg runs. It is exempt from the position cap (one extra minimal
+        leg; the position manager then manages and time-stops it like any
+        other), and the commit-reveal proof path runs for it like any trade."""
+        usd = max(0.0, self.cfg.daily_floor_usd)
+        if usd <= 0:
+            self._floor_note = "daily floor last resort: floor size is 0"
+            return None
+        # Never trade through a halt: check the RiskGovernor BEFORE quoting.
+        g_ok, _bps, g_detail = await asyncio.to_thread(self.writer.can_trade)
+        if not g_ok:
+            self._floor_note = f"daily floor last resort blocked: {g_detail}"
+            logger.warning(self._floor_note)
+            return None
+        # Pick the most liquid routable base the book does not already hold
+        # (a held base would need an 'add', whose rung ledger may be full).
+        try:
+            held = {b for b in _BSC_SPOT if self.pm.has_open(f"{b}USDT")}
+        except Exception:
+            held = set()
+        pick = _pick_lastresort_base(
+            _BSC_SPOT, self._unroutable_bases(list(_BSC_SPOT)), held)
+        if pick is None:
+            self._floor_note = ("daily floor last resort: no routable free "
+                                "base available")
+            logger.error(self._floor_note)
+            return None
+        base, tok = pick
+        symbol = f"{base}USDT"
+        # Live entry mark from a fresh quote (usd in / token out), so the
+        # commit and the stop/target envelope reflect the market now, not a
+        # stale stored signal price.
+        try:
+            q = await bsc_exec.quote(usd, "USDT", tok, self.cfg.slippage_pct)
+        except Exception as exc:
+            logger.warning("daily floor last resort quote failed: %s", exc)
+            q = None
+        out_amt = (bsc_exec._amount_field((q.data or {}).get("output"))
+                   if q is not None and q.ok else None)
+        if not out_amt or out_amt <= 0:
+            self._floor_note = "daily floor last resort: quote unavailable"
+            logger.warning(self._floor_note)
+            return None
+        entry = usd / out_amt
+        d = Decision(
+            symbol=symbol, timeframe=self.cfg.timeframe, action="TRADE_LONG",
+            direction=1, conviction=0.0, agreement=0.0, coverage=0.0,
+            entry=entry, target=entry * (1.0 + _FLOOR_LASTRESORT_STOP_FRAC),
+            stop=entry * (1.0 - _FLOOR_LASTRESORT_STOP_FRAC), leverage=1.0,
+            notional=usd, margin=usd, win_rate=0.0, payoff=0.0, is_floor=True)
+        d.reasons.append("daily floor last resort: minimal qualifying swap "
+                         "(selectivity gates bypassed; security gate and "
+                         "RiskGovernor still enforced)")
+        try:
+            await self._commit_and_act(d, equity, "open", cap_exempt=True)
+        except Exception as exc:
+            logger.warning("daily floor last resort commit/act failed (%s): %s",
+                           symbol, exc)
+            self._floor_note = "daily floor last resort: execution error"
+            return d
+        executed = isinstance(d.security, dict) and d.security.get("executed")
+        self._floor_note = (
+            f"daily floor last resort executed {symbol}" if executed
+            else f"daily floor last resort attempted {symbol}: "
+                 f"{(d.security or {}).get('detail', 'no fill')}")
+        return d
 
     # -- equity / drawdown ---------------------------------------------------
     async def _read_equity(self, realized: float = 0.0,
@@ -896,12 +1087,15 @@ class AgentLoop:
         d.leverage = sz.leverage
         d.notional = sz.notional
         d.margin = sz.margin
-        if force and self.cfg.daily_floor_usd > 0 and d.margin > self.cfg.daily_floor_usd:
+        if (force and self.cfg.daily_floor_usd > 0
+                and d.notional > self.cfg.daily_floor_usd):
             # Shrink the forced trade to the daily floor so keeping the cadence
-            # never spends meaningful budget; risk gates below still apply.
-            scale = self.cfg.daily_floor_usd / d.margin
-            d.margin = self.cfg.daily_floor_usd
-            d.notional = d.notional * scale
+            # never spends meaningful budget; risk gates below still apply. The
+            # clamp is on NOTIONAL (the USD the spot leg actually spends, see
+            # _commit_and_act); margin scales with it so both stay consistent.
+            scale = self.cfg.daily_floor_usd / d.notional
+            d.notional = self.cfg.daily_floor_usd
+            d.margin = d.margin * scale
             d.is_floor = True
             d.reasons.append(
                 "daily floor (forced past selectivity to keep >=1 trade/day)")
@@ -934,7 +1128,7 @@ class AgentLoop:
 
     # -- commit + execute + reveal ------------------------------------------
     async def _commit_and_act(self, d: Decision, equity: float,
-                              mode: str) -> None:
+                              mode: str, cap_exempt: bool = False) -> None:
         now = _now()
         bar = _TF_SECONDS.get(self.cfg.timeframe, 3600)
         expires_at = now + max(3 * bar, 3600)
@@ -1017,8 +1211,17 @@ class AgentLoop:
                 # open legs, so capital sitting in a position is never re-bet
                 # (sizing the new leg against TOTAL equity double-counts it).
                 free_usd = max(0.0, equity - self.pm.deployed_usd())
-                full_usd = max(0.0, min(d.margin, free_usd,
+                # The unlevered spot leg spends its NOTIONAL: that is the USD
+                # the sizer budgeted so notional * stop == rho * equity. The
+                # old d.margin here was algebraically the WHOLE equity (sizing
+                # defined leverage = notional / equity, so notional / leverage
+                # == equity), which made the Kelly/drawdown budget a no-op and
+                # spent the full free balance on every leg.
+                full_usd = max(0.0, min(d.notional, free_usd,
                                         bsc_exec.MAX_SWAP_USD))
+                # The daily-floor cap-exempt leg lets ONE extra minimal
+                # position past the book cap (see _daily_floor_lastresort).
+                max_pos = self.cfg.max_positions + (1 if cap_exempt else 0)
                 rung_usd = full_usd / rungs
                 if rung_usd <= 0:
                     d.security = {"go": False,
@@ -1058,7 +1261,7 @@ class AgentLoop:
                                         target=d.target, stop=d.stop,
                                         signal_dir=d.direction,
                                         swap_result=None,
-                                        max_positions=self.cfg.max_positions,
+                                        max_positions=max_pos,
                                         rungs_total=rungs,
                                         size_target_usd=full_usd)
                                 else:
@@ -1092,7 +1295,7 @@ class AgentLoop:
                                     target=d.target, stop=d.stop,
                                     signal_dir=d.direction,
                                     swap_result=None,
-                                    max_positions=self.cfg.max_positions,
+                                    max_positions=max_pos,
                                     rungs_total=rungs, size_target_usd=full_usd)
                             else:
                                 self.pm.record_add(
@@ -1122,6 +1325,28 @@ class AgentLoop:
                         # so the lifecycle is exercised honestly without signing.
                         record_it = (sw.executed if self.cfg.execute_trades
                                      else sw.go)
+                        # Live fill rebase: an executed swap reports the token
+                        # amount actually received, so the REAL fill price is
+                        # usd_spent / qty. Recording the stale signal price as
+                        # entry would mis-mark PnL and place stop/target around
+                        # a level the market may have already left, so entry is
+                        # rebased to the fill and the stop/target are rebuilt
+                        # from the decision's ORIGINAL price fractions (the
+                        # ratios stop/entry and target/entry are preserved).
+                        # Paper legs keep the signal price unchanged. If the
+                        # twak result carries no derivable token amount, entry
+                        # stays as-is for this leg (no fill price can be
+                        # derived; record_open's qty falls back the same way).
+                        if sw.executed and d.entry > 0 and rung_usd > 0:
+                            qty_fill = _amount_from_result(sw.result or {})
+                            if qty_fill and qty_fill > 0:
+                                fill = rung_usd / qty_fill
+                                if math.isfinite(fill) and fill > 0:
+                                    d.target = fill * (d.target / d.entry)
+                                    d.stop = fill * (d.stop / d.entry)
+                                    d.entry = fill
+                                    d.reasons.append(
+                                        "entry rebased to live fill")
                         if record_it and mode == "open":
                             self.pm.record_open(
                                 symbol=d.symbol, base=base, token=tok,
@@ -1129,7 +1354,7 @@ class AgentLoop:
                                 target=d.target, stop=d.stop,
                                 signal_dir=d.direction,
                                 swap_result=sw.result,
-                                max_positions=self.cfg.max_positions,
+                                max_positions=max_pos,
                                 rungs_total=rungs, size_target_usd=full_usd)
                         elif record_it and mode == "add":
                             self.pm.record_add(
@@ -1341,9 +1566,23 @@ class AgentLoop:
         if self._floor_due(now):
             floor_decision = await self._daily_floor_trade(equity, drawdown, sigs)
             decisions.append(floor_decision)
-            if (isinstance(floor_decision.security, dict)
-                    and floor_decision.security.get("executed")):
+            floor_executed = (isinstance(floor_decision.security, dict)
+                              and floor_decision.security.get("executed"))
+            if floor_executed:
                 self._record_executed_trades(1)
+            # True last resort: very late in the UTC day the signal-driven
+            # floor may STILL have nothing executable (all-sell day, cold
+            # signal book, every bucket failing the edge gate). Rather than
+            # retry into a guaranteed daily-minimum DQ, place ONE minimal
+            # routable swap that bypasses only the selectivity gates; the
+            # security gate and the RiskGovernor halt check still apply.
+            if not floor_executed and self._floor_lastresort_due(now):
+                lr = await self._daily_floor_lastresort(equity)
+                if lr is not None:
+                    decisions.append(lr)
+                    if (isinstance(lr.security, dict)
+                            and lr.security.get("executed")):
+                        self._record_executed_trades(1)
 
         # Transparency feed: announce every trade leg the agent actually takes
         # (and every close) to the optional Telegram broadcast channel, so the
@@ -1572,6 +1811,12 @@ class AgentLoop:
         logger.info("agent loop start mode=%s watchlist=%s tf=%s interval=%ss",
                     self.cfg.mode(), self.cfg.watchlist, self.cfg.timeframe,
                     self.cfg.interval)
+        # Routability audit: loudly flag any configured base with no spot route
+        # before the first decision (advisory; never crashes the loop).
+        try:
+            self._audit_routability()
+        except Exception as exc:
+            logger.warning("startup routability audit failed: %s", exc)
         # Reconcile the ledger against the live wallet once at startup so a leg
         # closed while the agent was down is surfaced before the first decision.
         try:

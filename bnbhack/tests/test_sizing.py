@@ -128,6 +128,82 @@ class SizingSafetyTest(unittest.TestCase):
         self.assertFalse(r.approved)
 
 
+class MarginSpendPropertyTest(unittest.TestCase):
+    """Regression for the margin == equity identity bug. sizing defined
+    leverage = notional / equity and then margin = notional / leverage, which
+    reduced to `equity` in EVERY branch, so a consumer treating margin as the
+    per-trade spend deployed the whole account on each leg. The properties
+    asserted here: the executed spend (min of notional and any external caps)
+    keeps the risk budget, and margin only ever equals equity when the leg is
+    GENUINELY levered to the point of committing the full account."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.db = os.path.join(self.tmp, "signal.db")
+        _build_db(self.db)
+        self._orig = sizing.SIGNAL_DB
+        sizing.SIGNAL_DB = self.db
+        sizing._stats_cache.clear(); sizing._stats_ts.clear()
+        sizing._prior_cache.clear(); sizing._prior_ts.clear()
+
+    def tearDown(self):
+        sizing.SIGNAL_DB = self._orig
+        sizing._stats_cache.clear(); sizing._stats_ts.clear()
+        sizing._prior_cache.clear(); sizing._prior_ts.clear()
+
+    def test_executed_spend_respects_risk_budget(self):
+        # Across a grid of inputs the SPEND the loop derives from the sizer
+        # (min of notional and external caps) must keep the per-trade risk
+        # budget: spend * stop_fraction <= rho * equity (small float slack).
+        for equity in (250.0, 1000.0, 10000.0, 100378.0):
+            for dd in (0.0, 0.02, 0.05, 0.10):
+                for stop in (None, 0.005, 0.02, 0.10):
+                    for conv in (0.4, 1.0):
+                        inp = sizing.SizingInput(
+                            symbol="BTCUSDT", timeframe="1h", equity=equity,
+                            current_drawdown=dd, stop_distance=stop,
+                            conviction=conv)
+                        r = sizing.size_position(inp)
+                        if not r.approved:
+                            continue
+                        for cap in (250.0, equity, float("inf")):
+                            spend = min(r.notional, cap)
+                            self.assertLessEqual(
+                                spend * r.stop_distance,
+                                r.risk_budget_rho * r.equity * 1.001,
+                                msg=f"eq={equity} dd={dd} stop={stop} "
+                                    f"conv={conv} cap={cap}")
+
+    def test_margin_not_equity_unless_genuinely_levered(self):
+        # A wide explicit stop keeps the position UNLEVERED (notional < equity);
+        # the committed capital is then the notional itself, never the whole
+        # account.
+        inp = sizing.SizingInput(symbol="BTCUSDT", timeframe="1h",
+                                 equity=10000.0, current_drawdown=0.0,
+                                 stop_distance=0.10)
+        r = sizing.size_position(inp)
+        self.assertTrue(r.approved, msg=r.reasons)
+        self.assertLessEqual(r.leverage, 1.0)
+        self.assertAlmostEqual(r.margin, r.notional, places=6)
+        self.assertLess(r.margin, r.equity)
+
+    def test_levered_margin_is_notional_over_leverage(self):
+        # A tight stop pushes notional above equity (leverage > 1); margin is
+        # then genuinely notional / leverage. With leverage defined as
+        # notional / equity that equals the full account, the one case where
+        # margin == equity is legitimate.
+        inp = sizing.SizingInput(symbol="BTCUSDT", timeframe="1h",
+                                 equity=10000.0, current_drawdown=0.0,
+                                 stop_distance=0.002)
+        r = sizing.size_position(inp)
+        self.assertTrue(r.approved, msg=r.reasons)
+        self.assertGreater(r.leverage, 1.0)
+        self.assertAlmostEqual(r.margin, r.notional / r.leverage, places=6)
+        # The worst-case loss bound still holds in the levered branch.
+        bound = sizing.DD_BUDGET_K * r.drawdown_room_R * r.equity
+        self.assertLessEqual(r.worst_case_loss, bound + 1e-6)
+
+
 class DirectionAwareTest(unittest.TestCase):
     def test_leg_dir_reads_signal_dir(self):
         self.assertEqual(pm._leg_dir({"signal_dir": 1}), 1)

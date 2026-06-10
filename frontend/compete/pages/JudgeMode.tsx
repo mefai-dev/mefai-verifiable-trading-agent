@@ -83,8 +83,12 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
   const uvii = usePoll<UviiIndex>((s) => fetchUvii('symbol', '24h', 8, s), 120_000)
 
   const st = loop.data?.available ? loop.data.state : undefined
-  const proofs = (st?.proofs || []).slice(0, 4)
-  const reveals = (st?.reveals || []).slice(0, 4)
+  /* prefer proofs that already carry a real broadcast tx; paper/pending ones follow */
+  const hasTx = (h?: string) => !!h && !/^0x0+$/.test(h)
+  const proofs = [...(st?.proofs || [])]
+    .sort((a, b) => Number(hasTx(b.commit_tx)) - Number(hasTx(a.commit_tx))).slice(0, 4)
+  const reveals = [...(st?.reveals || [])]
+    .sort((a, b) => Number(hasTx(b.tx)) - Number(hasTx(a.tx))).slice(0, 4)
   const gov = st?.governor
   const gi = uvii.data?.global_index
   const capBps = st ? Math.round(st.jury_cap * 10000) : 2000

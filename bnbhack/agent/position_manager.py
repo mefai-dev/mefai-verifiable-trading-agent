@@ -306,7 +306,7 @@ class PositionStore:
 # ---------------------------------------------------------------------------
 @dataclass
 class ExitRules:
-    # Scale-out (the autotrade lifecycle ported to BSC spot): at the committed
+    # Scale-out (the production MEFAI exit lifecycle ported to BSC spot): at the committed
     # target close `tp1_pct`% of the position (TP1), then pull the stop just into
     # profit (`profit_lock_pct` above entry, so the leg can no longer close red)
     # and extend the target to TP2 = entry + `tp2_mult` x the TP1 distance, so the

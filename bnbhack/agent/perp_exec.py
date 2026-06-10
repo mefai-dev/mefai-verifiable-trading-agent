@@ -4,12 +4,14 @@ MEFAI BNB HACK · Perp execution adapter (Track 1 live SHORT leg)
 The agent is two-sided by design: a LONG is expressed directly on PancakeSwap
 spot (bsc_exec), but a SHORT cannot be expressed on spot (there is no borrow
 leg). This module is the SHORT leg's execution venue. It routes a directional
-short through the project's already-audited USDT-M futures adapter
-(autotrade/exchange_adapter.py, Binance-first) · exactly the venue the bsc_exec
-perps note documents for leveraged exposure. ApolloX is deliberately NOT wired
-as a raw leveraged-DEX contract signer here: twak exposes no perp primitive and
-a bespoke signer would be a much larger funds-touching surface, so the audited
-CEX futures adapter is the supported, gated venue.
+short through the USDT-M futures adapter (Binance-first) that ships with the
+private MEFAI deployment running alongside this repo · exactly the venue the
+bsc_exec perps note documents for leveraged exposure. The public tree ships
+this short leg disabled by default: without that adapter and venue keys it
+stays an honest no-go. ApolloX is deliberately NOT wired as a raw
+leveraged-DEX contract signer here: twak exposes no perp primitive and a
+bespoke signer would be a much larger funds-touching surface, so the gated
+CEX futures adapter is the supported venue.
 
 Safety / integrity (mirrors bsc_exec):
   - OFF by default. open_short / close_short are an honest no-go (sign nothing,
@@ -39,8 +41,9 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("mefai.bnbhack.perp")
 
-# The audited USDT-M futures adapter lives in the autotrade package at the repo
-# root. Add that directory to the import path lazily so this module has no
+# The USDT-M futures adapter is part of the private MEFAI deployment that runs
+# alongside this repo (an autotrade package at the repo root when deployed).
+# Add that directory to the import path lazily so this module has no
 # import-time dependency when perps are disabled (the default).
 _AUTOTRADE_DIR = Path(__file__).resolve().parents[2] / "autotrade"
 
@@ -107,7 +110,7 @@ _adapter_lock = asyncio.Lock()
 
 
 async def _get_adapter() -> Any:
-    """Build (once) the audited futures adapter for the configured venue. Raises
+    """Build (once) the futures adapter for the configured venue. Raises
     on a real config error; callers wrap every use in a no-go guard."""
     global _adapter
     if _adapter is not None:

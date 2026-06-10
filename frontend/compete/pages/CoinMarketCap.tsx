@@ -53,7 +53,7 @@ export default function CoinMarketCap({ go }: { go: (p: string) => void }) {
       { t: 'Narrative rotation skill', d: 'We rank live CMC trending narratives and rotate the book into the strongest but only after the verifiable leaderboard confirms the edge is real.' },
       { t: 'Regime governor', d: 'BTC dominance and the aggregate market read set the regime. Every take profit and stop bracket is scaled to that regime so risk shrinks in a hostile tape.' },
       { t: 'Derivatives overlay', d: 'Open interest and funding from the CMC derivatives tools flag crowded positioning before the agent commits to a direction.' },
-      { t: 'Macro event awareness', d: 'Upcoming macro events from the hub gate sizing around known volatility windows instead of trading blind into them.' },
+      { t: 'Macro event awareness', d: 'Upcoming macro events from the hub are surfaced beside the cockpit, so the operator and the council see known volatility windows next to every decision.' },
       { t: 'CMC native tables', d: 'The verifiable leaderboard and skill studio replicate the CMC table language so judges read our proof in a format they already trust.' },
     ]} />
 
@@ -85,7 +85,7 @@ const CMC_EMBEDS: { label: string; path: string; note: string }[] = [
   { label: 'Top 1000', path: '/cmc-intelligence', note: 'The full audited market: every one of the top 1000 assets scored with a MEFAI verdict the same read that feeds the conviction engine.' },
   { label: 'Deep Intelligence', path: '/deep-intelligence', note: 'The deep market intelligence read that fuses the CoinMarketCap surface with our signal and regime layers into one view.' },
   { label: 'Market Regime', path: '/btc-dominance', note: 'BTC dominance and the aggregate market read that set the regime. Every take profit and stop bracket is scaled to this gauge.' },
-  { label: 'Macro Dashboard', path: '/btc-macro', note: 'The institutional macro cockpit: net liquidity regime score correlations and the macro calendar that gate sizing around volatility windows.' },
+  { label: 'Macro Dashboard', path: '/btc-macro', note: 'The institutional macro cockpit: net liquidity regime score correlations and the macro calendar that puts known volatility windows beside every decision.' },
 ]
 
 function CmcEmbedViewer() {

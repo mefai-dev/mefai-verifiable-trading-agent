@@ -24,13 +24,13 @@ AGENT_WALLET = os.getenv(
 # ERC-8004 Identity Registry on BSC mainnet (the only known deployment).
 ERC8004_REGISTRY = os.getenv(
     "ERC8004_REGISTRY_ADDRESS", "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432")
-# Proof anchors: the mainnet result ledger and the verified testnet protocol.
+# Proof anchors: the result ledger and the commit-reveal protocol, all on BSC mainnet.
 MAINNET_LEDGER = os.getenv(
     "MEFAI_MAINNET_LEDGER", "0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744")
-TESTNET_REGISTRY = os.getenv(
-    "BNBHACK_REGISTRY_TESTNET", "0x48E9Dcb1f0F12367041Bbe5f2FE1f66D0D830558")
-TESTNET_GOVERNOR = os.getenv(
-    "BNBHACK_RISKGOVERNOR_TESTNET", "0xf751366159446894D6fce783A9eB1bd5B6df25Be")
+REGISTRY = os.getenv(
+    "BNBHACK_REGISTRY_ADDRESS", "0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB")
+GOVERNOR = os.getenv(
+    "BNBHACK_RISKGOVERNOR_ADDRESS", "0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2")
 
 # Public service endpoints (the cockpit and the machine-payable feed).
 SITE = os.getenv("MEFAI_SITE", "https://mefai.io")
@@ -38,7 +38,7 @@ COCKPIT_URL = os.getenv("MEFAI_COCKPIT_URL", f"{SITE}/terminal/bnbhack-agent")
 LEADERBOARD_URL = os.getenv("MEFAI_LEADERBOARD_URL", f"{SITE}/bnbhack-api/leaderboard")
 X402_URL = os.getenv("MEFAI_X402_URL", f"{SITE}/bnbhack-x402/products")
 CARD_URL = os.getenv("MEFAI_AGENT_CARD_URL", f"{SITE}/bnbhack-api/agent-card")
-LOGO_URL = os.getenv("MEFAI_LOGO_URL", f"{SITE}/logo.png")
+LOGO_URL = os.getenv("MEFAI_LOGO_URL", f"{SITE}/mefailogo.png")
 
 # The minted agent id, surfaced once known so the served card reflects the live
 # identity (a strict ERC-8004 consumer resolves registrations[].agentId).
@@ -137,8 +137,8 @@ def build_agent_card() -> Dict[str, Any]:
             "track": "BNBHACK-T1",
             "proofs": {
                 "resultLedger": _eip155(MAINNET_LEDGER),
-                "predictionRegistry": _eip155(TESTNET_REGISTRY, 97),
-                "riskGovernor": _eip155(TESTNET_GOVERNOR, 97),
+                "predictionRegistry": _eip155(REGISTRY),
+                "riskGovernor": _eip155(GOVERNOR),
             },
         },
     }
@@ -149,8 +149,8 @@ def build_agent_card() -> Dict[str, Any]:
 def metadata_entries() -> List[Dict[str, str]]:
     return [
         {"key": "resultLedger", "value": _eip155(MAINNET_LEDGER)},
-        {"key": "predictionRegistry", "value": _eip155(TESTNET_REGISTRY, 97)},
-        {"key": "riskGovernor", "value": _eip155(TESTNET_GOVERNOR, 97)},
+        {"key": "predictionRegistry", "value": _eip155(REGISTRY)},
+        {"key": "riskGovernor", "value": _eip155(GOVERNOR)},
         {"key": "leaderboard", "value": LEADERBOARD_URL},
         {"key": "x402", "value": X402_URL},
         {"key": "track", "value": "BNBHACK-T1"},

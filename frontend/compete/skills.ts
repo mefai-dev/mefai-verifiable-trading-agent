@@ -47,10 +47,10 @@ const CMC_TOOLS: SkillDef[] = [
   {
     id: 'cmc-quotes', name: 'get_crypto_quotes_latest', group: 'cmc', kind: 'mcp-tool',
     summary: 'Latest price volume and supply for any asset.',
-    what: 'The price spine of the cockpit. Live quotes drive the market read every conviction score and the entry target and stop brackets the agent commits.',
+    what: 'The canonical hub price read. Wired in the MCP client and declared by the rotation and composer skills for price volume and supply lookups whenever a hub quote is needed.',
     inputs: 'symbol or id convert currency', outputs: 'price · 24h volume · market cap · supply',
     invoke: 'mcp__cmc__get_crypto_quotes_latest', tags: ['price', 'quote', 'core'],
-    related: ['bnb-fusion', 'cmc-metrics', 'cmc-skill-mcp'], used: true, link: CMC_REPO,
+    related: ['bnb-fusion', 'cmc-metrics', 'cmc-skill-mcp'], used: false, link: CMC_REPO,
   },
   {
     id: 'cmc-search', name: 'search_cryptos', group: 'cmc', kind: 'mcp-tool',
@@ -63,10 +63,10 @@ const CMC_TOOLS: SkillDef[] = [
   {
     id: 'cmc-info', name: 'get_crypto_info', group: 'cmc', kind: 'mcp-tool',
     summary: 'Project profile category links and contract addresses.',
-    what: 'Feeds the asset dossier and the narrative tags. The contract address it returns is handed straight to the Trust safety gate before any spend.',
+    what: 'Project profile lookup for the asset dossier and narrative tags. Returns category links and platform contract addresses an agent can hand to the Trust safety gate before any spend.',
     inputs: 'symbol or id', outputs: 'description · category · urls · platform contracts',
     invoke: 'mcp__cmc__get_crypto_info', tags: ['fundamentals', 'metadata'],
-    related: ['tw-risk', 'cmc-narratives'], used: true, link: CMC_REPO,
+    related: ['tw-risk', 'cmc-narratives'], used: false, link: CMC_REPO,
   },
   {
     id: 'cmc-ta', name: 'get_crypto_technical_analysis', group: 'cmc', kind: 'mcp-tool',
@@ -87,10 +87,10 @@ const CMC_TOOLS: SkillDef[] = [
   {
     id: 'cmc-metrics', name: 'get_crypto_metrics', group: 'cmc', kind: 'mcp-tool',
     summary: 'Deeper per asset metrics beyond the basic quote.',
-    what: 'Liquidity volume quality and supply detail enrich the per token audit so a thin or manipulated book is caught before sizing.',
+    what: 'Liquidity volume quality and supply detail beyond the basic quote, available to deepen a per token audit so a thin or manipulated book can be caught before sizing.',
     inputs: 'symbol or id', outputs: 'extended metric set',
     invoke: 'mcp__cmc__get_crypto_metrics', tags: ['metrics', 'liquidity'],
-    related: ['cmc-quotes', 'bnb-sizing'], used: true, link: CMC_REPO,
+    related: ['cmc-quotes', 'bnb-sizing'], used: false, link: CMC_REPO,
   },
   {
     id: 'cmc-global', name: 'get_global_metrics_latest', group: 'cmc', kind: 'mcp-tool',
@@ -135,10 +135,10 @@ const CMC_TOOLS: SkillDef[] = [
   {
     id: 'cmc-search-info', name: 'search_crypto_info', group: 'cmc', kind: 'mcp-tool',
     summary: 'Search the project knowledge base by topic.',
-    what: 'Powers the research skill\u2019s deeper lookups pulling the right profile and context for a free form question about an asset.',
+    what: 'Knowledge base search over project info, available for deeper research lookups that pull the right profile and context for a free form question about an asset.',
     inputs: 'free text query', outputs: 'matched project info',
     invoke: 'mcp__cmc__search_crypto_info', tags: ['search', 'research'],
-    related: ['cmc-skill-research', 'cmc-info'], used: true, link: CMC_REPO,
+    related: ['cmc-skill-research', 'cmc-info'], used: false, link: CMC_REPO,
   },
   {
     id: 'cmc-orderflow', name: 'Taker order flow', group: 'cmc', kind: 'engine',
@@ -281,9 +281,9 @@ const TW_CMDS: SkillDef[] = [
   {
     id: 'tw-serve', name: 'serve --watch', group: 'trust', kind: 'cli',
     summary: 'Run the agent autonomously.',
-    what: 'The autonomous loop. With watch on the agent acts on its own signals through the same gated execution path no human in the loop.',
-    invoke: 'twak serve --watch', tags: ['autonomous', 'loop', 'core'],
-    related: ['tw-swap', 'bnb-signals'], used: true, link: TW_REPO,
+    what: 'The kit’s autonomous loop. With watch on an agent acts on its own signals through the same gated execution path. MEFAI runs its own loop daemon today so this is surfaced as an available path.',
+    invoke: 'twak serve --watch', tags: ['autonomous', 'loop', 'available'],
+    related: ['tw-swap', 'bnb-signals'], used: false, link: TW_REPO,
   },
   {
     id: 'tw-guard', name: 'wallet approval guard', group: 'trust', kind: 'engine',

@@ -5,8 +5,9 @@ This is the agent's hands: the one module allowed to move real funds on BSC. It
 wraps the Trust Wallet Agent Kit CLI (`twak`) self-custody wallet for spot swaps
 (PancakeSwap-class routing via the 0x aggregator), native/token transfers, and
 balance reads. Perps (ApolloX) are NOT routed here; twak has no perp primitive,
-so leveraged exposure stays on the CEX adapter (autotrade/exchange_adapter.py)
-and is documented as a follow-on, not silently faked.
+so leveraged exposure stays on a perp adapter that lives in the private MEFAI
+deployment alongside this repo; the public tree ships the short leg disabled by
+default, not silently faked.
 
 Safety architecture (defence in depth):
   1. Every spend is gated through `tx_security_solver.evaluate_trade` FIRST. A
@@ -37,7 +38,7 @@ import re
 import shutil
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from tx_security_solver import TradePlan, SecurityVerdict, evaluate_trade
 
@@ -83,6 +84,7 @@ MAX_NATIVE_PER_SWAP: Dict[str, float] = {
     "USDT": 250.0, "USDC": 250.0, "BUSD": 250.0,
     "BTCB": 0.004, "ETH": 0.08, "SOL": 1.7,
     "CAKE": 120.0, "XRP": 120.0, "ADA": 400.0, "DOGE": 1500.0,
+    "LINK": 15.0, "AVAX": 8.0, "AAVE": 1.0, "ATOM": 40.0, "LTC": 2.5,
 }
 # Stablecoins whose unit value is ~1 USD, used to derive a swap notional from the
 # quote without an external price feed.
@@ -109,6 +111,11 @@ BSC_TOKENS: Dict[str, str] = {
     "ADA": "0x3ee2200efb3400fabb9aacf31297cbdd1d435d47",
     "DOGE": "0xba2ae424d960c26247dd6c32edc70b295c744c43",
     "SOL": "0x570a5d26f7765ecb712c0924e4de545b89fd43df",
+    "LINK": "0xf8a0bf9cf54bb92f17374d9e9a321e6a111a51bd",
+    "AVAX": "0x1ce0c2827e2ef14d5c4f29a091d735a204794041",
+    "AAVE": "0xfb6115445bff7b52feb98650c87f44907e58f802",
+    "ATOM": "0x0eb3a705fc54725037cc9e008bdede697f62f335",
+    "LTC": "0x4338665cbb7b2485a8855a139b75d5e34ab0db94",
 }
 
 # 0x Exchange Proxy on BSC: the spender twak's swap route approves. Surfaced so
@@ -137,6 +144,11 @@ def _resolve_token(sym_or_addr: str) -> Optional[str]:
     if up in BSC_TOKENS:
         return BSC_TOKENS[up]
     return None
+
+
+def assert_routable(bases: Iterable[str]) -> List[str]:
+    """Return the bases NOT resolvable via the same token lookup quote/swap use."""
+    return [b for b in bases if _resolve_token(b) is None]
 
 
 def _cli_token_arg(sym_or_addr: str) -> Optional[str]:
@@ -386,11 +398,12 @@ def _quote_to_plan(qbody: Dict[str, Any], to_addr: str, slippage_pct: float,
     feeds the solver's stronger slippage path (realised tolerance), the requested
     slippage carries through for the MEV read, and the quote's unsigned swap tx
     (when present) is forwarded so preflight eth_call-simulates the exact route. A
-    swap whose DESTINATION is native BNB has no token contract to scan, so token is
-    left None (the gate then relies on the spender + slippage + preflight + governor
-    checks) rather than the zero address, which would hard-fail address validation."""
+    swap whose DESTINATION is native BNB has no token contract of its own, so the
+    plan carries the canonical WBNB address (the asset actually wrapped under the
+    hood) and the token-risk and contract scans run against WBNB."""
     bps = int(round(max(0.0, slippage_pct) * 100))
-    token = None if _is_native_sentinel(to_addr) else (to_addr if _is_addr(to_addr) else None)
+    token = (BSC_TOKENS["WBNB"] if _is_native_sentinel(to_addr)
+             else (to_addr if _is_addr(to_addr) else None))
     # Derive expected_out / min_out from the live quote on a shared integer scale
     # (the solver's slippage ratio is scale-invariant, so the exact token decimals
     # do not matter here). This exercises the tighter realised-slippage check.
@@ -630,8 +643,9 @@ def _resolve_addr(v: Any) -> Optional[str]:
 
 # --- perps note ------------------------------------------------------------
 # ApolloX (BSC perps) is intentionally NOT executed through this adapter: twak
-# exposes no perp/derivative primitive, so leveraged exposure is kept on the
-# audited CEX adapter (autotrade/exchange_adapter.py, Binance USDT-M). Routing a
-# fake "perp" through a spot swap would misreport risk to the drawdown governor.
+# exposes no perp/derivative primitive, so leveraged exposure is kept on a CEX
+# perp adapter that lives in the private MEFAI deployment alongside this repo;
+# the public tree ships the short leg disabled by default. Routing a fake
+# "perp" through a spot swap would misreport risk to the drawdown governor.
 # This boundary is a safety decision, not a missing feature.
 SUPPORTS_PERPS = False

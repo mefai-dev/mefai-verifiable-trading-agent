@@ -62,7 +62,7 @@ export default function TrustWallet({ go }: { go: (p: string) => void }) {
       { t: 'Pre trade safety gate', d: 'Before any spend the agent runs honeypot contract slippage approval preflight and MEV checks. A BLOCK verdict stops the transaction before the wallet is ever asked to sign.' },
       { t: 'Approval drainer radar', d: 'We surveil unlimited approval and drainer patterns so a Trust Wallet user sees the trap highlighted instead of approving it blind.' },
       { t: 'Deep link and WalletConnect', d: 'Connect from mobile Trust Wallet over WalletConnect or jump straight into the cockpit with a deep link. The flow is built for the wallet not bolted on.' },
-      { t: 'Verifiable agent identity', d: 'The trading agent itself is a registered ERC-8004 identity on BSC so the wallet you interact with is provably the audited agent not an impostor.' },
+      { t: 'Verifiable agent identity', d: 'The trading agent carries an ERC-8004 identity anchored to the agent wallet on BSC, and the agent itself publishes its live registration status at the identity endpoint, so the wallet you interact with is provably the agent, not an impostor.' },
     ]} />
 
     <SponsorSectionHead tone={TONE} eyebrow={'The full surface'} title={'Every Trust Wallet skill catalogued'}

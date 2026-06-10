@@ -9,14 +9,14 @@
     },
     "sha256": "f7202dd2ef0ffd971204828a7f1fc2cd4616bf0dfda267881ae7ee632bb0282d"
   },
-  "generated_at": "2026-06-09T21:44:58Z",
+  "generated_at": "2026-06-10T02:15:23Z",
   "overall": "PASS",
   "platform": "Linux-6.8.0-110-generic-x86_64-with-glibc2.39",
   "python": "3.12.3",
-  "repro_digest": "792b3b52fd42e140498a1d92062fac890b59f4bfccb1d4873af5bd67ec40fa6d",
+  "repro_digest": "bc6c34de73aa4e6ecebf794824efff058d932773d038611341cf6e2a787ab3e3",
   "skills": [
     {
-      "code_sha256": "f7c4460fe7a5b98a181695bc425d48345eb223e59018b7cacbe9c955a16b9f27",
+      "code_sha256": "9cb9fa4367dd9db0e8bbf631aad28d0ad2815c99b4dc52e26920f0cc35462f86",
       "content_hash": "b711607008fbe1fb625406a68fe838dae5f95caea5d33c4ccb75361f116df417",
       "kind": "invariant-check",
       "manifest": "skills/empirical-tp-sl-optimizer/output/report.manifest.json",
@@ -25,7 +25,7 @@
       "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "4449b88257a3b197a0a35c0ac215c89e168b7abc91c29be39ed8143224769821",
+      "code_sha256": "692554f27ffb5d50d93154330dfc4f4b397d171393f0e0ad23554d5e5dd925a6",
       "content_hash": "dc88562a99c5129c31856c5f56ea9bbdba3f3d37e4983714dc9b6c7234dcbaaf",
       "kind": "invariant-check",
       "manifest": "skills/meta-strategy-composer/output/report.manifest.json",
@@ -34,7 +34,7 @@
       "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "cc3afb48c0a1f3a5414fabe105abed12ed3a79f82009d21517698c4682eb5b11",
+      "code_sha256": "c297c9d01ad397817dc36f3561366a480aea4858f3a8f66ae0a942aa6128f055",
       "content_hash": "0b3195771f80bfdd94ec0a62415348a2b84837d4768bd74c103ea292b809db25",
       "kind": "invariant-check",
       "manifest": "skills/narrative-rotation/output/report.manifest.json",
@@ -43,7 +43,7 @@
       "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "fc9e08367495559eda228e53bedc8d3c03f66c4df1501de60a41f8abdc0028d7",
+      "code_sha256": "a3a2be85b2ed39fe1a803d4f14157c928b09053286b5904d629a2d9d3f5e37c5",
       "content_hash": "bb821568cc26cf2a5ad679a68746a1fec2cafce67ab0b9a4866b84cc96850fdb",
       "kind": "invariant-check",
       "manifest": "skills/regime-risk-governor/output/report.manifest.json",
@@ -52,13 +52,13 @@
       "walk_forward_content_hash": null
     },
     {
-      "code_sha256": "1fb13a80f02359987b375ded63c9c1a2aaee8b6a1ded75a37f0ff8ec3bf0bfe4",
+      "code_sha256": "a097ee5c9ec3f8e189d9e438703900a0b3083e75d39c4c5cb9bb1b21a3e8abaf",
       "content_hash": "296e6f269273b23446a6b80759cddcb29cc19027d778cf33c504bb240909ac30",
       "kind": "walk-forward",
       "manifest": "skills/risk-budgeted-allocator/output/report.manifest.json",
       "result": "PASS",
       "skill": "risk-budgeted-allocator",
-      "walk_forward_content_hash": "eae4ae9d5393554d462d8d4d54d99d2e34f9cf07aec7e98a449e1075fe0d2851"
+      "walk_forward_content_hash": "7043b73cd52a5c70b16af558c9eff5e72b047857fadbed9c4c76d787fa906997"
     }
   ]
 }

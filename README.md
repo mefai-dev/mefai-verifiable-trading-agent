@@ -46,29 +46,33 @@ touching a private key.
 ## How a decision is made
 
 ```
-market data ─▶ signal fusion ─▶ expert council ─▶ net-of-cost edge gate
-                                                          │
-                       drawdown-budgeted Kelly sizing ◀───┘
+market data ─▶ ten-source signal fusion ─▶ net-of-cost edge gate
+                                                       │
+                    drawdown-budgeted Kelly sizing ◀───┘
                                   │
            security gate (6 core checks + advisory reads) ─▶ commit-reveal proof ─▶ trade
 ```
 
-1. **Signal fusion** blends every source (CoinMarketCap regime, the MEFAI signal
-   feed, a machine-learning ensemble, a technical composite) into one direction
-   and conviction.
-2. **The expert council** has six agents debate the same asset from different
-   lenses and resolve to a consensus with a measured agreement level.
-3. **The net-of-cost edge gate** only sizes a trade when the cell's *measured*
+1. **Signal fusion** blends ten weighted sources · the MEFAI signal score, a
+   deep composite, the Brain ML ensemble, Kronos forecasts, cross-venue order
+   flow, the CoinMarketCap regime / technicals / derivatives gates and a
+   per-asset funding contrarian · into one direction and conviction.
+2. **The net-of-cost edge gate** only sizes a trade when the cell's *measured*
    expectancy clears the full round-trip cost beyond its own error bar. It would
    rather skip a marginal trade than bleed fees on a coin flip.
-4. **Drawdown-budgeted sizing** fits real win rates and payoffs from labeled
+3. **Drawdown-budgeted sizing** fits real win rates and payoffs from labeled
    history and never lets exposure breach the equity floor.
-5. **The security gate** runs six core go / no-go checks on the exact spend
+4. **The security gate** runs six core go / no-go checks on the exact spend
    (honeypot, contract, slippage, approval, preflight, MEV) plus advisory reads
    such as gas sanity, the standing allowance and the risk governor, before
    anything is signed. Only a core check can block; the advisory reads warn.
-6. **The commit-reveal proof** seals the prediction on BSC mainnet before the
+5. **The commit-reveal proof** seals the prediction on BSC mainnet before the
    move, so the record cannot be backfilled.
+
+Riding alongside the order flow, a **six-expert council** narrates and
+stress-tests the same data live on the site: six specialist agents debate every
+asset from different lenses in the open, so anyone can watch the reasoning
+behind a call, not just its result.
 
 The engine is **direction-aware**: a long is expressed directly on a DEX; a short
 is simulated honestly in the paper book and routes through a perpetual venue

@@ -210,7 +210,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
           })}
         </div>
         <div className="mono" style={{ marginTop: 18, fontSize: 13, color: 'var(--c-muted)', textAlign: 'center' }}>
-          agentId {shortAddr(AGENT_ID)} · {'mainnet identity · BscScan and Sourcify verified'}
+          agentId {shortAddr(AGENT_ID)} · {'mainnet identity · result ledger Sourcify verified'}
         </div>
         <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', fontSize: 13, color: 'var(--c-text-2)' }}>
           <span>{'Registered for'} {COMPETITION}.</span>

@@ -15,6 +15,14 @@
 # Backtest / report artifacts are regenerated from the data; never committed so
 # no number in the repo is one a reviewer cannot reproduce from source.
 output/
+# Single exception: the two allocator artifacts embedded in bnbhack/skills/README.md
+# (the equity curve image and the report it links) are tracked so the GitHub render
+# is not a broken image and a dead link. Both still regenerate byte-for-byte from
+# the pinned sample DB; every other output/ artifact stays regenerate-only.
+!bnbhack/skills/risk-budgeted-allocator/output/
+bnbhack/skills/risk-budgeted-allocator/output/*
+!bnbhack/skills/risk-budgeted-allocator/output/equity_curve.svg
+!bnbhack/skills/risk-budgeted-allocator/output/equity_report.json
 *.db
 *.db-journal
 *.db-wal
