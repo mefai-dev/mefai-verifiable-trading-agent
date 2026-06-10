@@ -219,7 +219,7 @@ export default function Docs({ go }: { go: (p: string) => void }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginTop: 30 }}>
         <Stat label="Experts in council" value={<CountUp value={6} />} tone="var(--c-primary)" sub="debate and decide" />
         <Stat label="Labeled outcomes" value={<CountUp value={181000} />} tone="var(--cmc)" sub="training base" />
-        <Stat label="Resolved signals" value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--green)" sub="verified" />
+        <Stat label="Resolved signals" value={ov ? <CountUp value={ov.n_resolved} /> : "-"} tone="var(--green)" sub="labeled · off-chain edge base" />
         <Stat label="Chain" value="BNB Chain" tone="var(--trust)" sub="BSC mainnet" />
         {/* Stat label/sub translate centrally via ui.tsx */}
       </div>

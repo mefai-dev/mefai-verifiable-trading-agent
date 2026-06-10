@@ -68,8 +68,8 @@ export default function Landing({ go }: { go: (p: string) => void }) {
             <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `${'peak'} $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
             <Stat label={'Live drawdown'} value={`${ddBps} bps`} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={`${'cap'} ${capBps} bps`} />
             <Stat label={'Edge per signal'} value={ov ? `${exp >= 0 ? '+' : ''}${fmtNum(exp, 2)} R` : '-'} tone={exp >= 0 ? 'var(--green)' : 'var(--red)'} sub={'mean realized'} />
-            <Stat label={'Top strategy edge'} value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} ${'resolved'}` : 'verified'} />
-            <Stat label={'Verified results'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'recorded outcomes'} />
+            <Stat label={'Top strategy edge'} value={top ? `${top.expectancy >= 0 ? '+' : ''}${fmtNum(top.expectancy, 3)} R` : '-'} tone={top && top.expectancy >= 0 ? 'var(--green)' : 'var(--cmc)'} sub={top ? `${cleanSym(top.key)} · ${top.n_resolved} ${'resolved'}` : 'edge base'} />
+            <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off-chain edge base · on-chain proofs in Judge mode'} />
           </div>
         </Reveal>
       </div>
