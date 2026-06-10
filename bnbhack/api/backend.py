@@ -260,13 +260,40 @@ def _client_ip(request: Request) -> str:
 
 # --- app + middleware -------------------------------------------------------
 
+async def _prewarm() -> None:
+    """Warm the heavy DB-scan caches at boot so a judge's first click on the
+    leaderboard, the universal index or the TP/SL skill reads from a warm cache
+    instead of a multi-second cold scan. Best-effort: every job is independent
+    and any failure is swallowed so a warm-up hiccup never blocks the API."""
+    jobs = [
+        (("lb", "symbol", "expectancy", "24h", 30, None), build_leaderboard,
+         dict(group_by="symbol", rank_by="expectancy", horizon="24h",
+              min_samples=30, since_ts=None, db_path=_DB_PATH)),
+        (("uvii", "symbol", "24h", 30, None), build_uvii_index,
+         dict(group_by="symbol", horizon="24h", min_samples=30,
+              since_ts=None, db_path=_DB_PATH)),
+    ]
+    for sym in ("BTCUSDT", "ETHUSDT"):
+        jobs.append((("tpsl", sym, "1h", None, None, 12), optimize,
+                     dict(symbol=sym, timeframe="1h", signal_type=None,
+                          since_ts=None, min_samples=12, db_path=_DB_PATH)))
+    for key, fn, kw in jobs:
+        try:
+            await _cached_thread(key, fn, **kw)
+        except Exception as exc:
+            log.warning("prewarm %s skipped: %s", key[0], exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not API_KEY:
         log.warning("BNBHACK_API_KEY is not set; data endpoints run unauthenticated")
     if not os.path.exists(_DB_PATH):
         log.warning("signal record not found at the configured path")
+    # Warm the heavy caches in the background so startup stays fast.
+    _warm = asyncio.create_task(_prewarm())
     yield
+    _warm.cancel()
     # Close the shared CMC client if it was created.
     try:
         import cmc_mcp
