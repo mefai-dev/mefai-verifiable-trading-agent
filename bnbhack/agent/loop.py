@@ -57,7 +57,8 @@ import x402_feed
 from chain_writer import SIGNAL_BUY, SIGNAL_SELL
 from fusion_core import fuse
 from fusion_providers import gather_readings
-from position_manager import PositionManager, PositionStore, _amount_from_result
+from position_manager import (PositionManager, PositionStore,
+                               _amount_from_result, mark_price)
 from sizing import SizingInput, size_position
 
 logger = logging.getLogger("mefai.bnbhack.loop")
@@ -947,8 +948,88 @@ class AgentLoop:
                 total += amt
         return total
 
+    @classmethod
+    def _unpriced_position_usd(cls, data: Dict[str, Any],
+                               open_positions: List[Dict[str, Any]]) -> float:
+        """Value open LONG-position tokens that twak's totalUsd did NOT price
+        (usd None/absent), at qty x mark. A held tradeable asset (e.g. ETH after
+        a spot buy) is otherwise dropped from equity and reads as a phantom
+        drawdown that would trip the killswitch. Skips tokens twak already priced
+        (no double count) and stablecoins (counted by _unpriced_stable_usd)."""
+        if not isinstance(data, dict) or not open_positions:
+            return 0.0
+        priced: set = set()
+        raw = data.get("tokens") or data.get("balances") or data.get("assets")
+        if isinstance(raw, list):
+            for t in raw:
+                if not isinstance(t, dict):
+                    continue
+                sym = (t.get("symbol") or t.get("token") or t.get("asset") or "")
+                pv = t.get("usd", t.get("valueUsd", t.get("usdValue")))
+                if isinstance(sym, str) and pv is not None:
+                    priced.add(sym.upper())
+        total = 0.0
+        for p in open_positions:
+            if (p.get("side") or "long") != "long":
+                continue  # a short holds no spot token
+            base = str(p.get("symbol") or "").upper()
+            for q in ("USDT", "USDC", "BUSD", "FDUSD"):
+                if base.endswith(q):
+                    base = base[: -len(q)]
+                    break
+            base = base.replace(".P", "")
+            if not base or base in priced or base in cls._STABLES:
+                continue  # already in totalUsd, or a stablecoin counted elsewhere
+            qty = float(p.get("qty") or 0.0)
+            mark = float(p.get("mark") or 0.0)
+            v = qty * mark
+            if math.isfinite(v) and v > 0:
+                total += v
+        return total
+
+    def _equity_rpc_sync(self, bnb_px: float,
+                         open_positions: List[Dict[str, Any]]) -> Optional[float]:
+        """Total portfolio USD straight from chain RPC, independent of twak's
+        flaky (and token-blind) balance endpoint: native BNB at its mark, idle
+        stablecoins at face (balanceOf), and open long-position tokens at
+        qty x mark. Sync (web3 HTTP); run in a worker thread. None on failure."""
+        try:
+            w3 = self.writer._w3
+            if w3 is None:
+                self.writer._ensure()
+                w3 = self.writer._w3
+            if w3 is None:
+                return None
+            from web3 import Web3
+            addr = Web3.to_checksum_address(bsc_exec.AGENT_WALLET)
+            total = (w3.eth.get_balance(addr) / 1e18) * (bnb_px or 0.0)
+            for sym in ("USDT", "USDC", "BUSD"):
+                taddr = bsc_exec.BSC_TOKENS.get(sym)
+                if not taddr:
+                    continue
+                data = "0x70a08231" + addr[2:].lower().rjust(64, "0")
+                raw = w3.eth.call({"to": Web3.to_checksum_address(taddr),
+                                   "data": data})
+                bal = int(raw.hex() or "0x0", 16) / 1e18
+                if math.isfinite(bal) and bal > 0:
+                    total += bal
+            for p in (open_positions or []):
+                if (p.get("side") or "long") != "long":
+                    continue
+                qty = float(p.get("qty") or 0.0)
+                mark = float(p.get("mark") or 0.0)
+                v = qty * mark
+                if math.isfinite(v) and v > 0:
+                    total += v
+            return total if math.isfinite(total) and total > 0 else None
+        except Exception as exc:
+            logger.warning("rpc equity read failed: %s", exc)
+            return None
+
     async def _read_equity(self, realized: float = 0.0,
-                           unrealized: float = 0.0) -> float:
+                           unrealized: float = 0.0,
+                           open_positions: Optional[List[Dict[str, Any]]] = None
+                           ) -> float:
         # Paper baseline unless mark-to-market is enabled. In paper mode equity is
         # the static baseline plus realised PnL from closed positions plus the
         # live unrealised PnL of open positions, so the cockpit (and the drawdown
@@ -960,6 +1041,26 @@ class AgentLoop:
         # seeds start + last + peak.
         if not self.cfg.mark_to_market:
             return self.cfg.equity + realized + unrealized
+        # PRIMARY: value the portfolio straight from chain RPC (native BNB at
+        # mark + idle stablecoins at face + open long-position tokens at mark).
+        # Reliable and token-complete, unlike twak's flaky balance endpoint.
+        try:
+            bnb_px = await mark_price("BNBUSDT", fallback=0.0) or 0.0
+            rpc_usd = await asyncio.to_thread(self._equity_rpc_sync, bnb_px,
+                                              open_positions or [])
+            if rpc_usd is not None and math.isfinite(rpc_usd) and rpc_usd > 0:
+                if perp_exec.enabled():
+                    pe = await perp_exec.account_equity_usd()
+                    if pe is not None:
+                        rpc_usd += pe
+                if self._start_equity_usd is None:
+                    self._start_equity_usd = rpc_usd
+                    self.peak_equity = rpc_usd
+                    self._save_start_equity(rpc_usd)
+                self._last_equity_usd = rpc_usd
+                return rpc_usd
+        except Exception as exc:
+            logger.warning("rpc equity primary failed (%s); trying twak", exc)
         try:
             res = await bsc_exec.balance()
             if res.ok:
@@ -975,6 +1076,11 @@ class AgentLoop:
                 usd = float(raw) if raw is not None else None
                 if usd is not None and math.isfinite(usd):
                     usd += self._unpriced_stable_usd(res.data)
+                    # value held long-position tokens twak did not price (e.g.
+                    # ETH after a spot buy) so a real holding is never read as a
+                    # phantom drawdown that trips the killswitch.
+                    usd += self._unpriced_position_usd(res.data,
+                                                       open_positions or [])
                 else:
                     usd = None
                 if usd is not None and math.isfinite(usd) and usd > 0:
@@ -1605,7 +1711,8 @@ class AgentLoop:
         positions = await self.pm.snapshot()
         equity = await self._read_equity(
             realized=positions.get("realized_usd", 0.0),
-            unrealized=positions.get("unrealized_usd", 0.0))
+            unrealized=positions.get("unrealized_usd", 0.0),
+            open_positions=positions.get("open", []))
         drawdown = self._drawdown(equity)
 
         decisions: List[Decision] = []
