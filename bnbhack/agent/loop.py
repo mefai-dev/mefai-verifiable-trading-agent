@@ -141,6 +141,26 @@ def _now() -> int:
     return int(time.time())
 
 
+def _tx_hash_from_result(result: Optional[Dict[str, Any]]) -> str:
+    """Best-effort extract the on-chain tx hash from a twak swap result so the
+    executed spot leg records a BscScan-linkable hash. Looks at the common hash
+    keys, then falls back to parsing it out of an explorer URL. Returns '' when
+    none is present (a paper or unconfirmed leg), never raises."""
+    if not isinstance(result, dict):
+        return ""
+    for k in ("hash", "txHash", "tx_hash", "transactionHash", "txn_hash"):
+        v = result.get(k)
+        if isinstance(v, str) and v.startswith("0x") and len(v) >= 10:
+            return v
+    for k in ("explorer", "explorerUrl", "url", "tx"):
+        v = result.get(k)
+        if isinstance(v, str) and "/tx/" in v:
+            tail = v.split("/tx/")[-1].split("?")[0].split("#")[0].strip()
+            if tail.startswith("0x") and len(tail) >= 10:
+                return tail
+    return ""
+
+
 def _base_of(pair: str) -> str:
     s = (pair or "").upper().strip().replace(".P", "")
     for q in ("USDT", "USDC", "BUSD", "FDUSD", "USD"):
@@ -1403,6 +1423,11 @@ class AgentLoop:
                                 target=d.target, stop=d.stop,
                                 signal_dir=d.direction,
                                 swap_result=sw.result,
+                                # Record the executed swap's tx hash so the
+                                # cockpit can link the real spot leg on BscScan
+                                # (empty for a paper leg).
+                                open_tx=(_tx_hash_from_result(sw.result)
+                                         if sw.executed else ""),
                                 max_positions=max_pos,
                                 rungs_total=rungs, size_target_usd=full_usd)
                         elif record_it and mode == "add":
@@ -1783,6 +1808,10 @@ class AgentLoop:
                 "regime_filter": self.cfg.regime_filter,
                 "max_hold_sec": self.pm.rules.max_hold_sec,
                 "roundtrip_cost_pct": self.pm.rules.roundtrip_cost_pct,
+                # Surface the execution posture so the cockpit can state plainly
+                # whether spot swaps and chain proofs are signing live.
+                "execute_trades": self.cfg.execute_trades,
+                "execute_chain": self.cfg.execute_chain,
             },
             "daily": {
                 "day": self._trade_day,

@@ -543,6 +543,12 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
         {r.tp1_done && <Chip tone="var(--green)">{'TP1 booked'}</Chip>}
       </span>
     }},
+    { key: 'tx', header: 'Swap tx', align: 'l', hideSm: true, sortValue: (r) => (txHashOf(r.open_tx) ? 1 : 0), render: (r) => {
+      const h = txHashOf(r.open_tx)
+      return h
+        ? <a className="cp-a mono" href={`https://bscscan.com/tx/${h}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--gold)' }}>{shortAddr(h)} <IconExternal size={11} /></a>
+        : <span style={{ color: 'var(--c-muted-2)' }} title={'simulated leg · no signed swap'}>{'paper'}</span>
+    }},
   ]
   return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="var(--gold)"
     right={st ? `${open.length}/${maxPos} ${'open'}${signedExec ? ` · ${'live signed'}` : ` · ${'proof-live · execution simulated'}`}` : 'standby'}>
