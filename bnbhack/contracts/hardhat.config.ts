@@ -38,11 +38,9 @@ const config: HardhatUserConfig = {
       accounts,
     },
   },
+  // Etherscan V2 single multichain key (one key verifies BSC mainnet + testnet).
   etherscan: {
-    apiKey: {
-      bscTestnet: BSCSCAN_API_KEY,
-      bsc: BSCSCAN_API_KEY,
-    },
+    apiKey: BSCSCAN_API_KEY,
   },
 };
 

@@ -785,7 +785,7 @@ function X402ConsumePanel({ st }: { st?: LoopEnvelope['state'] }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
           <Stat label={'product'} value={x.product_id} tone={GOLD} />
-          <Stat label={'price'} value={`${fmtPrice(price)} USD`} tone="var(--c-text)" />
+          <Stat label={'price'} value={fmtPrice(price)} tone="var(--c-text)" />
           <Stat label={'network'} value={`${x.network}${x.chain_id ? ` · ${x.chain_id}` : ''}`} tone="var(--cmc)" />
           <Stat label={'settlement'} value={x.settlement_deferred ? 'deferred' : (x.settled ? 'settled' : '-')} tone="var(--trust)" />
           {typeof score === 'number' && <Stat label={'UVII index'} value={fmtNum(score, 1)} tone="var(--green)" />}

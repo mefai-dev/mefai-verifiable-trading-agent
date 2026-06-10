@@ -244,7 +244,7 @@ function LiveFeed() {
             </div>
             <span style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--c-text-2)' }}>{p.description}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto', paddingTop: 6, flexWrap: 'wrap' }}>
-              <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>{p.price_atomic} {'atomic'}</span>
+              <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', minWidth: 0, overflowWrap: 'anywhere' }}>{p.price_atomic} {'atomic'}</span>
               <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{p.mime_type}</span>
             </div>
           </div>

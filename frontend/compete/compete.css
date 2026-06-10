@@ -561,7 +561,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   transition: border-color .18s, box-shadow .18s, transform .18s; }
 .compete-root .stat:hover { border-color: var(--c-line-2); box-shadow: 0 8px 20px var(--c-shadow); transform: translateY(-2px); }
 .compete-root .stat-label { font-size: 10.5px; letter-spacing: 1px; color: var(--c-muted); text-transform: uppercase; font-weight: 700; }
-.compete-root .stat-value { margin-top: 7px; font-size: 23px; font-weight: 800; letter-spacing: .2px; }
+.compete-root .stat-value { margin-top: 7px; font-size: 23px; font-weight: 800; letter-spacing: .2px; max-width: 100%; overflow-wrap: anywhere; }
 
 /* badge / chip */
 .compete-root .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 7px;

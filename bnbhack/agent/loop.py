@@ -886,6 +886,37 @@ class AgentLoop:
         return d
 
     # -- equity / drawdown ---------------------------------------------------
+    # Stablecoins twak holds at face value. twak's totalUsd omits any token it
+    # cannot price (it returns usd=None for them), so a wallet that swaps native
+    # gas into USDT would otherwise read as a phantom ~50% drawdown. We add the
+    # face value of any held stablecoin twak left unpriced.
+    _STABLES = ("USDT", "USDC", "BUSD", "FDUSD", "DAI", "USD1", "TUSD", "USDD")
+
+    @classmethod
+    def _unpriced_stable_usd(cls, data: Dict[str, Any]) -> float:
+        """Sum balances of held stablecoins twak did NOT already value (usd
+        missing/None), so each is counted once and only once."""
+        if not isinstance(data, dict):
+            return 0.0
+        raw = data.get("tokens") or data.get("balances") or data.get("assets")
+        if not isinstance(raw, list):
+            return 0.0
+        total = 0.0
+        for t in raw:
+            if not isinstance(t, dict):
+                continue
+            sym = (t.get("symbol") or t.get("token") or t.get("asset") or "")
+            if not isinstance(sym, str) or sym.upper() not in cls._STABLES:
+                continue
+            priced = t.get("usd", t.get("valueUsd", t.get("usdValue")))
+            if priced is not None:
+                continue  # already in totalUsd, do not double count
+            amt = bsc_exec._amount_field(
+                t.get("balance", t.get("amount", t.get("qty"))))
+            if amt is not None and math.isfinite(amt) and amt > 0:
+                total += amt
+        return total
+
     async def _read_equity(self, realized: float = 0.0,
                            unrealized: float = 0.0) -> float:
         # Paper baseline unless mark-to-market is enabled. In paper mode equity is
@@ -904,6 +935,10 @@ class AgentLoop:
             if res.ok:
                 raw = res.data.get("totalUsd")
                 usd = float(raw) if raw is not None else None
+                if usd is not None and math.isfinite(usd):
+                    # twak omits unpriced tokens from totalUsd; add held
+                    # stablecoins at face value so idle USDT counts as equity.
+                    usd += self._unpriced_stable_usd(res.data)
                 if usd is not None and math.isfinite(usd) and usd > 0:
                     # Fold the perp venue's account equity (margin + open uPnL)
                     # into the mark so a live short's risk is VISIBLE to the

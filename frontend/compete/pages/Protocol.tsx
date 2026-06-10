@@ -279,7 +279,7 @@ function ProofsTable({ st }: { st?: LoopEnvelope['state'] }) {
     { key: 'name', header: 'Market', align: 'l', sticky: true, render: (r) => <span className="cmc-name"><CoinLogo symbol={r.symbol} /><span className="cmc-name-main">{r.symbol.replace('USDT', '')}</span></span> },
     { key: 'status', header: 'Status', render: (r) => <Chip tone={r.status === 'revealed' ? 'var(--green)' : 'var(--gold)'}>{r.status}</Chip> },
     { key: 'signal', header: 'Signal', render: (r) => <span className="mono">{fmtNum(r.signal, 0)}</span> },
-    { key: 'conf', header: 'Confidence', render: (r) => <PctCell value={r.confidence} d={0} /> },
+    { key: 'conf', header: 'Confidence', render: (r) => <PctCell value={r.confidence * 100} d={0} /> },
     { key: 'commit', header: 'Commit tx', render: (r) => r.commit_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.commit_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{shortAddr(r.commit_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
     { key: 'reveal', header: 'Reveal tx', render: (r) => r.reveal_tx ? <a className="cp-a" href={`https://bscscan.com/tx/${r.reveal_tx}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--green)' }}>{shortAddr(r.reveal_tx)} <IconExternal size={11} /></a> : <span style={{ color: 'var(--c-muted-2)' }}>-</span> },
     { key: 'pid', header: 'Pred ID', render: (r) => <span className="mono">{r.prediction_id ?? '-'}</span> },
