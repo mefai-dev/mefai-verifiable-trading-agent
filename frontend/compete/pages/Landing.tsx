@@ -190,7 +190,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
 
     {/* ════════ VERIFIABLE PROOF ════════ */}
     <section style={{ maxWidth: 1080, margin: '0 auto', padding: '52px 22px 30px' }}>
-      <Reveal><SectionHead title={'Audit the proof yourself'} sub={'Every contract and identity below is deployed and verified on BSC mainnet. The result ledger, the identity, the live judged registry and the risk governor all run on chain 56. One tap opens it in the explorer.'} /></Reveal>
+      <Reveal><SectionHead title={'Audit the proof yourself'} sub={'Every contract and identity below is deployed on BSC mainnet. The result ledger, the identity, the live judged registry and the risk governor all run on chain 56. One tap opens it in the explorer.'} /></Reveal>
       <Reveal delay={70}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14, marginTop: 30 }}>
           {[
