@@ -594,7 +594,6 @@ function BalanceDemo() {
     {(error || (data && !data.available)) && !loading && <Down what="The autonomous loop snapshot is not available right now." />}
     {st && <div style={statGrid}>
       <MiniStat label="Equity" value={fmtUsd(st.equity)} tone={TW_TONE} />
-      <MiniStat label="Peak equity" value={fmtUsd(st.peak_equity)} />
       <MiniStat label="Drawdown" value={fmtPct(st.drawdown * 100, 2)} tone={st.drawdown > 0 ? 'var(--red)' : 'var(--green)'} />
       <MiniStat label="Risk budget" value={fmtPct(st.internal_cap * 100, 0)} sub="internal cap" />
     </div>}

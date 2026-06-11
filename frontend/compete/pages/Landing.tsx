@@ -62,7 +62,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
         {/* live heartbeat strip · honest headline metrics */}
         <Reveal delay={290}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(155px,1fr))', gap: 12, marginTop: 50, maxWidth: 940, marginLeft: 'auto', marginRight: 'auto' }}>
-            <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? `${'peak'} $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
+            <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? 'live' : 'standby'} />
             <Stat label={'Live drawdown'} value={`${ddBps} bps`} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={`${'cap'} ${capBps} bps`} />
             <a href={`https://bscscan.com/txs?a=${ADDR.ledger}&p=178`} target="_blank" rel="noopener noreferrer" className="cp-stat-link" title={'View the result ledger transactions on BscScan'}>
               <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off-chain edge base · proofs anchored on the ledger ↗'} />

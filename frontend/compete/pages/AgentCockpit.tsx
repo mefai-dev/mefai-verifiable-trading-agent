@@ -70,7 +70,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
     {/* live equity + drawdown budget */}
     <Reveal delay={80}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginTop: 30 }}>
-        <Stat label="Agent equity" value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone={GOLD} sub={st ? `peak $${(st.peak_equity ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}` : 'standby'} />
+        <Stat label="Agent equity" value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone={GOLD} sub={st ? 'live' : 'standby'} />
         <Stat label="Drawdown used" value={`${ddBps} bps`} tone={ddPct >= 90 ? 'var(--red)' : ddPct >= 60 ? 'var(--gold)' : 'var(--green)'} sub={`cap ${capBps} bps`} />
         <Stat label="Proven on" value={ov ? `${(ov.n_resolved / 1000).toFixed(0)}k` : '-'} tone="var(--cmc)" sub="resolved signals" />
         <Stat label="Agent UVII" value={uvii ? <CountUp value={uvii.global_index.score} decimals={1} /> : '-'} tone="var(--trust)" sub="0 to 100" />
@@ -548,7 +548,6 @@ function EquityCurve({ st }: { st?: LoopEnvelope['state'] }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--c-muted)', flexWrap: 'wrap', gap: 6 }}>
         <span className="mono">{'start'} {fmtUsd(first)}</span>
         <span className="mono" style={{ color: 'var(--c-text)' }}>{'now'} {fmtUsd(last)}</span>
-        <span className="mono">{'peak'} {fmtUsd(peak)}</span>
         <span className="mono">{'span'} {spanLabel} · {n} {'points'}</span>
       </div>
     </Card>

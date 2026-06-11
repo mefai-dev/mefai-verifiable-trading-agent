@@ -345,6 +345,12 @@ class ExitRules:
     # horizon before being closed (reason 'time') to bank the live edge. 0
     # disables the time stop.
     max_hold_sec: int = int(os.getenv("BNBHACK_MAX_HOLD_SEC", "86400"))
+    # Operator manual hold: a symbol listed here is exempt from EVERY automatic
+    # exit (stop / flip / time / target / trail). The leg stays open until the
+    # operator closes it by hand. Other symbols trade and exit normally.
+    manual_hold: frozenset = frozenset(
+        s.strip().upper() for s in
+        os.getenv("BNBHACK_MANUAL_HOLD_SYMBOLS", "").split(",") if s.strip())
 
     def __post_init__(self) -> None:
         # A profit lock below the round-trip cost would "lock in" a net loss, so
@@ -527,6 +533,12 @@ class PositionManager:
         stop = float(p["stop"] or 0)
         target = float(p["target"] or 0)
         tp1_done = bool(p["tp1_done"])
+
+        # Operator manual hold: never auto-close this symbol; just track peak.
+        if symbol.upper() in self.rules.manual_hold:
+            if peak != prev_peak:
+                self.store.update_peak(int(p["id"]), peak)
+            return None
 
         # 1) Stop. Before TP1 it is the committed protective stop ('stop'); after
         #    TP1 it has been pulled into profit, so a hit is a locked-in win and
