@@ -801,6 +801,13 @@ class AgentLoop:
         still applies. Picks the highest-conviction long available this cycle.
         Returns the floor Decision (action SKIP if none is eligible this tick;
         the loop retries on the next cycle inside the window)."""
+        # COMPLIANCE PATH (the competition's min-1-trade-per-day rule). This is
+        # NOT a conviction trade: it deliberately relaxes the selectivity gates
+        # to keep the wallet's cadence and avoid the no-trade-day forfeit. Every
+        # leg it opens is flagged is_floor=True so it is disclosed in /loop/state,
+        # on the open position record, and in the broadcast, and is kept separate
+        # from edge-driven trades. It is sized minimally (clamped to
+        # daily_floor_usd in decide(), see the force-clamp block).
         best: Optional[Decision] = None
         for sig in sigs:
             try:
@@ -860,6 +867,14 @@ class AgentLoop:
         normal leg runs. It is exempt from the position cap (one extra minimal
         leg; the position manager then manages and time-stops it like any
         other), and the commit-reveal proof path runs for it like any trade."""
+        # COMPLIANCE PATH (the competition's min-1-trade-per-day rule), TRUE last
+        # resort. NOT a conviction trade: it bypasses ONLY the fusion-direction
+        # and bucket-edge selectivity gates to keep the wallet's cadence and
+        # avoid the no-trade-day forfeit; the security gate and RiskGovernor stay
+        # enforced. The leg it opens is flagged is_floor=True so it is disclosed
+        # in /loop/state, on the open position record, and in the broadcast, and
+        # is kept separate from edge-driven trades. It is sized minimally (exactly
+        # one daily_floor_usd swap).
         usd = max(0.0, self.cfg.daily_floor_usd)
         if usd <= 0:
             self._floor_note = "daily floor last resort: floor size is 0"
@@ -1449,7 +1464,8 @@ class AgentLoop:
                                         swap_result=None,
                                         max_positions=max_pos,
                                         rungs_total=rungs,
-                                        size_target_usd=full_usd)
+                                        size_target_usd=full_usd,
+                                        is_floor=getattr(d, "is_floor", False))
                                 else:
                                     self.pm.record_add(
                                         symbol=d.symbol, add_size_usd=rung_usd,
@@ -1482,7 +1498,8 @@ class AgentLoop:
                                     signal_dir=d.direction,
                                     swap_result=None,
                                     max_positions=max_pos,
-                                    rungs_total=rungs, size_target_usd=full_usd)
+                                    rungs_total=rungs, size_target_usd=full_usd,
+                                    is_floor=getattr(d, "is_floor", False))
                             else:
                                 self.pm.record_add(
                                     symbol=d.symbol, add_size_usd=rung_usd,
@@ -1546,7 +1563,8 @@ class AgentLoop:
                                 open_tx=(_tx_hash_from_result(sw.result)
                                          if sw.executed else ""),
                                 max_positions=max_pos,
-                                rungs_total=rungs, size_target_usd=full_usd)
+                                rungs_total=rungs, size_target_usd=full_usd,
+                                is_floor=getattr(d, "is_floor", False))
                         elif record_it and mode == "add":
                             self.pm.record_add(
                                 symbol=d.symbol, add_size_usd=rung_usd,

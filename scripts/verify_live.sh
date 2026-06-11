@@ -18,7 +18,11 @@
 #   MEFAI_API_BASE=http://127.0.0.1:8401 \
 #     bash scripts/verify_live.sh               # check a local cockpit
 #
-# Requires: bash, curl, python3 (all standard).
+# Requires: bash, curl, python3 (all standard). This script itself reads the
+# live endpoints and the public RPC with stdlib only, so it needs NO extra pip
+# packages. The agent's on-chain paths (bnbhack/agent/chain_writer.py) do need
+# `web3` (pip install -r requirements.txt); this script reports its absence as a
+# plain note below rather than failing, since it does not import web3 itself.
 
 set -u
 
@@ -78,6 +82,14 @@ printf '%s\n' "═════════════════════�
 printf '  MEFAI · verifiable trading agent · live reproducibility check\n'
 printf '  edge : %s\n' "$API_BASE"
 printf '%s\n' "════════════════════════════════════════════════════════════════"
+
+# Optional dependency note: this script needs no pip packages, but the agent's
+# on-chain writer needs web3. Surface a clear message instead of a later
+# traceback if a user goes on to run those paths in this same environment.
+if ! python3 -c "import web3" 2>/dev/null; then
+  printf '  %s python web3 is not installed (fine for this script). For the\n' "$(dim 'note:')"
+  printf '        on-chain agent paths run: pip install -r requirements.txt\n'
+fi
 
 # ── 1. Autonomous loop (public, no Referer needed) ──────────────────────────
 head_ "1 · Autonomous loop · GET /loop/state"

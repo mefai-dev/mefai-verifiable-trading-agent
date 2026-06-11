@@ -21,10 +21,17 @@ The result is a record a stranger can audit instead of one they must trust.
 
 ## What it does
 
-MEFAI fuses many independent market signals into a single conviction score,
-sizes a position with a drawdown-budgeted fractional-Kelly engine, clears every
-spend through a security gate, and publishes a verifiable proof for each
-decision. It runs three things at once:
+Three pillars carry the agent and are the parts a competitor cannot easily
+replicate: a **commit-reveal prediction registry** that seals each call on BSC
+mainnet before the move is known, an **on-chain drawdown circuit breaker** that
+halts trading the moment an equity floor is crossed, and a **fail-closed
+pre-trade security gate** that must clear every spend before anything is signed.
+Everything else · the signal fusion, the CMC strategy skills, the UVII index,
+the six-expert council, ERC-8004 identity and the x402 feed · exists to feed and
+support those three. MEFAI fuses many independent market signals into a single
+conviction score, sizes a position with a drawdown-budgeted fractional-Kelly
+engine, clears every spend through that security gate, and publishes a verifiable
+proof for each decision. It runs three things at once:
 
 | Pillar | What it is |
 | --- | --- |
@@ -96,9 +103,11 @@ direction-aware. Nothing is signed until both execute flags are set.
 
 A trading agent is easy to claim and hard to trust. MEFAI closes that gap on
 three fronts at once. Its edge is **measured, not asserted**: every signal is
-fitted against a base of 181k labeled outcomes, so the sizing engine works from
-real win rates and payoffs and the leaderboard ranks each source by realized
-expectancy. Its calls are **provable, not backfillable**: each decision is sealed
+fitted against the private base of resolved outcomes (root sealed on BSC mainnet,
+see *Verifiable dataset commitment*), so the sizing engine works from real win
+rates and payoffs and the leaderboard ranks each source by realized expectancy ·
+the public sample only proves that machinery runs, the sealed root proves the
+outcomes are real. Its calls are **provable, not backfillable**: each decision is sealed
 as a commit-reveal proof on BSC mainnet *before* the move, so the record cannot
 be drawn after the fact. And its risk is **bounded, not promised**: equity is
 anchored to a RiskGovernor contract that halts trading the moment a drawdown
@@ -148,7 +157,8 @@ frontend/
 ## Quickstart
 
 ```bash
-# 1. Install dependencies and configure
+# 1. Install dependencies and configure (a venv dodges PEP 668 on clean hosts)
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env      # fill in your own values; defaults run in paper mode
 
@@ -177,7 +187,10 @@ cd bnbhack/contracts && npm install && npm test   # 15 tests, all green
 The backtests are out-of-sample walk-forward simulations: each cell learns its
 edge from a training window and is tested on a later window it never saw, with
 equity compounded net of cost under the same drawdown budget the live engine
-uses.
+uses. Run on the public sample they prove the **engine and the method** · that
+the sizing, the edge gate and the drawdown budget behave as claimed · not a real
+trading edge. The real outcomes are the private book whose sealed Merkle root is
+verified separately (see *Verifiable dataset commitment*).
 
 ### One-click live verification
 
@@ -221,15 +234,53 @@ MEFAI_API_BASE=http://127.0.0.1:8401 bash scripts/verify_live.sh
 
 ## The edge
 
-The strategy is grounded on a base of **181k labeled outcomes across forty
-assets**. Every signal the agent reads has been resolved against what the market
-actually did, which is what lets the sizing engine fit real win rates and payoffs
-rather than guesses, and what lets the leaderboard rank each source by realized
-expectancy. A win rate near fifty percent is not weak when the reward-to-risk
-ratio carries positive expectancy. The private book covers all forty assets; the
-public sample DB shipped for reproducible backtests ships twenty illustrative
-symbols of the same shape, so every figure in this repo regenerates without the
-private data.
+The strategy is grounded on a base of real labeled outcomes: every signal the
+agent reads has been resolved against what the market actually did, which is what
+lets the sizing engine fit real win rates and payoffs rather than guesses, and
+what lets the leaderboard rank each source by realized expectancy. The edge is
+not a high hit rate. The production win rate over 24h sits at about **49.9%** ·
+the value comes from positive net-of-cost expectancy and a profit factor above
+one, so a near-coin-flip hit rate still compounds because winners outweigh losers
+after costs. The public sample DB shipped for reproducible backtests proves the
+**engine and the method** run end to end; it does not prove the real outcomes.
+The real outcomes live in a private book whose Merkle root is sealed on BSC
+mainnet (see below), so every figure in this repo regenerates without exposing
+the private data.
+
+---
+
+## Verifiable dataset commitment
+
+The production outcome base · **198,248 rows across 42 symbols** of resolved
+signal history · is live business data and cannot ship in a public repo. Instead
+of asking you to trust it, its Merkle root is sealed on BSC mainnet, and the
+script that computes that root is committed here so the algorithm is fully open.
+
+`scripts/seal_dataset.py` walks `signal_performance` in `id` order, canonicalizes
+the outcome-bearing fields of each row to compact JSON, hashes each to a sha256
+leaf, and folds the leaves into one Merkle root. A juror reproduces the
+**algorithm** by running the script on the public sample · it prints the sample
+root `0x36ea...`. Under NDA or escrow a juror runs the same script on the private
+DB and reproduces the exact sealed root `0x42ce...` byte for byte. One tampered
+row changes the root.
+
+```
+seal tx (BSC mainnet, chain 56)
+  https://bscscan.com/tx/0xc3501e1e40954a8b4ca8da36a1018c7d32016e5aa823e63cdc02a5794a9917bc
+sealed from keeper wallet  0x064Af3880d562720963bba400B51F95d45AF91d3
+
+production merkle_root  0x42ce0ec21ca92a98f5b3a696a417255ee1adb739f240b3649abb6b736de183d5
+production rows         198248   (resolved_24h 195868, distinct_symbols 42)
+production win_rate_24h ~49.92%
+dataset_sha256          da6d0393f154f019041e7af9ce5eb70a2773a34d1f860f39e9b39c8742b72b1a
+
+public sample merkle_root  0x36eac52e8e21e2d25eb600b186f22cad865c3e551a935904b95c87ffb9bb309b
+public sample rows         40000
+```
+
+The win rate is plainly near 50%. We do not claim a high hit rate · the sealed
+root proves the record is real and fixed in advance, and the positive net-of-cost
+expectancy behind that record is what makes a near-50% hit rate an edge.
 
 ---
 

@@ -84,3 +84,14 @@ export const TRACKS = [
     blurb: 'A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.',
   },
 ]
+
+// Verifiable dataset commitment: the private production outcome base is sealed by
+// its Merkle root on BSC mainnet (scripts/seal_dataset.py over signal_performance
+// in id order). A juror reproduces the algorithm on the public sample, and under
+// NDA/escrow reproduces the exact sealed root on the private DB byte for byte.
+export const DATASET_SEAL = {
+  txHash: '0xc3501e1e40954a8b4ca8da36a1018c7d32016e5aa823e63cdc02a5794a9917bc',
+  merkleRoot: '0x42ce0ec21ca92a98f5b3a696a417255ee1adb739f240b3649abb6b736de183d5',
+  sampleRoot: '0x36eac52e8e21e2d25eb600b186f22cad865c3e551a935904b95c87ffb9bb309b',
+  rows: 198248, resolved: 195868, symbols: 42,
+}

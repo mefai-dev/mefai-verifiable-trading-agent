@@ -10,7 +10,7 @@ import {
 import type { CmcColumn } from '../ui'
 import { apiGet, usePoll, fetchX402Roundtrip } from '../api'
 import type { UviiIndex, Uvii, X402Catalog, LoopEnvelope, X402Roundtrip } from '../api'
-import { ADDR, AGENT_ID, scan, chainOf, txHashOf } from '../config'
+import { ADDR, AGENT_ID, DATASET_SEAL, scan, chainOf, txHashOf } from '../config'
 import { IconExternal } from '../icons'
 
 const TRUST = 'var(--trust)'
@@ -139,6 +139,25 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
     <Reveal delay={80}>
       <div style={{ marginTop: 16 }}>
         <X402Panel x402={x402} />
+      </div>
+    </Reveal>
+
+    {/* verifiable dataset commitment */}
+    <Reveal delay={80}>
+      <div style={{ marginTop: 16 }}>
+        <Panel title={'DATASET COMMITMENT · BNB CHAIN'} accent={TRUST}
+          right={`${DATASET_SEAL.rows.toLocaleString('en-US')} ${'rows'}`}
+          help={<>{'The production outcome base is private, so its Merkle root is sealed on BSC mainnet instead. A juror runs scripts/seal_dataset.py on the public sample to confirm the algorithm, and under NDA or escrow reproduces the exact sealed root on the private database byte for byte. One tampered row changes the root.'}</>}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginBottom: 12 }}>
+            <Stat label={'Sealed rows'} value={<CountUp value={DATASET_SEAL.rows} />} tone={TRUST} sub={'signal outcomes'} />
+            <Stat label={'Resolved'} value={<CountUp value={DATASET_SEAL.resolved} />} tone="var(--green)" sub={'24h horizon'} />
+            <Stat label={'Markets'} value={`${DATASET_SEAL.symbols}`} tone="var(--cmc)" sub={'distinct symbols'} />
+          </div>
+          <div className="mono" style={{ fontSize: 11.5, color: 'var(--c-muted)', lineHeight: 1.8, wordBreak: 'break-all' }}>
+            {'merkle root'} {DATASET_SEAL.merkleRoot.slice(0, 18)}…{DATASET_SEAL.merkleRoot.slice(-6)}<br />
+            <a className="cp-a" href={`https://bscscan.com/tx/${DATASET_SEAL.txHash}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: TRUST }}>{'sealed on BscScan'} {DATASET_SEAL.txHash.slice(0, 12)}… <IconExternal size={11} /></a>
+          </div>
+        </Panel>
       </div>
     </Reveal>
 

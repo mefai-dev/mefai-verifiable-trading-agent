@@ -114,6 +114,16 @@ def _leg_dir(row: sqlite3.Row) -> int:
         return 1
 
 
+def _row_is_floor(row: sqlite3.Row) -> bool:
+    """True when this leg was opened by the daily-floor compliance path. Reads
+    the stored is_floor flag; legacy rows written before the column existed
+    raise on the missing key and default to False (not a floor leg)."""
+    try:
+        return bool(row["is_floor"])
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Store
 # ---------------------------------------------------------------------------
@@ -146,6 +156,9 @@ class PositionStore:
                 ("rungs_total", "rungs_total INTEGER DEFAULT 1"),
                 ("rungs_filled", "rungs_filled INTEGER DEFAULT 1"),
                 ("size_target_usd", "size_target_usd REAL DEFAULT 0"),
+                # Disclosure flag: 1 when this leg was opened by the daily-floor
+                # min-1-trade-per-day compliance path, not by a conviction signal.
+                ("is_floor", "is_floor INTEGER DEFAULT 0"),
             ):
                 if col not in existing:
                     db.execute("ALTER TABLE positions ADD COLUMN " + ddl)
@@ -184,14 +197,15 @@ class PositionStore:
             cur = db.execute(
                 "INSERT INTO positions (symbol,base,token,status,qty_token,"
                 "size_usd,entry,target,stop,peak,signal_dir,opened_ts,open_tx,"
-                "rungs_total,rungs_filled,size_target_usd) "
-                "VALUES (?,?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?)",
+                "rungs_total,rungs_filled,size_target_usd,is_floor) "
+                "VALUES (?,?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rec["symbol"], rec["base"], rec["token"], rec["qty_token"],
                  rec["size_usd"], rec["entry"], rec["target"], rec["stop"],
                  rec["entry"], rec["signal_dir"], rec["opened_ts"],
                  rec.get("open_tx", ""), rec.get("rungs_total", 1),
                  rec.get("rungs_filled", 1),
-                 rec.get("size_target_usd", rec["size_usd"])))
+                 rec.get("size_target_usd", rec["size_usd"]),
+                 1 if rec.get("is_floor") else 0))
             return int(cur.lastrowid)
 
     def add_if_openable(self, rec: Dict[str, Any], max_positions: int
@@ -217,14 +231,15 @@ class PositionStore:
             cur = db.execute(
                 "INSERT INTO positions (symbol,base,token,status,qty_token,"
                 "size_usd,entry,target,stop,peak,signal_dir,opened_ts,open_tx,"
-                "rungs_total,rungs_filled,size_target_usd) "
-                "VALUES (?,?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?)",
+                "rungs_total,rungs_filled,size_target_usd,is_floor) "
+                "VALUES (?,?,?,'open',?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rec["symbol"], rec["base"], rec["token"], rec["qty_token"],
                  rec["size_usd"], rec["entry"], rec["target"], rec["stop"],
                  rec["entry"], rec["signal_dir"], rec["opened_ts"],
                  rec.get("open_tx", ""), rec.get("rungs_total", 1),
                  rec.get("rungs_filled", 1),
-                 rec.get("size_target_usd", rec["size_usd"])))
+                 rec.get("size_target_usd", rec["size_usd"]),
+                 1 if rec.get("is_floor") else 0))
             return int(cur.lastrowid)
 
     def deployed_usd(self) -> float:
@@ -435,7 +450,7 @@ class PositionManager:
                     signal_dir: int, swap_result: Optional[Dict[str, Any]],
                     max_positions: int, rungs_total: int = 1,
                     size_target_usd: float = 0.0,
-                    open_tx: str = "") -> Optional[int]:
+                    open_tx: str = "", is_floor: bool = False) -> Optional[int]:
         if entry <= 0 or size_usd <= 0:
             return None
         # Live: prefer the token amount actually received from the swap; paper
@@ -452,7 +467,8 @@ class PositionManager:
                 "target": target, "stop": stop, "signal_dir": signal_dir,
                 "opened_ts": _now(), "open_tx": open_tx,
                 "rungs_total": max(1, int(rungs_total)), "rungs_filled": 1,
-                "size_target_usd": size_target_usd or size_usd}, max_positions)
+                "size_target_usd": size_target_usd or size_usd,
+                "is_floor": bool(is_floor)}, max_positions)
             if pid is None:
                 logger.warning(
                     "record_open blocked for %s: open leg / cap re-check failed",
@@ -788,7 +804,10 @@ class PositionManager:
                 "rungs_total": int(p["rungs_total"] or 1),
                 "realized_partial_usd": round(
                     float(p["realized_partial_usd"] or 0), 2),
-                "opened_ts": p["opened_ts"], "open_tx": p["open_tx"] or ""})
+                "opened_ts": p["opened_ts"], "open_tx": p["open_tx"] or "",
+                # Disclosure: True when this leg was forced by the daily-floor
+                # min-1-trade-per-day compliance path, not a conviction signal.
+                "is_floor": bool(_row_is_floor(p))})
         closes_out: List[Dict[str, Any]] = []
         for c in self.store.recent_closes(8):
             closes_out.append({

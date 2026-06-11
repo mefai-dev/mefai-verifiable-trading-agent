@@ -3,14 +3,18 @@
 Five composable trading-strategy skills, each conforming to the CMC Agent Skill
 schema (`skill.json` · `cmc-agent-skill/1.0`). Every skill is **read-only,
 network-free in CI, and deterministic**: it reads a pinned labeled-outcome store
-and never trades, signs, or writes. The edge comes from **181k labeled MEFAI
-signal outcomes across 40+ assets and multiple timeframes** in production; that
-edge is expectancy / risk-adjusted and drawdown-bounded, not a directional
-hit-rate (the live win rate sits near 50%). That book is private. A
-deterministic sample-DB generator ships; one command regenerates the pinned DB
-byte-for-byte (`sha256 f7202dd2…2bb0282d`). The sample covers **20 illustrative
-symbols (40000 labeled outcomes)** of the same shape as the private 40+ asset
-production base, so the figures here are reproducible without the private book.
+and never trades, signs, or writes. The production edge comes from the private
+base of resolved MEFAI signal outcomes; that edge is expectancy / risk-adjusted
+and drawdown-bounded, not a directional hit-rate (the live 24h win rate sits near
+50%, about 49.9%). That book is private · its Merkle root is sealed on BSC
+mainnet and the algorithm is open in `scripts/seal_dataset.py` (see the
+*Verifiable dataset commitment* section of the root README). A deterministic
+sample-DB generator ships; one command regenerates the pinned DB byte-for-byte
+(`sha256 f7202dd2…2bb0282d`). The sample covers **20 illustrative symbols (40000
+labeled outcomes)** of the same shape as the private base. Running the skills on
+that sample proves the **engine and the method** · that the backtests, hashes and
+invariants behave as claimed · it does **not** prove a real trading edge; the
+sealed root plus the private DB do that.
 
 > Verify it yourself · no displayed number is one you cannot reproduce.
 
@@ -149,5 +153,8 @@ engine's mechanics and ablation; they are **not** a live track record.
   it is stable across machines. On a re-run only `generated_at` (a wall-clock
   field, excluded from the digest) changes; the digest itself does not.
 
-Live forward proof for the production edge sits on the BSC mainnet result ledger
+The figures above are reproduced on the public sample and prove the method, not
+a live track record. Proof of the real outcomes lives on chain: the production
+dataset's Merkle root is sealed on BSC mainnet (see *Verifiable dataset
+commitment* in the root README) and live forward calls land on the result ledger
 `0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744`.

@@ -171,7 +171,8 @@ def format_open(sec: Dict[str, Any], symbol: str, direction: int,
     if stop:
         lines.append(f"Stop · {stop:,.6g}")
     if is_floor:
-        lines.append("Note · daily floor (kept \u22651 trade/day)")
+        lines.append("· daily floor trade (rule compliance, "
+                     "not a conviction signal)")
     detail = sec.get("detail")
     if detail:
         lines.append(f"Gate · {_esc(detail)}")
