@@ -233,6 +233,11 @@ class LoopConfig:
     # BNBHACK_REGIME_FILTER=0 to disable; strength 0.5 == F&G >= 75 (extreme
     # greed) given the source's abs(fg-50)/50 scaling.
     regime_filter: bool = os.getenv("BNBHACK_REGIME_FILTER", "1") == "1"
+    # Long-only: BSC spot can only be expressed as a LONG (buy a token), so the
+    # agent does not risk capital on a short. A sell-direction signal is still
+    # COMMITTED on chain as a verifiable PREDICT (zero capital), keeping the record
+    # two-sided, but no short position is opened. Default on (on-chain spot reality).
+    long_only: bool = os.getenv("BNBHACK_LONG_ONLY", "1") == "1"
     regime_block_strength: float = float(
         os.getenv("BNBHACK_REGIME_BLOCK_STRENGTH", "0.5"))
     interval: float = float(os.getenv("BNBHACK_LOOP_INTERVAL", "60"))
@@ -1445,6 +1450,12 @@ class AgentLoop:
             d.reasons.append(f"{gdetail}; prediction only (no capital)")
             return d
 
+        if self.cfg.long_only and fr.direction < 0:
+            # Long-only: record the short as a verifiable on-chain forecast, never
+            # a capital short (BSC spot cannot express one without a perp venue).
+            d.action = "PREDICT"
+            d.reasons.append("long-only: short recorded as forecast, no capital")
+            return d
         d.action = "TRADE_LONG" if fr.direction > 0 else "TRADE_SHORT"
         d.reasons.append(
             f"{fr.label} conv {fr.conviction:.0f} agree {fr.agreement:.2f} "
