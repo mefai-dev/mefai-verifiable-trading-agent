@@ -23,7 +23,7 @@ export const TELEGRAM_FEED_URL = 'https://t.me/mefainews_bot?start=agentfeed'
    mainnet and stays un backfillable. */
 export const ADDR = {
   registry:  '0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB', // CommitRevealPredictionRegistry (mainnet)
-  governor:  '0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2', // RiskGovernor, maxDrawdownBps=1400 (mainnet)
+  governor:  '0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f', // RiskGovernor, maxDrawdownBps=1400 (mainnet)
   agent:     '0xD5df700Ed5355f0c778159592a072B8773faE1CC', // agent wallet (holds the mainnet identity)
   keeper:    '0x064Af3880d562720963bba400B51F95d45AF91d3', // oracle/keeper, feeds the governor (mainnet)
   ledger:    '0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744', // result ledger (mainnet)

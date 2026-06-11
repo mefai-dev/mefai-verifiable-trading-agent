@@ -435,7 +435,7 @@ const BNB_CAPS: SkillDef[] = [
     id: 'bnb-governor', name: 'RiskGovernor circuit breaker', group: 'bnb', kind: 'contract',
     summary: 'A drawdown cap the agent cannot breach.',
     what: 'A contract enforcing a 1400 bps drawdown cap. Breach the budget and the vault halts on the mainnet registry beneath the hard floor.',
-    invoke: '0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2', tags: ['risk', 'circuit-breaker', 'core'],
+    invoke: '0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f', tags: ['risk', 'circuit-breaker', 'core'],
     related: ['bnb-sizing', 'bnb-keeper'], used: true,
   },
   {

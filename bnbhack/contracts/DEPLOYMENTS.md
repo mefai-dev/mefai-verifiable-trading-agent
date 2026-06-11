@@ -16,7 +16,7 @@ equity records and halts, and the ledger's results are all public reads.
 | Result ledger | `0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744` | https://bscscan.com/address/0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744 |
 | ERC-8004 Identity Registry | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432 |
 | CommitRevealPredictionRegistry | `0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB` | https://bscscan.com/address/0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB#code |
-| RiskGovernor · `maxDrawdownBps=1400` | `0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2` | https://bscscan.com/address/0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2#code |
+| RiskGovernor · `maxDrawdownBps=1400` | `0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f` | https://bscscan.com/address/0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f#code |
 | Equity keeper · feeds the governor | `0x064Af3880d562720963bba400B51F95d45AF91d3` | https://bscscan.com/address/0x064Af3880d562720963bba400B51F95d45AF91d3 |
 | Agent wallet (holds the identity, authors commits) | `0xD5df700Ed5355f0c778159592a072B8773faE1CC` | https://bscscan.com/address/0xD5df700Ed5355f0c778159592a072B8773faE1CC |
 

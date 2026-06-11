@@ -30,7 +30,7 @@ MAINNET_LEDGER = os.getenv(
 REGISTRY = os.getenv(
     "BNBHACK_REGISTRY_ADDRESS", "0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB")
 GOVERNOR = os.getenv(
-    "BNBHACK_RISKGOVERNOR_ADDRESS", "0xf679DD2Fe68Bd8e67838efB2740285E491Fa00b2")
+    "BNBHACK_RISKGOVERNOR_ADDRESS", "0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f")
 
 # Public service endpoints (the cockpit and the machine-payable feed).
 SITE = os.getenv("MEFAI_SITE", "https://mefai.io")
