@@ -77,6 +77,12 @@ MIN_SLIPPAGE_PCT = 0.05
 # cannot see, so it is blocked / warned here from the live quote.
 MAX_PRICE_IMPACT_PCT = 5.0
 WARN_PRICE_IMPACT_PCT = 1.0
+# Independent-mark sanity: a dead / near-empty pool returns a quote whose effective
+# price is wildly off the real market (the LTC class of failure). When the caller
+# passes a per-unit mark, any swap whose quote implies a price more than this many
+# percent off the mark is refused before signing, even if the venue's own reported
+# price impact looks fine.
+MAX_PRICE_DEV_PCT = float(os.getenv("BNBHACK_MAX_PRICE_DEV_PCT", "8"))
 # Absolute per-symbol native-unit backstop, independent of any USD figure, so a
 # missing or low approx_usd still cannot authorise an oversized order. Tokens not
 # listed fall back to the USD gate (which fails closed for an execute).
@@ -531,7 +537,8 @@ async def swap(amount: float, from_token: str, to_token: str,
                slippage_pct: float = 1.0, *, execute: bool = False,
                equity: Optional[float] = None,
                equity_floor: Optional[float] = None,
-               approx_usd: Optional[float] = None) -> SwapOutcome:
+               approx_usd: Optional[float] = None,
+               mark_price: Optional[float] = None) -> SwapOutcome:
     """Quote a swap, run the security gate, and (only if execute=True AND the gate
     says GO) sign it. Quote-only by default. The gate ALWAYS runs, even when
     execute=False, so the cockpit can show the verdict before a human commits."""
@@ -593,6 +600,30 @@ async def swap(amount: float, from_token: str, to_token: str,
         return SwapOutcome(False, False, None, quote=q.data,
                            detail=f"price impact {pi:.2f}% over cap "
                                   f"{MAX_PRICE_IMPACT_PCT:.1f}% (thin liquidity)")
+
+    # Independent-mark sanity: compare the quote's implied execution price to a
+    # caller-supplied per-unit mark (a Binance-derived reference). A dead / near
+    # empty pool prices the asset tens of x off the real market while the venue's
+    # own reported impact can still look fine, so this is the robust dead-pool
+    # backstop. Only checked for a stable<->token leg where the implied price is
+    # well defined; a token<->token leg (no stable side) is left to the impact guard.
+    if mark_price is not None and mark_price > 0:
+        out_amt = _amount_field(q.data.get("output"))
+        src_stable = (from_token or "").strip().upper() in _USD_STABLES
+        dst_stable = (to_token or "").strip().upper() in _USD_STABLES
+        implied = None
+        if out_amt and out_amt > 0:
+            if src_stable and not dst_stable:        # buy token with stable
+                implied = amt / out_amt
+            elif dst_stable and not src_stable:      # sell token for stable
+                implied = out_amt / amt
+        if implied is not None and implied > 0:
+            dev = abs(implied / mark_price - 1.0)
+            if dev > MAX_PRICE_DEV_PCT / 100.0:
+                return SwapOutcome(False, False, None, quote=q.data,
+                                   detail=f"quote price {implied:.6g} deviates "
+                                          f"{dev*100:.1f}% from mark "
+                                          f"{mark_price:.6g} (dead/thin pool)")
 
     slip = max(MIN_SLIPPAGE_PCT, min(MAX_SLIPPAGE_PCT, _to_float(slippage_pct) or 1.0))
     # The sold ERC-20 (none for native BNB) + the public wallet drive the live

@@ -133,6 +133,15 @@ _BSC_SPOT = {"ETH": "ETH", "XRP": "XRP", "ADA": "ADA", "DOGE": "DOGE",
              "CAKE": "CAKE", "LINK": "LINK", "AVAX": "AVAX", "AAVE": "AAVE",
              "ATOM": "ATOM", "LTC": "LTC"}
 
+# Optional deep-pool allowlist for LIVE spot legs. Empty = trade any routable base
+# (current behaviour). Set BNBHACK_SPOT_DEEP_BASES="ETH" (or "ETH,LINK,AVAX") to
+# only ever route real capital into genuinely deep BSC pools during the judged
+# window; thinner eligible bases still earn a verifiable on-chain prediction but
+# take no spot leg, so a near-empty pool can never bleed the live notional.
+_SPOT_DEEP_BASES = frozenset(
+    b.strip().upper() for b in os.getenv("BNBHACK_SPOT_DEEP_BASES", "").split(",")
+    if b.strip())
+
 # Entry freshness gate: a stored signal row older than this many timeframe bars
 # is never a NEW entry trigger. 8 bars matches the SIGNAL_DROP_BARS convention
 # fusion_providers already uses to drop a stale MEFAI reading, so the row gate
@@ -1582,6 +1591,12 @@ class AgentLoop:
         if d.action in ("TRADE_LONG", "TRADE_SHORT") and mode in ("open", "add"):
             base = _base_of(d.symbol)
             tok = _BSC_SPOT.get(base)
+            # Deep-pool-only mode (optional): when BNBHACK_SPOT_DEEP_BASES is set,
+            # only those bases take a live spot leg; any other base gets the
+            # verifiable on-chain prediction but no capital, so the agent never
+            # routes real size into a thin BSC pool that would bleed to slippage.
+            if tok is not None and _SPOT_DEEP_BASES and base.upper() not in _SPOT_DEEP_BASES:
+                tok = None
             if tok is None:
                 d.security = {"go": False, "detail": f"no BSC spot token for {base}"}
             else:
@@ -1690,13 +1705,18 @@ class AgentLoop:
                                           "rungs": rungs}
                         return
                     try:
+                        # Independent per-unit mark (Binance) so the swap can
+                        # refuse a dead/thin-pool quote whose implied price is far
+                        # off the real market (the LTC-class dead-pool backstop).
+                        _mk = await mark_price(d.symbol, fallback=0.0)
                         sw = await bsc_exec.swap(
                             rung_usd, "USDT", tok,
                             slippage_pct=self.cfg.slippage_pct,
                             execute=self.cfg.execute_trades,
                             equity=equity,
                             equity_floor=equity * (1.0 - self.cfg.jury_cap),
-                            approx_usd=rung_usd)
+                            approx_usd=rung_usd,
+                            mark_price=(_mk if _mk and _mk > 0 else None))
                         sc = getattr(sw.verdict, "score", None)
                         d.security = {"go": sw.go, "executed": sw.executed,
                                       "score": sc, "detail": sw.detail,
