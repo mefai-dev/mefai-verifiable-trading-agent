@@ -156,6 +156,25 @@ frontend/
 
 ## Quickstart
 
+### Verify in one command (offline, no keys, no infra)
+
+From a fresh `git clone`, one command runs the full deterministic verification
+fully offline against the shipped synthetic sample. It needs no API keys, no
+live infrastructure and no private database, and it proves the strategy engine,
+the reproducible backtest digest, the dataset-commitment (Merkle) algorithm,
+and that the stored outcome labels match the public scoring rule.
+
+```bash
+# Docker (nothing to install but Docker):
+docker build -t mefai-verify . && docker run --rm mefai-verify
+
+# or local Python:
+python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt && sh scripts/verify_offline.sh
+```
+
+Both print a single `OFFLINE VERIFICATION: PASS` banner with the sample sha256,
+the reproducible `repro_digest`, the dataset `merkle_root`, and `label mismatch : 0`.
+
 ```bash
 # 1. Install dependencies and configure (a venv dodges PEP 668 on clean hosts)
 python3 -m venv .venv && source .venv/bin/activate

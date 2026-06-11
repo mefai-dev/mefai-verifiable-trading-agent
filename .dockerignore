@@ -1,0 +1,24 @@
+# Keep the build context small and deterministic. The sample DB is regenerated
+# inside the image from its seeded generator, so build artifacts and local
+# state never need to ship.
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+node_modules
+dist
+build
+.cache
+*.log
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea
+.vscode
