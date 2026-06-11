@@ -392,6 +392,12 @@ class SwapOutcome:
     quote: Dict[str, Any] = field(default_factory=dict)
     result: Dict[str, Any] = field(default_factory=dict)
     detail: str = ""
+    # The source-token amount ACTUALLY submitted after the live-balance clamp
+    # (see swap()): a buy whose stable balance is below the requested size is
+    # trimmed to what the wallet holds, so the caller must record the real spend
+    # and fill price from this, never the requested size (else an under-filled
+    # swap back-computes a phantom entry). None on a non-executed / quote-only path.
+    input_amount: Optional[float] = None
 
 
 def _is_native_sentinel(addr: Optional[str]) -> bool:
@@ -621,6 +627,7 @@ async def swap(amount: float, from_token: str, to_token: str,
         return SwapOutcome(True, False, verdict, quote=q.data,
                            detail="gate passed but execution failed")
     return SwapOutcome(True, True, verdict, quote=q.data, result=ex.data,
+                       input_amount=amt,
                        detail=f"executed after passing security gate{impact_note}")
 
 

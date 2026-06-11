@@ -178,6 +178,27 @@ def _tx_hash_from_result(result: Optional[Dict[str, Any]]) -> str:
     return ""
 
 
+def _live_fill(requested_usd: float, input_amount: Optional[float],
+               qty_fill: Optional[float]) -> Tuple[float, Optional[float]]:
+    """Resolve the REAL spend and fill price of an executed buy. The buy amount is
+    clamped inside bsc_exec.swap to the live stable balance, so the source amount
+    actually submitted (input_amount) can be far below the requested size; the
+    ledger MUST use the real spend, never the request, or it back-computes a
+    phantom entry (an $8 request that only filled $0.19 of USDT would otherwise
+    record entry = 8/qty, tens of x the true price). Returns (spent_usd,
+    fill_price | None); fill_price is None when no token amount is derivable, in
+    which case the caller leaves the entry at the signal price."""
+    spent = float(requested_usd)
+    if input_amount and input_amount > 0:
+        spent = float(input_amount)
+    fill: Optional[float] = None
+    if qty_fill and qty_fill > 0 and spent > 0:
+        f = spent / qty_fill
+        if math.isfinite(f) and f > 0:
+            fill = f
+    return spent, fill
+
+
 def _base_of(pair: str) -> str:
     s = (pair or "").upper().strip().replace(".P", "")
     for q in ("USDT", "USDC", "BUSD", "FDUSD", "USD"):
@@ -1686,32 +1707,42 @@ class AgentLoop:
                         # so the lifecycle is exercised honestly without signing.
                         record_it = (sw.executed if self.cfg.execute_trades
                                      else sw.go)
-                        # Live fill rebase: an executed swap reports the token
+                        # Live fill rebase: an executed swap reports BOTH the
+                        # source amount actually spent (sw.input_amount, after the
+                        # live-balance clamp inside bsc_exec.swap) AND the token
                         # amount actually received, so the REAL fill price is
-                        # usd_spent / qty. Recording the stale signal price as
-                        # entry would mis-mark PnL and place stop/target around
-                        # a level the market may have already left, so entry is
-                        # rebased to the fill and the stop/target are rebuilt
-                        # from the decision's ORIGINAL price fractions (the
-                        # ratios stop/entry and target/entry are preserved).
-                        # Paper legs keep the signal price unchanged. If the
-                        # twak result carries no derivable token amount, entry
-                        # stays as-is for this leg (no fill price can be
-                        # derived; record_open's qty falls back the same way).
+                        # spent / qty. The requested rung_usd is NOT the spend
+                        # when a buy is clamped to a thin stable balance: using it
+                        # back-computes a phantom entry (e.g. an $8 request that
+                        # only filled $0.19 of USDT would record entry = 8/qty,
+                        # tens of x the true price). So both the recorded size and
+                        # the fill price are taken from the actual spend; the
+                        # stop/target are rebuilt from the decision's ORIGINAL
+                        # price fractions (the ratios stop/entry, target/entry are
+                        # preserved). Paper legs keep the signal price + rung_usd.
+                        spent_usd = rung_usd
                         if sw.executed and d.entry > 0 and rung_usd > 0:
                             qty_fill = _amount_from_result(sw.result or {})
-                            if qty_fill and qty_fill > 0:
-                                fill = rung_usd / qty_fill
-                                if math.isfinite(fill) and fill > 0:
-                                    d.target = fill * (d.target / d.entry)
-                                    d.stop = fill * (d.stop / d.entry)
-                                    d.entry = fill
-                                    d.reasons.append(
-                                        "entry rebased to live fill")
+                            spent_usd, fill = _live_fill(
+                                rung_usd, sw.input_amount, qty_fill)
+                            if spent_usd < rung_usd * 0.95:
+                                logger.warning(
+                                    "spot swap under-filled for %s: spent $%.4g "
+                                    "of $%.2f requested (low USDT balance); "
+                                    "recording the real spend",
+                                    d.symbol, spent_usd, rung_usd)
+                                d.reasons.append(
+                                    f"swap under filled to ${spent_usd:.4g} "
+                                    f"(low USDT balance)")
+                            if fill is not None:
+                                d.target = fill * (d.target / d.entry)
+                                d.stop = fill * (d.stop / d.entry)
+                                d.entry = fill
+                                d.reasons.append("entry rebased to live fill")
                         if record_it and mode == "open":
                             self.pm.record_open(
                                 symbol=d.symbol, base=base, token=tok,
-                                size_usd=rung_usd, entry=d.entry,
+                                size_usd=spent_usd, entry=d.entry,
                                 target=d.target, stop=d.stop,
                                 signal_dir=d.direction,
                                 swap_result=sw.result,
@@ -1725,7 +1756,7 @@ class AgentLoop:
                                 is_floor=getattr(d, "is_floor", False))
                         elif record_it and mode == "add":
                             self.pm.record_add(
-                                symbol=d.symbol, add_size_usd=rung_usd,
+                                symbol=d.symbol, add_size_usd=spent_usd,
                                 fill_price=d.entry, swap_result=sw.result)
                     except Exception as exc:
                         logger.warning("spot swap failed for %s: %s", d.symbol, exc)

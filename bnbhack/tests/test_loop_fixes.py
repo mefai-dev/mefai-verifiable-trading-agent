@@ -137,5 +137,36 @@ class LastResortPickerTest(unittest.TestCase):
                          ("ETH", "LINK", "AVAX"))
 
 
+class LiveFillSpendTest(unittest.TestCase):
+    """A buy is clamped inside bsc_exec.swap to the live stable balance, so the
+    ledger must record the amount ACTUALLY spent (SwapOutcome.input_amount), not
+    the requested size. Recording the request would back-compute a phantom entry.
+    These lock the exact regression: an $8 request that only filled ~$0.19 of
+    USDT (LTC at ~$42.9) must record entry ~42.9 and size ~0.19, never $1807/$8."""
+
+    def test_underfilled_buy_records_real_spend_not_request(self):
+        qty = 0.00442563                 # LTC actually received
+        spent, fill = loop._live_fill(8.0, 0.18973515, qty)
+        self.assertAlmostEqual(spent, 0.18973515, places=6)
+        self.assertAlmostEqual(fill, 42.87, delta=0.5)   # real price, not 1807
+        self.assertLess(fill, 100.0)
+
+    def test_full_fill_uses_request_when_input_absent(self):
+        # No input_amount reported -> fall back to the requested size.
+        spent, fill = loop._live_fill(8.0, None, 0.18651)
+        self.assertEqual(spent, 8.0)
+        self.assertAlmostEqual(fill, 42.89, delta=0.5)
+
+    def test_no_qty_leaves_fill_none(self):
+        # No derivable token amount -> caller keeps the signal entry.
+        spent, fill = loop._live_fill(8.0, 0.19, 0.0)
+        self.assertAlmostEqual(spent, 0.19, places=6)
+        self.assertIsNone(fill)
+
+    def test_zero_input_amount_falls_back_to_request(self):
+        spent, fill = loop._live_fill(8.0, 0.0, 0.1865)
+        self.assertEqual(spent, 8.0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
