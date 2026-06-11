@@ -36,7 +36,7 @@ proof for each decision. It runs three things at once:
 | Pillar | What it is |
 | --- | --- |
 | **Autonomous Trading Agent** | A self-driving decision loop that turns market data into one conviction, sizes it under a hard drawdown cap, and seals each trade as a commit-reveal proof. |
-| **CMC Strategy Skills** | Five backtested strategy skills (allocation, TP/SL optimization, narrative rotation, regime governing, meta-composition) powered by 181k labeled outcomes and the CoinMarketCap Agent Hub. |
+| **CMC Strategy Skills** | Five backtested strategy skills (allocation, TP/SL optimization, narrative rotation, regime governing, meta-composition) powered by 195k labeled outcomes and the CoinMarketCap Agent Hub. |
 | **Verifiable Protocol** | A commit-reveal prediction registry, a chain-anchored drawdown circuit breaker, a unified intelligence index, and an x402 machine-payable signal feed. |
 
 ### Ships in paper mode by default
@@ -240,7 +240,7 @@ MEFAI_API_BASE=http://127.0.0.1:8401 bash scripts/verify_live.sh
 
 ### A note on the data and the frontend
 
-- **The labeled-outcome book is private.** The 181k resolved outcomes are real
+- **The labeled-outcome book is private.** The 195k resolved outcomes are real
   account data, excluded by `.gitignore`. `bnbhack/data/` ships the exact table
   schema and a seeded, clearly-synthetic sample generator so anyone can run the
   full pipeline locally without it. See `bnbhack/data/README.md`.
@@ -257,10 +257,13 @@ The strategy is grounded on a base of real labeled outcomes: every signal the
 agent reads has been resolved against what the market actually did, which is what
 lets the sizing engine fit real win rates and payoffs rather than guesses, and
 what lets the leaderboard rank each source by realized expectancy. The edge is
-not a high hit rate. The production win rate over 24h sits at about **49.9%** ·
-the value comes from positive net-of-cost expectancy and a profit factor above
-one, so a near-coin-flip hit rate still compounds because winners outweigh losers
-after costs. The public sample DB shipped for reproducible backtests proves the
+not a high hit rate and not a promised profit. The production win rate over 24h
+sits at about **49.9%** · on the shipped public sample the net-of-cost expectancy
+is at or below zero after the modelled round-trip cost, so the agent sizes a leg
+only when a cell clears that cost hurdle and stands aside otherwise. The value is
+bounded drawdown discipline, the verifiable commit reveal protocol, and a
+reproducible method, not a profit edge we cannot demonstrate out of sample. The
+public sample DB shipped for reproducible backtests proves the
 **engine and the method** run end to end; it does not prove the real outcomes.
 The real outcomes live in a private book whose Merkle root is sealed on BSC
 mainnet (see below), so every figure in this repo regenerates without exposing
@@ -297,9 +300,11 @@ public sample merkle_root  0x36eac52e8e21e2d25eb600b186f22cad865c3e551a935904b95
 public sample rows         40000
 ```
 
-The win rate is plainly near 50%. We do not claim a high hit rate · the sealed
-root proves the record is real and fixed in advance, and the positive net-of-cost
-expectancy behind that record is what makes a near-50% hit rate an edge.
+The win rate is plainly near 50%. We do not claim a high hit rate and we do not
+claim a proven profit edge · the sealed root proves the record is real and fixed
+in advance for that 198,248 row snapshot at the seal block, and the value is
+disciplined sizing plus bounded drawdown, not a positive expectancy we cannot
+demonstrate out of sample.
 
 ---
 
@@ -314,7 +319,7 @@ expectancy behind that record is what makes a near-50% hit rate an edge.
   guard and the security solver run from this kit.
 - **ERC-8004** · the agent's portable cross-protocol identity contract.
 - **x402** · the machine-payable feed standard that lets agents pay agents for
-  proven alpha with no human in the loop.
+  verifiable signals with no human in the loop.
 
 ---
 

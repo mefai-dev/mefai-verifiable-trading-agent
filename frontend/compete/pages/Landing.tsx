@@ -50,6 +50,11 @@ export default function Landing({ go }: { go: (p: string) => void }) {
             {'An agent that proves every trade before it happens and cannot breach its own risk cap. One conviction engine fuses every MEFAI signal, sizes with a drawdown budget and writes a commit then reveal proof to the BSC ledger.'}
           </p>
         </Reveal>
+        <Reveal delay={170}>
+          <p className="mono" style={{ margin: '14px auto 0', fontSize: 'clamp(11px,1.2vw,13px)', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--c-muted)' }}>
+            {'executes trades on BSC · brains via CoinMarketCap · hands via Trust Wallet'}
+          </p>
+        </Reveal>
         <Reveal delay={210}>
           <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap', justifyContent: 'center', marginTop: 32 }}>
             <Btn variant="primary" onClick={() => go('/compete/agent')}>{'Enter the live agent'}</Btn>
@@ -208,7 +213,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
           })}
         </div>
         <div className="mono" style={{ marginTop: 18, fontSize: 13, color: 'var(--c-muted)', textAlign: 'center' }}>
-          commit id {shortAddr(AGENT_ID)} · {'mainnet identity · contracts source verified on BscScan'}
+          commit id {shortAddr(AGENT_ID)} · {'mainnet identity · contracts open source in bnbhack/contracts'}
         </div>
         <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', fontSize: 13, color: 'var(--c-text-2)' }}>
           <span>{'Registered for'} {COMPETITION}.</span>

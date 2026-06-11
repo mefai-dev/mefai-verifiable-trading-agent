@@ -76,7 +76,7 @@ export const TRACKS = [
   {
     id: 'skills', path: '/compete/skills', tone: '#3861FB',
     title: 'CMC Strategy Skills',
-    blurb: 'Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 181k labeled outcomes and the full CoinMarketCap Agent Hub.',
+    blurb: 'Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.',
   },
   {
     id: 'protocol', path: '/compete/protocol', tone: '#3375BB',

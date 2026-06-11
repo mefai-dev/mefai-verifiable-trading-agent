@@ -190,7 +190,7 @@ export default function Protocol({ go }: { go: (p: string) => void }) {
             </a>
           })}
         </div>
-        <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>commit id {shortAddr(AGENT_ID)} · {'BscScan source verified'}</div>
+        <div className="mono" style={{ marginTop: 14, fontSize: 11.5, color: 'var(--c-muted)' }}>commit id {shortAddr(AGENT_ID)} · {'open source in bnbhack/contracts'}</div>
       </Card>
     </Reveal>
   </div>

@@ -7,7 +7,7 @@ price action has been measured at the 1h, 4h and 24h horizons and stamped
 
 ## The production book is not committed
 
-The real book (181k labeled outcomes across forty assets) is live account data.
+The real book (195k labeled outcomes across forty assets) is live account data.
 It is excluded by `.gitignore` and is **not** in this repository. That keeps the
 record honest: nobody can hand-edit a committed file and call it a track record.
 

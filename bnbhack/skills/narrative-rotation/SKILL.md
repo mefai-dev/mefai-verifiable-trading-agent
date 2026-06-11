@@ -1,6 +1,6 @@
 ---
 name: narrative-rotation
-description: Select which crypto assets to rotate into based on verified outcome rankings and live market narrative. Ranks symbols by their realized expectancy / skill from labeled outcome history, then optionally tilts the shortlist with live CoinMarketCap narrative and momentum signals. Use when the user asks which coins to focus on, wants a rotation watchlist, asks to rank assets by proven edge, or wants narrative-aware asset selection rather than a single fixed pair.
+description: Select which crypto assets to rotate into based on verified outcome rankings and live market narrative. Ranks symbols by their realized expectancy / skill from labeled outcome history, then optionally tilts the shortlist with live CoinMarketCap narrative and momentum signals. Use when the user asks which coins to focus on, wants a rotation watchlist, asks to rank assets by realized outcome rankings, or wants narrative-aware asset selection rather than a single fixed pair.
 license: MIT
 metadata:
   version: "1.0.0"
@@ -16,7 +16,7 @@ with the live market narrative, instead of trading one fixed pair.
 ## When to reach for this
 
 - "Which symbols should the agent rotate into this week?"
-- "Rank assets by proven edge, then bias toward what is trending."
+- "Rank assets by realized outcome rankings, then bias toward what is trending."
 - "Build a rotation watchlist that updates as outcomes resolve."
 
 ## Two layers

@@ -14,7 +14,7 @@ import { IconExternal } from '../icons'
 const FLOW = [
   { n: '01', tone: 'var(--c-primary)', t: 'Gather', d: 'Every MEFAI capability reports a directional reading · signals expert debate whale flow smart money accumulation derivatives risk and the full CoinMarketCap regime.' },
   { n: '02', tone: 'var(--cmc)', t: 'Fuse', d: 'Readings collapse into one conviction score each weighted by its own historical hit rate. Agreement and coverage qualify the call.' },
-  { n: '03', tone: 'var(--green)', t: 'Size', d: 'A fractional Kelly engine sizes the position from 181k empirical outcomes then shrinks it to fit the remaining drawdown budget.' },
+  { n: '03', tone: 'var(--green)', t: 'Size', d: 'A fractional Kelly engine sizes the position from 195k empirical outcomes then shrinks it to fit the remaining drawdown budget.' },
   { n: '04', tone: '#8b5cf6', t: 'Guard', d: 'A pre trade security solver runs honeypot contract slippage approval preflight and MEV checks. GO or BLOCK gates the spend.' },
   { n: '05', tone: 'var(--c-primary)', t: 'Commit', d: 'The full prediction is hashed and written to the registry before entry so the track record cannot be backfilled.' },
   { n: '06', tone: 'var(--trust)', t: 'Reveal', d: 'After the window the preimage is revealed the hash verified and the keeper records the outcome to the BSC ledger.' },
@@ -74,8 +74,8 @@ const SECTIONS: Section[] = [
   {
     id: 'sizing', title: 'Sizing under a drawdown budget',
     body: [
-      'Conviction alone is not a position. The sizing engine fits a fractional Kelly stake from the realised win rate and payoff of the relevant cell. It draws on a base of 181k labeled outcomes.',
-      'The raw Kelly stake is then shrunk to fit the remaining drawdown budget. If the budget is nearly spent the position is small or zero. A leg only deploys when its empirical edge is positive. This is how the agent compounds while it physically cannot ruin itself.',
+      'Conviction alone is not a position. The sizing engine fits a fractional Kelly stake from the realised win rate and payoff of the relevant cell. It draws on a base of 195k labeled outcomes.',
+      'The raw Kelly stake is then shrunk to fit the remaining drawdown budget. If the budget is nearly spent the position is small or zero. A leg only deploys when its empirical edge is positive after costs, and when none clears that bar the agent holds. The drawdown cap makes ruin structurally impossible regardless of outcome.',
     ],
   },
   {
@@ -127,8 +127,8 @@ const SECTIONS: Section[] = [
   {
     id: 'data', title: 'Data and methodology',
     body: [
-      'The edge is grounded on a base of 181k labeled outcomes across forty assets. Every signal the agent reads has been resolved against what the market actually did.',
-      'This is what lets the sizing engine fit real win rates and payoffs rather than guesses. It is also what lets the leaderboard rank each source by realised expectancy. A win rate near fifty percent is not weak when the reward to risk ratio carries positive expectancy.',
+      'The edge is grounded on a base of 195k labeled outcomes across forty plus assets. Every signal the agent reads has been resolved against what the market actually did.',
+      'This is what lets the sizing engine fit real win rates and payoffs rather than guesses. It is also what lets the leaderboard rank each source by realised expectancy. A win rate near fifty percent is not inherently weak when the reward to risk ratio is favourable, but the agent sizes a leg only when that cell clears its cost hurdle and stands aside otherwise.',
     ],
   },
   {

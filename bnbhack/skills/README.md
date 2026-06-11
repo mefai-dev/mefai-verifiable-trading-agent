@@ -69,7 +69,7 @@ keeps the summed worst-case loss inside the drawdown budget.
         |                  |                  |                (how large)
         +------------------+--------+---------+------------------+
                                     |
-                       181k labeled signal outcomes
+                       195k labeled signal outcomes
                        (pinned synthetic sample in CI)
 ```
 
@@ -140,7 +140,7 @@ notional than the naive leg) far more than signal selection, and would be
 impossible on a live market. The honest takeaways are the **bounded 14% drawdown**
 and the **net-of-cost edge gate**, not the percentage. These figures demonstrate the
 engine's mechanics and ablation; they are **not** a live track record, and the
-real per-signal edge is the thin positive expectancy at a roughly 50% hit rate
+real per-signal edge is thin and at or below zero net of cost at a roughly 50% hit rate
 shown by the sealed production dataset.
 
 ---

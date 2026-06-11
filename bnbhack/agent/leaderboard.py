@@ -2,7 +2,7 @@
 MEFAI BNB HACK · Verifiable Leaderboard + Unified Verifiable Intelligence Index
 
 This is the Track 3 verifiable-protocol layer. It ranks MEFAI signal entities by
-their VERIFIED realized outcomes (the 181k+ labeled rows in signal_performance,
+their VERIFIED realized outcomes (the 195k+ labeled rows in signal_performance,
 each a real signal whose result was recorded after the fact) and folds every
 ranked entity into one trust-scored headline number: the Unified Verifiable
 Intelligence Index (UVII).
@@ -393,7 +393,7 @@ def recent_resolved(limit: int = 20, symbols: Optional[List[str]] = None,
             "signal_type", "entry_price", "max_profit_pct"]
     sql = (f"SELECT {', '.join(cols)} FROM signal_performance "
            "WHERE entry_time IS NOT NULL ORDER BY entry_time DESC")
-    # Bound the scan so a sparse filter can never walk the whole 181k+ record.
+    # Bound the scan so a sparse filter can never walk the whole 195k+ record.
     scan_cap = limit * 200 + 2000
 
     out: List[ResolvedSignal] = []

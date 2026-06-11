@@ -76,7 +76,7 @@ AGENT_DESCRIPTION = (
     "registry before each entry and reveals it after, producing a track record "
     "that cannot be backfilled. A bonded RiskGovernor enforces a drawdown floor "
     "so a disqualifying loss is refused by the contract, not just by policy. "
-    "Position sizing is drawdown budget fractional Kelly fitted to 181k labelled "
+    "Position sizing is drawdown budget fractional Kelly fitted to 195k labelled "
     "signal outcomes across 40+ assets, fused with a 12 tool market regime read "
     "and a pre trade transaction safety gate (honeypot, slippage, approval, MEV, "
     "preflight). Spot routing on PancakeSwap class venues via the Trust Wallet "

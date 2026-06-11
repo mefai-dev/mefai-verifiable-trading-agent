@@ -1,5 +1,5 @@
 /* BNB HACK · Track 2 · CMC Strategy Skill Studio (CoinMarketCap palette).
-   Five backtested skills powered by 181k labeled outcomes and the full
+   Five backtested skills powered by 195k labeled outcomes and the full
    CoinMarketCap Agent Hub, presented through CMC-style tables. */
 
 import { useMemo, useState } from 'react'
@@ -18,7 +18,7 @@ const CMC = 'var(--cmc)'
 const ASSETS = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT', 'ADAUSDT', 'AVAXUSDT', 'LINKUSDT']
 const SKILLS = [
   { id: 'alloc', name: 'Risk Budgeted Allocator', tone: CMC, blurb: 'Distributes a fixed risk budget across the watchlist by empirical edge and a drawdown ceiling never letting any leg exceed its Kelly cap.' },
-  { id: 'tpsl', name: 'TP/SL Optimizer', tone: 'var(--green)', blurb: 'Grid searches every take profit and stop pair against 181k resolved outcomes to find the bracket with the best expectancy per risk.' },
+  { id: 'tpsl', name: 'TP/SL Optimizer', tone: 'var(--green)', blurb: 'Grid searches every take profit and stop pair against 195k resolved outcomes to find the bracket with the best expectancy per risk.' },
   { id: 'rotate', name: 'Narrative Rotation', tone: 'var(--gold)', blurb: 'Rotates exposure into the strongest CoinMarketCap narratives ranked by momentum and confirmed by the verified signal leaderboard.' },
   { id: 'regime', name: 'Regime Governor', tone: 'var(--trust)', blurb: 'Reads the global market regime and scales every bracket deploying only when alignment and strength clear the gate.' },
   { id: 'meta', name: 'Meta Strategy Composer', tone: 'var(--purple)', blurb: 'The flagship · fuses the four skills above into one plan. Selects the assets brackets the trades gates them by regime then sizes every leg inside a single drawdown budget.' },

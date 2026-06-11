@@ -57,7 +57,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
             <span style={{ color: GOLD }}>{'Autonomous'}</span> {'Trading Agent'}
           </h1>
           <p style={{ color: 'var(--c-text-2)', maxWidth: 660, marginTop: 10, lineHeight: 1.6, fontSize: 14.5 }}>
-            {'One conviction engine and a drawdown budget the agent cannot breach. It reads the same MEFAI signals shown below sizes each by its own payoff and writes a sealed proof before every entry. The edge is not a high hit rate. It is positive expectancy compounded under a hard risk cap, so the agent compounds while its drawdown stays structurally capped.'}
+            {'One conviction engine and a drawdown budget the agent cannot breach. It reads the same MEFAI signals shown below sizes each by its own payoff and writes a sealed proof before every entry. The edge is not a high hit rate and not a promised profit. It is discipline: the sizer refuses to pay fees on a coin flip, the drawdown stays structurally capped, and every entry is sealed by a verifiable commit reveal proof before it happens.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -701,7 +701,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10, marginBottom: 16 }}>
           <Stat label="Closed trades" value={`${n}`} tone={GOLD} sub="banked results" />
           <Stat label="Realized PnL" value={`${net >= 0 ? '+' : ''}${fmtUsd(net)}`} tone={net >= 0 ? 'var(--green)' : 'var(--red)'} sub="across all closes" />
-          <Stat label="Profit factor" value={pf === Infinity ? '∞' : fmtNum(pf, 2)} tone={pf >= 1 ? 'var(--green)' : 'var(--red)'} sub="gross win / gross loss" />
+          <Stat label="Profit factor" value={n < 30 || !isFinite(pf) ? '—' : fmtNum(pf, 2)} tone={n >= 30 && pf >= 1 ? 'var(--green)' : 'var(--c-muted)'} sub="live window · not a track record" />
           <Stat label={'Win rate'} value={n ? fmtPct((closes.filter((c) => c.pnl_usd >= 0).length / n) * 100, 0) : '-'} tone="var(--cmc)" sub={`${closes.filter((c) => c.pnl_usd >= 0).length}/${n} ${'won'}`} />
         </div>
         <div className="panel-title" style={{ color: 'var(--c-muted)', margin: '4px 0 10px' }}>{'By exit reason'}</div>

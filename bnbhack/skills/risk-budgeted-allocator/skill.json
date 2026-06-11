@@ -40,7 +40,7 @@
     "primary": {
       "kind": "labeled-outcome-history",
       "tables": ["signal_performance"],
-      "description": "Realized expectancy and adverse-excursion stops from 181k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
+      "description": "Realized expectancy and adverse-excursion stops from 195k labeled MEFAI signal outcomes (pinned synthetic sample for reproducible backtests)."
     },
     "cmc_agent_hub_tools": ["get_global_metrics_latest", "get_global_crypto_derivatives_metrics"],
     "cmc_agent_hub_tools_usage": "live-only"

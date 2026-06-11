@@ -2,7 +2,7 @@
 MEFAI · synthetic sample database generator
 
 The production database (the live `signals` stream and the labeled
-`signal_performance` book of 181k resolved outcomes across forty assets) is not
+`signal_performance` book of 195k resolved outcomes across forty assets) is not
 committed to this repository: it is real account data and is excluded by
 .gitignore. So that anyone can still run the agent, the sizing engine, the
 TP/SL optimizer, the leaderboard and the walk-forward backtests end to end,

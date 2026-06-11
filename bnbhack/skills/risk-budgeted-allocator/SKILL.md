@@ -1,6 +1,6 @@
 ---
 name: risk-budgeted-allocator
-description: Size a crypto trade so it cannot breach a drawdown budget. Turns a (symbol, timeframe, equity, current drawdown) decision into a position notional, leverage and margin using drawdown-budget fractional-Kelly sizing driven by 181k labeled MEFAI signal outcomes. Use when the user needs position sizing, leverage selection, risk-budget allocation, or wants to know how large a trade may be without risking disqualification on a max-drawdown rule.
+description: Size a crypto trade so it cannot breach a drawdown budget. Turns a (symbol, timeframe, equity, current drawdown) decision into a position notional, leverage and margin using drawdown-budget fractional-Kelly sizing driven by 195k labeled MEFAI signal outcomes. Use when the user needs position sizing, leverage selection, risk-budget allocation, or wants to know how large a trade may be without risking disqualification on a max-drawdown rule.
 license: MIT
 metadata:
   version: "1.0.0"

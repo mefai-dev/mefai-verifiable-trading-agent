@@ -34,7 +34,7 @@
     "primary": {
       "kind": "labeled-outcome-history",
       "tables": ["signal_performance"],
-      "description": "Pre-recorded barrier-touch times for resolved MEFAI signals (181k labeled outcomes across 40+ assets and 7 timeframes in production; a pinned synthetic sample ships for reproducible backtests)."
+      "description": "Pre-recorded barrier-touch times for resolved MEFAI signals (195k labeled outcomes across 40+ assets and 7 timeframes in production; a pinned synthetic sample ships for reproducible backtests)."
     },
     "cmc_agent_hub_tools": []
   },
