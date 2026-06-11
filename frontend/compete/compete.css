@@ -1278,3 +1278,83 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 /* drop the boxed grid backdrop, keep only the soft glows (orbs + wash) */
 .compete-root .cp-grid-bg { display: none !important; }
 .compete-root .cp-foot-grid { display: none !important; }
+
+/* ════════════════════════════════════════════════════════════════════
+   TACTILE SURFACE LANGUAGE · solid cards, pill buttons, press-in hover,
+   expo-out easing, hairline pulse. One coherent interaction system
+   applied over both themes; layout and markup untouched.
+   ════════════════════════════════════════════════════════════════════ */
+.compete-root {
+  --px-ease: cubic-bezier(.22, 1, .36, 1);
+  --px-ease-soft: cubic-bezier(.25, 1, .5, 1);
+  --px-hairline: rgba(255, 255, 255, .07);
+  --px-hairline-2: rgba(255, 255, 255, .11);
+}
+.compete-root[data-theme="ocean"] {
+  --px-hairline: rgba(10, 25, 50, .10);
+  --px-hairline-2: rgba(10, 25, 50, .16);
+}
+
+/* hairline pulse · panels feel alive without moving */
+@keyframes px-hairline-pulse { 0% { border-color: var(--px-hairline); } 100% { border-color: var(--px-hairline-2); } }
+
+/* ── buttons: full pill, solid fill, press-in ── */
+.compete-root .btn {
+  border-radius: 9999px;
+  transition: transform .15s var(--px-ease), filter .2s var(--px-ease),
+              background-color .2s var(--px-ease), box-shadow .2s var(--px-ease);
+}
+.compete-root .btn::after { display: none; }
+.compete-root .btn:hover { transform: scale(.985); filter: brightness(1.06); }
+.compete-root .btn:active { transform: scale(.965); }
+
+/* pills and small toggles share the press */
+.compete-root .cp-pill { border-radius: 9999px; transition: transform .15s var(--px-ease), background .2s var(--px-ease); }
+.compete-root .cp-pill:hover { transform: scale(.97); }
+
+/* ── cards and panels: solid, 24px, hairline halo ── */
+.compete-root .card {
+  border-radius: 24px;
+  border: 1px solid var(--px-hairline);
+  box-shadow: 0 0 4px rgba(0, 0, 0, .22);
+  animation: px-hairline-pulse 3.2s ease-in-out infinite alternate;
+}
+.compete-root .card-hover { transition: transform .18s var(--px-ease), box-shadow .22s var(--px-ease); }
+.compete-root .card-hover:hover { transform: scale(.988); box-shadow: 0 4px 16px rgba(0, 0, 0, .25); }
+
+/* interactive tiles adopt the press (replace lift) */
+.compete-root .cp-stat-link { border-radius: 24px; }
+.compete-root .cp-stat-link:hover { transform: scale(.985); box-shadow: 0 4px 16px rgba(0, 0, 0, .22); }
+.compete-root .cp-close-card { border-radius: 16px; }
+.compete-root .cp-close-card:hover { transform: scale(.985); box-shadow: 0 4px 16px rgba(0, 0, 0, .22); }
+.compete-root .stack-tile { border-radius: 9999px; transition: transform .18s var(--px-ease), background .2s var(--px-ease); }
+.compete-root .stack-tile:hover { transform: scale(.97); }
+
+/* chips: rounded-32 solid pastel feel */
+.compete-root .chip, .compete-root [class*="cp-chip"] { border-radius: 32px; }
+
+/* nav links + tabbar press */
+.compete-root .cp-navlink { transition: transform .15s var(--px-ease), background .2s var(--px-ease), color .2s var(--px-ease); }
+.compete-root .cp-navlink:hover { transform: scale(.97); }
+.compete-root .cp-tab { transition: transform .15s var(--px-ease), color .2s var(--px-ease); }
+.compete-root .cp-tab:active { transform: scale(.94); }
+
+/* reveal entrance keeps its travel but adopts the expo-out family */
+.compete-root .reveal { transition: opacity .55s var(--px-ease), transform .55s var(--px-ease); }
+
+/* shimmer for loading rows (drop-in utility) */
+@keyframes px-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.compete-root .px-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,.06) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: px-shimmer 1.6s linear infinite;
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .compete-root .card { animation: none; }
+  .compete-root .btn:hover, .compete-root .card-hover:hover,
+  .compete-root .cp-stat-link:hover, .compete-root .cp-close-card:hover,
+  .compete-root .stack-tile:hover, .compete-root .cp-pill:hover,
+  .compete-root .cp-navlink:hover { transform: none; }
+}
