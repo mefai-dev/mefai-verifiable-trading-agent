@@ -362,6 +362,13 @@ class PendingStore:
                            "reveal_attempts INTEGER DEFAULT 0")
             except sqlite3.OperationalError:
                 pass
+            # Migrate a DB that predates the on-chain outcome-grading flag. A
+            # second run finds the column already present and ignores the error.
+            try:
+                db.execute("ALTER TABLE pending ADD COLUMN "
+                           "verified INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass
 
     def _conn(self) -> sqlite3.Connection:
         c = sqlite3.connect(self._path, timeout=5)
@@ -435,6 +442,22 @@ class PendingStore:
                 "UPDATE pending SET revealed=1, prediction_id=?, reveal_tx=?, "
                 "status=? WHERE local_id=?",
                 (prediction_id, reveal_tx, status, local_id))
+
+    def due_verifications(self, now: int) -> List[sqlite3.Row]:
+        """Revealed predictions whose judged window has elapsed and that have
+        not yet been graded on chain. These are the rows the oracle resolves to
+        TARGET_HIT / STOP_HIT / EXPIRED so the on-chain correct/wrong tally
+        stops reading 0/0. Oldest first, capped so one cycle never floods."""
+        with closing(self._conn()) as db, db:
+            return db.execute(
+                "SELECT * FROM pending WHERE revealed=1 AND verified=0 "
+                "AND prediction_id IS NOT NULL AND expires_at <= ? "
+                "ORDER BY local_id ASC LIMIT 25", (now,)).fetchall()
+
+    def mark_verified(self, prediction_id: int) -> None:
+        with closing(self._conn()) as db, db:
+            db.execute("UPDATE pending SET verified=1 WHERE prediction_id=?",
+                       (int(prediction_id),))
 
     def prune(self, before_ts: int) -> int:
         """Drop terminal rows (revealed or expired) committed before before_ts so
@@ -1643,6 +1666,72 @@ class AgentLoop:
                 logger.warning("reveal failed (%s): %s", r["symbol"], exc)
         return revealed
 
+    async def _verify_due_outcomes(self) -> None:
+        """Grade every revealed prediction whose judged window has closed,
+        recording TARGET_HIT / STOP_HIT / EXPIRED on chain (onlyOracle), so the
+        registry's correct/wrong tally reflects the real track record instead of
+        sitting at 0/0 forever. The verdict is DETERMINISTIC from a fresh mark
+        and the committed (and already revealed) entry/target/stop, so the graded
+        outcome is exactly what the disclosed seal predicted. Signs only in live
+        chain mode; one faulty row is logged and swallowed, never raised."""
+        if not self.cfg.execute_chain:
+            return  # dry mode never signs
+        try:
+            due = self.store.due_verifications(_now())
+        except Exception as exc:
+            logger.warning("due_verifications failed: %s", exc)
+            return
+        if not due:
+            return
+        # Reuse the reveal pass's per-cycle wall-clock budget so a backlog of
+        # grading calls (each blocks on a receipt wait) can never wedge the loop.
+        deadline = time.monotonic() + max(1.0, self.cfg.reveal_cycle_budget_sec)
+        for r in due:
+            if time.monotonic() >= deadline:
+                logger.info("verify pass hit cycle budget; deferring %d grade(s)",
+                            len(due))
+                break
+            try:
+                pid = int(r["prediction_id"])
+                symbol = str(r["symbol"] or "")
+                base = symbol if symbol.upper().endswith("USDT") else f"{symbol}USDT"
+                mark = await mark_price(base, fallback=0.0)
+                if not (mark and math.isfinite(mark) and mark > 0):
+                    continue  # no fresh mark this cycle; grade on a later one
+                # Compare in the contract's SCALED integer space: the stored
+                # entry/target/stop are already to_scaled_price(...) integers and
+                # the on-chain exitPrice arg is the same uint64 scale, so scale the
+                # fresh mark identically and compare/record without unscaling.
+                mark_s = chain_writer.to_scaled_price(mark)
+                target_s = int(r["target"])
+                stop_s = int(r["stop"])
+                d = 1 if int(r["signal"]) == SIGNAL_BUY else -1
+                if d > 0:
+                    if mark_s >= target_s:
+                        outcome = chain_writer.OUTCOME_TARGET
+                    elif mark_s <= stop_s:
+                        outcome = chain_writer.OUTCOME_STOP
+                    else:
+                        outcome = chain_writer.OUTCOME_EXPIRED
+                else:
+                    if mark_s <= target_s:
+                        outcome = chain_writer.OUTCOME_TARGET
+                    elif mark_s >= stop_s:
+                        outcome = chain_writer.OUTCOME_STOP
+                    else:
+                        outcome = chain_writer.OUTCOME_EXPIRED
+                out = await asyncio.to_thread(
+                    self.writer.verify_outcome, pid, outcome, mark_s,
+                    execute=True)
+                if out.ok and out.executed:
+                    self.store.mark_verified(pid)
+                    logger.info("graded prediction %d %s outcome=%d exit=%d tx=%s",
+                                pid, symbol, outcome, mark_s,
+                                chain_writer.ChainWriter.tx_url(out.tx_hash))
+            except Exception as exc:
+                logger.warning("verify outcome failed (%s): %s",
+                               r["symbol"], exc)
+
     async def _broadcast_cycle(self, decisions: List["Decision"],
                                closes: List[Any]) -> None:
         """Announce this cycle's taken legs and closes to the transparency feed.
@@ -1700,6 +1789,11 @@ class AgentLoop:
         self._roll_daily(now)
 
         reveals = await self._process_reveals()
+
+        # Grade every revealed prediction whose judged window has closed, so the
+        # on-chain correct/wrong tally reflects the real track record (signs only
+        # in live chain mode; best-effort, never wedges the cycle).
+        await self._verify_due_outcomes()
 
         # Keep the proof store bounded over a multi-day live window. Runs off the
         # event loop (a delete + WAL checkpoint can briefly block) and only every
