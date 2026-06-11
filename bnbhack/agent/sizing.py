@@ -4,7 +4,7 @@ MEFAI BNB HACK · Drawdown-budget fractional-Kelly position sizing
 The BNB HACK Track 1 judge scores returns, drawdown, risk-adjusted performance
 (Sharpe) and rule adherence on a held-out live window. This module turns a trade
 decision into a position size that, by construction, cannot breach the drawdown
-budget, while sizing each bet by its EMPIRICAL edge from 195k labelled MEFAI
+budget, while sizing each bet by its EMPIRICAL edge from 181k labelled MEFAI
 signal outcomes (signal_performance) rather than a guessed win-rate.
 
 Model (documented so the cockpit can explain every number):
@@ -393,6 +393,12 @@ class SizingInput:
     regime_gate: float = 1.0      # [0,1] multiplier from regime (0 = stand aside)
     venue_max_leverage: float = DEFAULT_VENUE_MAX_LEV
     conviction: float = 1.0       # [0,1] from the Omni-Fusion core (optional)
+    require_edge: bool = True      # False = managed mode: the edge is provided by
+                                   # the validated MANAGEMENT (TP1 + magnet runner),
+                                   # not the raw per-cell expectancy, so skip the
+                                   # Kelly / sample / net-edge / split-sign REJECTS
+                                   # and size purely on the drawdown budget. Risk is
+                                   # still bounded by the budget (cannot breach cap).
 
 
 @dataclass
@@ -452,7 +458,13 @@ def size_position(inp: SizingInput) -> SizingResult:
     # Risk budget rho (fraction of equity lost if the stop hits).
     rho_kelly = QUARTER_KELLY * f_kelly
     rho_dd = DD_BUDGET_K * R
-    rho = min(rho_kelly, rho_dd) * regime * conviction
+    if inp.require_edge:
+        rho = min(rho_kelly, rho_dd) * regime * conviction
+    else:
+        # Managed mode: the edge is the validated MANAGEMENT, not the raw cell, so
+        # size purely on the drawdown budget (still bounded by R, so worst-case
+        # loss = rho*equity <= DD_BUDGET_K*R*equity and cannot breach the cap).
+        rho = rho_dd * regime * conviction
     rho = max(0.0, rho)
 
     cost = roundtrip_cost(stats.symbol)
@@ -476,37 +488,35 @@ def size_position(inp: SizingInput) -> SizingResult:
     if regime <= 0:
         reasons.append("regime gate closed (risk-off)")
         return result
-    if f_kelly <= 0:
-        reasons.append("empirical edge non-positive (Kelly<=0): no bet")
-        return result
-    # Net-of-cost edge gate: the bucket must have enough samples AND a per-trade
-    # expectancy that clears the round-trip cost by a statistical margin, else a
-    # nominally-positive Kelly would still bleed fees on a coin-flip edge.
-    if stats.n < MIN_EDGE_SAMPLES:
-        reasons.append(
-            f"thin bucket n={stats.n} < min {MIN_EDGE_SAMPLES}: no bet")
-        return result
-    # net_edge uses the shrunk expectancy, but expectancy_stderr is computed from
-    # the raw (un-shrunk) bucket samples on purpose: the wider raw-sample error is
-    # the conservative significance threshold, so a thin bucket must clear a higher
-    # bar before any bet is approved.
-    required = EDGE_STDERR_MULT * stats.expectancy_stderr
-    if net_edge <= required:
-        reasons.append(
-            f"net edge {net_edge:.3f}% (exp {stats.expectancy:.3f}% - cost "
-            f"{cost:.2f}%) <= {EDGE_STDERR_MULT:.1f} stderr "
-            f"{required:.3f}%: edge not significant after fees")
-        return result
-    # Split-sign stability: the net edge must hold in BOTH the older and newer
-    # half of the bucket, not just pooled, so a one-period fluke that averages
-    # positive cannot pass. A bucket too small to split is treated as unstable.
-    if REQUIRE_SPLIT_STABLE:
-        h1n, h2n = stats.half1_expectancy - cost, stats.half2_expectancy - cost
-        if not stats.splits_resolved or h1n <= 0 or h2n <= 0:
-            reasons.append(
-                f"net edge unstable across halves (h1 {h1n:+.3f}% h2 {h2n:+.3f}% "
-                f"net of {cost:.2f}% cost): not both positive, no bet")
+    # Raw per-cell edge gates (Kelly / sample / net-of-cost / split-sign). These
+    # REJECT a bet unless the bucket's RAW signal expectancy clears cost with a
+    # margin. In managed mode the edge comes from the validated MANAGEMENT (near
+    # TP1 + magnet runner) measured in aggregate, NOT the raw cell, so these
+    # rejects are skipped; risk stays bounded by the drawdown budget above.
+    if inp.require_edge:
+        if f_kelly <= 0:
+            reasons.append("empirical edge non-positive (Kelly<=0): no bet")
             return result
+        if stats.n < MIN_EDGE_SAMPLES:
+            reasons.append(
+                f"thin bucket n={stats.n} < min {MIN_EDGE_SAMPLES}: no bet")
+            return result
+        # net_edge uses the shrunk expectancy; expectancy_stderr is the raw-sample
+        # error (the conservative significance threshold) on purpose.
+        required = EDGE_STDERR_MULT * stats.expectancy_stderr
+        if net_edge <= required:
+            reasons.append(
+                f"net edge {net_edge:.3f}% (exp {stats.expectancy:.3f}% - cost "
+                f"{cost:.2f}%) <= {EDGE_STDERR_MULT:.1f} stderr "
+                f"{required:.3f}%: edge not significant after fees")
+            return result
+        if REQUIRE_SPLIT_STABLE:
+            h1n, h2n = stats.half1_expectancy - cost, stats.half2_expectancy - cost
+            if not stats.splits_resolved or h1n <= 0 or h2n <= 0:
+                reasons.append(
+                    f"net edge unstable across halves (h1 {h1n:+.3f}% h2 {h2n:+.3f}% "
+                    f"net of {cost:.2f}% cost): not both positive, no bet")
+                return result
     if rho <= 0:
         reasons.append("risk budget collapsed to zero")
         return result

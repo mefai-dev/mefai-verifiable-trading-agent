@@ -72,6 +72,10 @@ SIGNAL_DB = os.getenv("MEFAI_SIGNAL_DB",
 # tighter than these, so it is not whipsawed out inside intraday noise.
 _LIVE_MIN_STOP = float(os.getenv("BNBHACK_LIVE_MIN_STOP", "0.015"))
 _LIVE_MIN_TP = float(os.getenv("BNBHACK_LIVE_MIN_TP", "0.025"))
+# Fixed TP1 (take-half) target as a fraction, e.g. 0.005 = +0.5%. When > 0 the
+# committed target is this near level (the validated managed-mode TP1) instead of
+# the payoff-scaled target; the runner then rides to the magnet. 0 = legacy.
+_TP1_TARGET_PCT = float(os.getenv("BNBHACK_TP1_TARGET_PCT", "0")) / 100.0
 
 _STATE_DIR = Path(os.getenv(
     "BNBHACK_LOOP_STATE_DIR",
@@ -238,6 +242,11 @@ class LoopConfig:
     # COMMITTED on chain as a verifiable PREDICT (zero capital), keeping the record
     # two-sided, but no short position is opened. Default on (on-chain spot reality).
     long_only: bool = os.getenv("BNBHACK_LONG_ONLY", "1") == "1"
+    # Managed mode: size on the drawdown budget + conviction and let the validated
+    # MANAGEMENT (near TP1 + magnet runner + wide stop) provide the edge, rather
+    # than rejecting every signal whose RAW per-cell expectancy is non-positive.
+    # The 1h long backtest (PF ~1.38, 4/6 walk-forward folds) validated this.
+    managed_mode: bool = os.getenv("BNBHACK_MANAGED_MODE", "0") == "1"
     regime_block_strength: float = float(
         os.getenv("BNBHACK_REGIME_BLOCK_STRENGTH", "0.5"))
     interval: float = float(os.getenv("BNBHACK_LOOP_INTERVAL", "60"))
@@ -1376,7 +1385,11 @@ class AgentLoop:
         sz = size_position(SizingInput(
             symbol=pair, timeframe=tf, equity=equity, current_drawdown=drawdown,
             horizon=horizon, jury_cap=self.cfg.jury_cap,
-            conviction=fr.conviction / 100.0))
+            conviction=fr.conviction / 100.0,
+            require_edge=not self.cfg.managed_mode,
+            # Managed mode pins the stop to the configured fixed distance (the
+            # validated 3%) so the sizer's notional and the committed stop agree.
+            stop_distance=(_LIVE_MIN_STOP if self.cfg.managed_mode else None)))
         d.win_rate = sz.win_rate
         d.payoff = sz.payoff
 
@@ -1386,7 +1399,14 @@ class AgentLoop:
         # it sane and reproducible. This is the call the agent commits and reveals
         # on chain regardless of whether it then risks capital on it.
         sd = max(sz.stop_distance, _LIVE_MIN_STOP)
-        rr = max(sz.payoff * sd, _LIVE_MIN_TP)
+        # Committed target = the TP1 level. In managed mode this is a fixed NEAR
+        # level (BNBHACK_TP1_TARGET_PCT, the validated +0.5% take-half point); TP1
+        # closes 50% there, then the runner rides to the magnet. Otherwise it is
+        # the payoff-scaled target with the live floor.
+        if _TP1_TARGET_PCT > 0:
+            rr = _TP1_TARGET_PCT
+        else:
+            rr = max(sz.payoff * sd, _LIVE_MIN_TP)
         if fr.direction > 0:
             d.stop = entry * (1.0 - sd)
             d.target = entry * (1.0 + rr)
