@@ -46,6 +46,7 @@ import httpx
 
 import bsc_exec
 import perp_exec
+import magnet
 
 logger = logging.getLogger("mefai.bnbhack.positions")
 
@@ -351,23 +352,21 @@ class PositionStore:
 # ---------------------------------------------------------------------------
 @dataclass
 class ExitRules:
-    # Exit lifecycle. With `ride_winners` on (the default) the committed target is
-    # NOT a hard take-profit: when price reaches it the whole leg switches into
-    # ride mode (stop pulled into profit, trail armed, cap removed) and rides the
-    # move to the trailing stop or the 24h time stop, because the walk-forward
-    # shows ~58% of trades never even touch a 1.5% barrier, so capping the exit at
-    # the target clips the 24h drift and a stop-only ride beats every capped-TP
-    # variant out of sample. (The on-chain prediction is still graded TARGET_HIT
-    # the instant price crosses the committed target, independently of this; ride
-    # mode only changes how the REALIZED trade exits.)
-    #
-    # Legacy scale-out is still available: set `ride_winners`=0 and tp1_pct to a
-    # value strictly between 0 and 100 to close `tp1_pct`% at the target, pull the
-    # stop into profit and let the runner ride to TP2 = entry + `tp2_mult` x the
-    # TP1 distance. tp1_pct defaults to 100 (no partial) so the default path is
-    # the measured-best stop-only ride, not the double-fee scale-out.
-    ride_winners: bool = os.getenv("BNBHACK_RIDE_WINNERS", "1") == "1"
-    tp1_pct: float = float(os.getenv("BNBHACK_TP1_PCT", "100"))
+    # Exit lifecycle (the MEFAI signal-managed scheme, default):
+    #   1. At the committed target close `tp1_pct`% (TP1 = take half),
+    #   2. pull the stop to break-even (entry) so the runner can no longer lose,
+    #   3. set the RUNNER's target to the nearest liquidation MAGNET in the trade's
+    #      favour (see magnet.py / the proxy liq-clusters) so the rest is banked
+    #      where price is actually pulled, not at a fixed multiple, and
+    #   4. there is NO trailing stop (use_trailing off): the runner exits at the
+    #      magnet, the break-even stop, or the 24h time stop.
+    # `magnet_exit` off (or no magnet available) falls back to TP2 = entry +
+    # `tp2_mult` x the TP1 distance. `ride_winners` (no partial, ride the whole leg
+    # behind a trailing stop) is kept as an alternative behind its flag.
+    ride_winners: bool = os.getenv("BNBHACK_RIDE_WINNERS", "0") == "1"
+    tp1_pct: float = float(os.getenv("BNBHACK_TP1_PCT", "50"))
+    magnet_exit: bool = os.getenv("BNBHACK_MAGNET_EXIT", "1") == "1"
+    use_trailing: bool = os.getenv("BNBHACK_USE_TRAILING", "0") == "1"
     # The profit lock must clear the round-trip swap cost, otherwise pulling the
     # stop "into profit" still books a net loss once fees/slippage are paid; it
     # is therefore floored at the round-trip cost below.
@@ -649,9 +648,12 @@ class PositionManager:
                 return await self._arm_ride(p, entry, mark, peak)
             return await self._close(p, mark, "target", execute)
 
-        # 5) No exit: ratchet the trailing stop in the trade's favor, then bump
-        #    the favorable extreme (up for a long, down for a short).
-        new_stop = self._trail_stop(entry, peak, stop, d)
+        # 5) No exit. With trailing OFF (the default) the stop only ever moves once
+        #    to break-even at TP1; the runner then exits at its magnet target, the
+        #    break-even stop, or the 24h time stop (no trailing). With trailing ON
+        #    the stop ratchets in the trade's favour. Either way bump the extreme.
+        new_stop = (self._trail_stop(entry, peak, stop, d)
+                    if self.rules.use_trailing else None)
         if new_stop is not None and (
                 (d > 0 and new_stop > stop)
                 or (d < 0 and (stop <= 0 or new_stop < stop))):
@@ -747,11 +749,22 @@ class PositionManager:
         cur = float(p["stop"] or 0)
         lock = (max(cur, prof) if d > 0
                 else (min(cur, prof) if cur > 0 else prof))
-        tp2 = entry + self.rules.tp2_mult * (target - entry)
+        # Runner target: the nearest liquidation MAGNET in the trade's favour
+        # (where price is actually pulled), falling back to the fixed TP2 multiple
+        # when magnet exits are off or no magnet is available this cycle.
+        tp2 = None
+        is_magnet = False
+        if self.rules.magnet_exit:
+            mt = magnet.magnet_target(symbol, d, mark)
+            if mt is not None and (mt - entry) * d > 0:  # must be in profit
+                tp2, is_magnet = mt, True
+        if tp2 is None:
+            tp2 = entry + self.rules.tp2_mult * (target - entry)
         self.store.apply_tp1(p["id"], qty - close_qty, size - close_size, lock,
                              tp2, max(peak, mark), slice_pnl)
-        logger.info("TP1(%s) %.0f%% @ %.8f pnl=%.2f%% lock->%.8f tp2->%.8f",
-                    symbol, self.rules.tp1_pct, exit_price, slice_pct, lock, tp2)
+        logger.info("TP1(%s) %.0f%% @ %.8f pnl=%.2f%% lock->%.8f runner->%.8f%s",
+                    symbol, self.rules.tp1_pct, exit_price, slice_pct, lock, tp2,
+                    " (magnet)" if is_magnet else " (tp2)")
         return CloseEvent(symbol=symbol, reason="tp1", exit_price=exit_price,
                           pnl_usd=slice_pnl, pnl_pct=slice_pct, executed=executed,
                           detail=detail, partial=True)

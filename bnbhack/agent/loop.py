@@ -1288,6 +1288,44 @@ class AgentLoop:
             self._reconcile_note = f"ok: {len(open_rows)} leg(s) backed by wallet"
 
     # -- one decision --------------------------------------------------------
+    def _market_regime_dir(self) -> int:
+        """Higher-timeframe market regime from the latest 4h BTC signal: +1 if it
+        is a fresh BUY (long favourable), -1 if a fresh SELL, 0 if none or stale.
+        Cached ~5 min. Read-only; never raises (a fault yields 0 = no bias)."""
+        now = time.time()
+        cached = getattr(self, "_regime_cache", None)
+        if cached and now - cached[0] < 300:
+            return cached[1]
+        d = 0
+        try:
+            tf = os.getenv("BNBHACK_REGIME_TF", "4h")
+            sym = os.getenv("BNBHACK_REGIME_SYMBOL", "BTCUSDT")
+            sym = sym if sym.endswith(".P") else sym + ".P"
+            con = sqlite3.connect(f"file:{SIGNAL_DB}?mode=ro", uri=True, timeout=5)
+            try:
+                row = con.execute(
+                    "SELECT signal, timestamp FROM signals WHERE symbol=? AND "
+                    "timeframe=? ORDER BY id DESC LIMIT 1", (sym, tf)).fetchone()
+            finally:
+                con.close()
+            if row:
+                # A 4h regime is a STANCE that holds until the next 4h signal
+                # flips it, so it is valid far longer than an entry trigger. Use a
+                # generous regime age (default 5 days); only a long signal outage
+                # drops it to neutral.
+                try:
+                    age = now - float(row[1])
+                except (TypeError, ValueError):
+                    age = 0.0  # unparseable -> treat the latest as the stance
+                max_age = float(os.getenv("BNBHACK_REGIME_MAX_AGE_H", "120")) * 3600
+                if 0 <= age <= max_age:
+                    side = str(row[0] or "").strip().lower()
+                    d = 1 if side == "buy" else -1 if side == "sell" else 0
+        except Exception:
+            d = 0
+        self._regime_cache = (now, d)
+        return d
+
     async def decide(self, sig: Dict[str, Any], equity: float,
                      drawdown: float, force: bool = False) -> Decision:
         pair = sig["pair"]
@@ -1370,6 +1408,20 @@ class AgentLoop:
         d.leverage = sz.leverage
         d.notional = sz.notional
         d.margin = sz.margin
+        # Directional capital bias: lean INTO the higher-timeframe market regime.
+        # When the 4h BTC signal favours this trade's direction we deploy full
+        # size; when it OPPOSES we still take the (verifiable) trade but with less
+        # capital. Forced daily-floor trades are exempt (compliance, not edge).
+        if not force:
+            reg = self._market_regime_dir()
+            if reg != 0 and reg != fr.direction:
+                sc = max(0.0, min(1.0, float(
+                    os.getenv("BNBHACK_REGIME_OPPOSED_SCALE", "0.5"))))
+                d.notional *= sc
+                d.margin *= sc
+                d.reasons.append(
+                    f"counter to 4h regime ({'long' if reg > 0 else 'short'}); "
+                    f"capital x{sc:g}")
         if (force and self.cfg.daily_floor_usd > 0
                 and d.notional > self.cfg.daily_floor_usd):
             # Shrink the forced trade to the daily floor so keeping the cadence
