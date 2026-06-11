@@ -1,4 +1,4 @@
-# On chain deployments
+# Verified deployments
 
 The verifiable layer is live on **BSC mainnet** (chain 56). The result ledger,
 the agent's ERC-8004 identity, the commit-reveal registry, the RiskGovernor and
