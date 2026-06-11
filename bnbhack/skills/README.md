@@ -133,8 +133,15 @@ the same edge-positive signals at the engine's own average leverage but with no
 drawdown stop**, and over this short window it still posts a positive return ·
 the engine's value is the *bounded* drawdown, not a bigger number. The edge-gate
 overlay (enabled live at the 24h / 0.2% production basis) is what lifts net
-return while holding the same 14% drawdown cap. These figures demonstrate the
-engine's mechanics and ablation; they are **not** a live track record.
+return while holding the same 14% drawdown cap. The eye-catching +402.56% is a SYNTHETIC artifact: the sample generator embeds a
+fixed per-symbol edge that a leverage-scaled Kelly leg compounds over the window,
+so the headline number reflects average leverage (the engine runs far higher
+notional than the naive leg) far more than signal selection, and would be
+impossible on a live market. The honest takeaways are the **bounded 14% drawdown**
+and the **net-of-cost edge gate**, not the percentage. These figures demonstrate the
+engine's mechanics and ablation; they are **not** a live track record, and the
+real per-signal edge is the thin positive expectancy at a roughly 50% hit rate
+shown by the sealed production dataset.
 
 ---
 

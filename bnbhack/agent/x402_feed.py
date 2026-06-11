@@ -635,6 +635,7 @@ def build_feed(product_id: str, params: FeedParams,
             "below_threshold": lb.below_threshold,
             "overall": _entity_dict(lb.overall),
             "ranked": [_entity_dict(e) for e in lb.entries[:params.top_n]],
+            "method": {"integrity": "proxy: share of predictions with a recorded outcome", "uptime": "proxy: recency of the last verified outcome", "note": "integrity and uptime are computed proxies, not third-party attestations"},
         }
     if product_id == "uvii-index":
         idx = build_uvii_index(group_by=params.group_by, horizon=params.horizon,
@@ -645,6 +646,7 @@ def build_feed(product_id: str, params: FeedParams,
             "horizon": idx.horizon, "since_ts": idx.since_ts,
             "global_index": _uvii_dict(idx.global_index),
             "entities": [_uvii_dict(u) for u in idx.entities[:params.top_n]],
+            "method": {"integrity": "proxy: share of predictions with a recorded outcome", "uptime": "proxy: recency of the last verified outcome", "note": "integrity and uptime are computed proxies, not third-party attestations"},
         }
     raise X402Error(f"unknown product: {product_id!r}")
 

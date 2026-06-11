@@ -206,6 +206,34 @@ chk_code "Commit-reveal registry (mainnet)" "$REGISTRY" "$RPC_MAINNET" "https://
 chk_code "RiskGovernor (mainnet)"         "$GOVERNOR" "$RPC_MAINNET" "https://bscscan.com"
 printf '        %s\n' "$(dim "agent wallet holding the identity: $AGENT_WALLET")"
 
+# On-chain arena record: the registry's own committed/revealed/verified counts,
+# read with a key-free eth_call (selector 0x97f2a5b9 = getArenaStats()). This is
+# the unflattering-but-honest number: a juror sees exactly how many predictions
+# are committed, revealed and graded on chain, growing through the judged window.
+head_ "10 · Verifiable record · on-chain arena stats (getArenaStats, no key)"
+ARENA_HEX=$(curl -s --max-time 12 -X POST "$RPC_MAINNET" -H 'Content-Type: application/json' \
+  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"$REGISTRY\",\"data\":\"0x97f2a5b9\"},\"latest\"]}" \
+  | sed -n 's/.*"result":"\(0x[0-9a-fA-F]*\)".*/\1/p')
+if [ -n "$ARENA_HEX" ] && [ "$ARENA_HEX" != "0x" ]; then
+  ARENA=$(python3 - "$ARENA_HEX" <<'PY'
+import sys
+h=sys.argv[1][2:]
+w=[int(h[i:i+64],16) for i in range(0,len(h),64)] if len(h)>=384 else []
+if len(w)>=4:
+    print(f"agents={w[0]} committed={w[1]} revealed={w[2]} verified={w[3]}")
+else:
+    print("")
+PY
+)
+  if [ -n "$ARENA" ]; then
+    ok "On-chain arena record · $ARENA" "https://bscscan.com/address/$REGISTRY"
+  else
+    bad "getArenaStats returned an unexpected shape" "https://bscscan.com/address/$REGISTRY"
+  fi
+else
+  bad "getArenaStats read failed (RPC may be rate-limited; open the explorer)" "https://bscscan.com/address/$REGISTRY"
+fi
+
 # ── summary ─────────────────────────────────────────────────────────────────
 printf '\n%s\n' "════════════════════════════════════════════════════════════════"
 if [ "$FAIL" -eq 0 ]; then

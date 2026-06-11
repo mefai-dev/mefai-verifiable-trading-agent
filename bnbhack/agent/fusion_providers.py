@@ -63,6 +63,10 @@ SIGNAL_DROP_BARS = 8
 # vote, reaching full strength at 0.06%. Keyless public endpoint, read-only.
 FUNDING_DEADZONE = 0.0001
 FUNDING_FULL = 0.0006
+# Note: the Binance perp endpoint is geo-restricted from some datacenters, so
+# this provider can read unavailable in those regions; the funding gate then
+# degrades to neutral (no tilt) rather than blocking, and CMC derivatives is
+# the primary funding read in production.
 FUNDING_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
 FUNDING_TTL = 60.0
 _FUNDING_CACHE: Dict[str, Tuple[float, SourceReading]] = {}
