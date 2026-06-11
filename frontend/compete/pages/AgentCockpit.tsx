@@ -534,6 +534,7 @@ function EquityCurve({ st }: { st?: LoopEnvelope['state'] }) {
         <span className="panel-title" style={{ color: GOLD }}>{'EQUITY CURVE · LIVE'}</span>
         <Chip tone={tone}>{up ? '+' : ''}{fmtUsd(net)} · {up ? '+' : ''}{fmtNum(netPct, 2)}%</Chip>
       </div>
+      <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: -4, marginBottom: 8 }}>{'Record begins at the first live trade · the open ETH position'}</div>
       <svg viewBox="0 0 100 44" preserveAspectRatio="none" style={{ width: '100%', height: 150, display: 'block' }} aria-label={'Live equity curve'}>
         <defs>
           <linearGradient id="cp-eqfill" x1="0" y1="0" x2="0" y2="1">
@@ -546,7 +547,7 @@ function EquityCurve({ st }: { st?: LoopEnvelope['state'] }) {
         <path d={line} fill="none" stroke={tone} strokeWidth="1.6" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--c-muted)', flexWrap: 'wrap', gap: 6 }}>
-        <span className="mono">{'start'} {fmtUsd(first)}</span>
+        <span className="mono">{'initial capital'} {fmtUsd(first)}</span>
         <span className="mono" style={{ color: 'var(--c-text)' }}>{'now'} {fmtUsd(last)}</span>
         <span className="mono">{'span'} {spanLabel} · {n} {'points'}</span>
       </div>
