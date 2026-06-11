@@ -103,7 +103,7 @@ const SECTIONS: Section[] = [
   {
     id: 'x402', title: 'The machine payable feed',
     body: [
-      'The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for proven alpha with no human in the loop.',
+      'The verified signal feed is served over HTTP 402. Each product binds its exact price with an EIP-3009 authorization to the token and chain charged. A calling agent hits the URL. It receives a 402. It signs the authorization for the quoted amount. It re requests and gets the signed payload. The shipped settler is verify only: it proves a real payment authorization and the settlement transaction is deferred to a funded facilitator, so no funds move in this proof. Agents pay agents for verifiable signals with no human in the loop.',
     ],
   },
   {

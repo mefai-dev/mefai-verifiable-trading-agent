@@ -286,6 +286,18 @@ class PositionStore:
                 "rungs_filled=? WHERE id=?",
                 (qty, size, entry, rungs_filled, pos_id))
 
+    def arm_ride(self, pos_id: int, stop: float, peak: float) -> None:
+        """Switch a winner into ride mode at the target: lock the stop into
+        profit, mark the trail armed (tp1_done=1 so a later stop reads as a
+        locked win, never a loss) and CLEAR the target so the leg is no longer
+        capped. The whole size keeps riding behind the ratcheting trailing stop
+        and the 24h time stop; no slice is banked and no second fee is paid."""
+        with self._conn() as db:
+            db.execute(
+                "UPDATE positions SET tp1_done=1, stop=?, target=0, peak=? "
+                "WHERE id=?",
+                (stop, peak, pos_id))
+
     def update_peak(self, pos_id: int, peak: float) -> None:
         with self._conn() as db:
             db.execute("UPDATE positions SET peak=? WHERE id=?", (peak, pos_id))
@@ -321,13 +333,23 @@ class PositionStore:
 # ---------------------------------------------------------------------------
 @dataclass
 class ExitRules:
-    # Scale-out (the production MEFAI exit lifecycle ported to BSC spot): at the committed
-    # target close `tp1_pct`% of the position (TP1), then pull the stop just into
-    # profit (`profit_lock_pct` above entry, so the leg can no longer close red)
-    # and extend the target to TP2 = entry + `tp2_mult` x the TP1 distance, so the
-    # runner rides the rest of the move. Set tp1_pct to 0 or 100 to disable the
-    # partial and take the whole leg at the first target.
-    tp1_pct: float = float(os.getenv("BNBHACK_TP1_PCT", "50"))
+    # Exit lifecycle. With `ride_winners` on (the default) the committed target is
+    # NOT a hard take-profit: when price reaches it the whole leg switches into
+    # ride mode (stop pulled into profit, trail armed, cap removed) and rides the
+    # move to the trailing stop or the 24h time stop, because the walk-forward
+    # shows ~58% of trades never even touch a 1.5% barrier, so capping the exit at
+    # the target clips the 24h drift and a stop-only ride beats every capped-TP
+    # variant out of sample. (The on-chain prediction is still graded TARGET_HIT
+    # the instant price crosses the committed target, independently of this; ride
+    # mode only changes how the REALIZED trade exits.)
+    #
+    # Legacy scale-out is still available: set `ride_winners`=0 and tp1_pct to a
+    # value strictly between 0 and 100 to close `tp1_pct`% at the target, pull the
+    # stop into profit and let the runner ride to TP2 = entry + `tp2_mult` x the
+    # TP1 distance. tp1_pct defaults to 100 (no partial) so the default path is
+    # the measured-best stop-only ride, not the double-fee scale-out.
+    ride_winners: bool = os.getenv("BNBHACK_RIDE_WINNERS", "1") == "1"
+    tp1_pct: float = float(os.getenv("BNBHACK_TP1_PCT", "100"))
     # The profit lock must clear the round-trip swap cost, otherwise pulling the
     # stop "into profit" still books a net loss once fees/slippage are paid; it
     # is therefore floored at the round-trip cost below.
@@ -579,20 +601,29 @@ class PositionManager:
             if age >= self.rules.max_hold_sec:
                 return await self._close(p, mark, "time", execute)
 
-        # 4) Target. The first time, scale out a TP1 slice, lock the stop into
-        #    profit and let the runner ride to TP2; the second time (already
-        #    scaled out) close the runner at TP2. With TP1 disabled (0 or 100%),
-        #    or when the target gain is too small to amortise a second swap, the
-        #    first target simply closes the whole leg. A long takes profit when
-        #    price rises to the target; a short when price falls to it.
+        # 4) Target reached. Behaviour depends on the exit mode:
+        #    - ride mode (default): the whole leg switches to ride mode once, then
+        #      rides on the trailing stop / 24h time stop instead of being clipped
+        #      at the target (the measured-best stop-only policy). The target is
+        #      cleared by arm_ride, so this fires at most once per leg.
+        #    - legacy scale-out: the first time, take a TP1 slice and let the
+        #      runner ride to TP2; the second time (already scaled out) close at
+        #      TP2. A long fires when price rises to the target; a short when it
+        #      falls to it.
         if target > 0 and ((d > 0 and mark >= target) or (d < 0 and mark <= target)):
+            if tp1_done:
+                # Legacy: already scaled out at TP1, runner reached TP2 -> close.
+                # In ride mode tp1_done coincides with target==0, so we never get
+                # here for a ridden leg.
+                return await self._close(p, mark, "tp2", execute)
             target_gain_pct = (d * (target - entry) / entry * 100.0
                                if entry > 0 else 0.0)
-            if (not tp1_done and 0 < self.rules.tp1_pct < 100
+            if (not self.rules.ride_winners and 0 < self.rules.tp1_pct < 100
                     and target_gain_pct >= self.rules.tp1_min_gain_pct):
                 return await self._partial_tp1(p, mark, target, peak, execute)
-            return await self._close(p, mark, "tp2" if tp1_done else "target",
-                                     execute)
+            if self.rules.ride_winners:
+                return await self._arm_ride(p, entry, mark, peak)
+            return await self._close(p, mark, "target", execute)
 
         # 5) No exit: ratchet the trailing stop in the trade's favor, then bump
         #    the favorable extreme (up for a long, down for a short).
@@ -603,6 +634,25 @@ class PositionManager:
             self.store.update_stop(p["id"], new_stop, peak)
         elif (d > 0 and peak > prev_peak) or (d < 0 and peak < prev_peak):
             self.store.update_peak(p["id"], peak)
+        return None
+
+    async def _arm_ride(self, p: sqlite3.Row, entry: float, mark: float,
+                        peak: float) -> Optional[CloseEvent]:
+        """Switch a winner to ride mode at the target: lock the stop into profit
+        (profit_lock_pct beyond entry in the trade's favour, never looser than the
+        stop already set, and floored at the round-trip cost so it can never lock
+        a net loss), mark the trail armed and clear the target cap via arm_ride.
+        The leg stays OPEN and rides on the ratcheting trailing stop and the 24h
+        time stop, so a winner is not clipped at the target. No slice is banked,
+        no second swap (second fee) is paid, and nothing is signed here."""
+        d = _leg_dir(p)
+        prof = entry * (1.0 + d * self.rules.profit_lock_pct / 100.0)
+        cur = float(p["stop"] or 0)
+        lock = (max(cur, prof) if d > 0
+                else (min(cur, prof) if cur > 0 else prof))
+        self.store.arm_ride(int(p["id"]), lock, peak)
+        logger.info("RIDE(%s) target reached; lock stop -> %.8f, riding to "
+                    "trail / 24h time stop", p["symbol"], lock)
         return None
 
     async def _partial_tp1(self, p: sqlite3.Row, mark: float, target: float,

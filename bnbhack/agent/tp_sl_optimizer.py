@@ -81,8 +81,18 @@ _HORIZON_BY_TF: Dict[str, Tuple[str, str]] = {
 }
 _DEFAULT_HORIZON: Tuple[str, str] = ("pnl_24h", "24h")
 
-MIN_SAMPLES = 30          # a (TP,SL) cell below this is reported but not recommended
+MIN_SAMPLES = 100         # a (TP,SL) cell below this is reported but not recommended
 PAYOFF_CAP = 50.0         # clamp avg_win/avg_loss so a near-zero avg_loss can't blow up
+# A recommended bracket must use a stop at least this wide. The raw
+# expectancy-per-risk objective divides a COST-BLIND gross expectancy by the
+# stop, so it drifts monotonically to the TIGHTEST stop (e.g. 0.2 percent) where
+# the round-trip fee is ~100 percent of the risked amount and same-second TP/SL
+# ties are charged as losses. Out of sample that tuned tight-stop bracket is
+# net-NEGATIVE while the fixed wide-stop bracket is net-positive. The floor (set
+# at a few times the round-trip cost) keeps a fee-dominated rung from ever being
+# recommended; the recommendation now ranks NET expectancy per risk, not gross.
+MIN_SL_RUNG = float(os.getenv("BNBHACK_MIN_SL_RUNG", "1.0"))
+DEFAULT_COST_PCT = float(os.getenv("BNBHACK_ROUNDTRIP_COST_PCT", "0.2"))
 
 
 def _finite(x: object, default: float = 0.0) -> float:
@@ -146,10 +156,12 @@ class GridCell:
     avg_win: float            # mean return of positive-return trades (+)
     avg_loss: float           # mean return of negative-return trades (negative)
     payoff: float             # avg_win / |avg_loss|, clamped to PAYOFF_CAP
-    expectancy: float         # mean signed return % per trade
+    expectancy: float         # mean signed return % per trade (gross, pre-cost)
     expectancy_stderr: float  # standard error of the mean return
-    expectancy_per_risk: float  # expectancy / sl  (R-multiple per unit risk)
+    expectancy_per_risk: float  # gross expectancy / sl (kept for reference only)
     total_return: float       # summed signed return % over all trades
+    net_expectancy: float = 0.0       # expectancy minus the round-trip cost
+    net_expectancy_per_risk: float = 0.0  # net_expectancy / sl (the ranked field)
 
 
 @dataclass
@@ -259,7 +271,8 @@ def _resolve_trade(
 
 
 def _eval_cell(rows: List[sqlite3.Row], tp: float, tp_col: str,
-               sl: float, sl_col: str, horizon_col: str) -> GridCell:
+               sl: float, sl_col: str, horizon_col: str,
+               cost: float = 0.0) -> GridCell:
     barrier_wins = barrier_losses = ties = open_closes = 0
     unresolved = 0
     pos_n = neg_n = 0
@@ -311,6 +324,12 @@ def _eval_cell(rows: List[sqlite3.Row], tp: float, tp_col: str,
     else:
         stderr = 0.0
     per_risk = (expectancy / sl) if sl > 0 else 0.0
+    # NET of the round-trip cost: the fee is paid once per round-trip regardless
+    # of the stop width, so subtracting it BEFORE dividing by sl is what stops the
+    # objective from rewarding a fee-dominated tight stop. This is the field the
+    # recommendation ranks; the gross per_risk is kept only for inspection.
+    net_expectancy = expectancy - cost
+    net_per_risk = (net_expectancy / sl) if sl > 0 else 0.0
 
     return GridCell(
         tp=tp, sl=sl, rr=round(tp / sl, 3) if sl > 0 else 0.0,
@@ -324,6 +343,8 @@ def _eval_cell(rows: List[sqlite3.Row], tp: float, tp_col: str,
         expectancy_stderr=round(stderr, 5),
         expectancy_per_risk=round(per_risk, 5),
         total_return=round(total, 3),
+        net_expectancy=round(net_expectancy, 5),
+        net_expectancy_per_risk=round(net_per_risk, 5),
     )
 
 
@@ -334,6 +355,8 @@ def optimize(
     since_ts: Optional[int] = None,
     min_samples: int = MIN_SAMPLES,
     db_path: str = SIGNAL_DB,
+    cost_pct: Optional[float] = None,
+    min_sl: float = MIN_SL_RUNG,
 ) -> OptimizeResult:
     """Grid-search the barrier ladder for the best (TP, SL) bracket.
 
@@ -345,6 +368,20 @@ def optimize(
     and has positive expectancy."""
     horizon_col, horizon_label = _horizon_for_tf(timeframe)
     norm_symbol = _norm_symbol(symbol)
+    # Round-trip cost subtracted from every cell's gross expectancy. Prefer the
+    # per-symbol liquidity-tier cost (same basis as the sizer) when a symbol is
+    # given; fall back to the supplied cost or the deep-pool default. Lazy import
+    # keeps this module importable without the sizing module.
+    if cost_pct is not None:
+        cost = float(cost_pct)
+    elif symbol:
+        try:
+            from sizing import roundtrip_cost  # local, no import cycle
+            cost = roundtrip_cost(symbol)
+        except Exception:
+            cost = DEFAULT_COST_PCT
+    else:
+        cost = DEFAULT_COST_PCT
 
     conn = _ro_connect(db_path)
     try:
@@ -367,40 +404,47 @@ def optimize(
     for tp_pct, tp_col in TP_LEVELS:
         for sl_pct, sl_col in SL_LEVELS:
             grid.append(_eval_cell(rows, tp_pct, tp_col, sl_pct, sl_col,
-                                   horizon_col))
+                                   horizon_col, cost))
 
-    eligible = [c for c in grid if c.n >= min_samples]
-    # best = raw max expectancy (kept for reference; it drifts toward the widest
-    # stop because stops rarely trigger there). best_per_risk divides by the
-    # stop, so it is the risk-honest pick that drives the recommendation.
+    # Eligible to be RECOMMENDED: enough samples AND a stop at least min_sl wide.
+    # The stop floor is what removes the fee-dominated tight-stop cells the gross
+    # per-risk objective used to drift toward; cells below it are still kept in
+    # the grid for inspection, just never recommended.
+    eligible = [c for c in grid if c.n >= min_samples and c.sl >= min_sl]
+    # best = raw max GROSS expectancy (reference only; it drifts to the widest
+    # stop). best_per_risk now ranks NET expectancy per unit risk, so a bracket
+    # cannot win the ranking by hiding the round-trip fee inside a tiny stop.
     best = max(eligible, key=lambda c: c.expectancy) if eligible else None
-    best_per_risk = (max(eligible, key=lambda c: c.expectancy_per_risk)
+    best_per_risk = (max(eligible, key=lambda c: c.net_expectancy_per_risk)
                      if eligible else None)
-    # Recommend only when the risk-honest bracket has a positive expectancy that
-    # also clears one standard error (a light t > 1 significance gate), so a
-    # near-zero edge inside the noise band is not advertised.
+    # Recommend only when the risk-honest bracket has a positive NET expectancy
+    # (after the round-trip cost) that also clears one standard error (a light
+    # t > 1 gate), so a near-zero or fee-eaten edge is never advertised.
     recommend = (
         best_per_risk is not None
-        and best_per_risk.expectancy > 0
-        and best_per_risk.expectancy > best_per_risk.expectancy_stderr
+        and best_per_risk.net_expectancy > 0
+        and best_per_risk.net_expectancy > best_per_risk.expectancy_stderr
     )
     rec_cell = best_per_risk if recommend else None
     n_unresolved = rec_cell.n_unresolved if rec_cell else (
         best_per_risk.n_unresolved if best_per_risk else 0)
 
     if not eligible:
-        note = (f"no (TP,SL) bracket reached min_samples={min_samples} "
-                f"(largest cell {max((c.n for c in grid), default=0)} trades)")
+        note = (f"no (TP,SL) bracket reached min_samples={min_samples} with a "
+                f"stop >= {min_sl:.2f}% (largest cell "
+                f"{max((c.n for c in grid), default=0)} trades)")
     elif not recommend:
-        note = ("no bracket clears a significant positive edge on this slice "
-                "(direction edge is negative, flat, or inside the noise band)")
+        note = ("no bracket clears a significant positive edge net of the "
+                f"{cost:.2f}% round-trip cost on this slice (direction edge is "
+                "negative, flat, or inside the noise band after fees)")
     else:
-        note = (f"recommend TP {rec_cell.tp}% / SL {rec_cell.sl}% -> "
-                f"expectancy {rec_cell.expectancy:+.3f}% "
-                f"(+/-{rec_cell.expectancy_stderr:.3f}) per-risk "
-                f"{rec_cell.expectancy_per_risk:+.3f}R over {rec_cell.n} trades")
+        note = (f"recommend TP {rec_cell.tp}% / SL {rec_cell.sl}% -> net "
+                f"expectancy {rec_cell.net_expectancy:+.3f}% "
+                f"(gross {rec_cell.expectancy:+.3f}% - cost {cost:.2f}%, "
+                f"+/-{rec_cell.expectancy_stderr:.3f}) net-per-risk "
+                f"{rec_cell.net_expectancy_per_risk:+.3f}R over {rec_cell.n} trades")
 
-    grid.sort(key=lambda c: c.expectancy_per_risk, reverse=True)
+    grid.sort(key=lambda c: c.net_expectancy_per_risk, reverse=True)
     return OptimizeResult(
         symbol=norm_symbol, timeframe=timeframe, signal_type=signal_type,
         horizon=horizon_label, since_ts=since_ts, n_total=n_total,
@@ -499,16 +543,17 @@ def regime_overlay(
     defensive = [
         c for c in result.grid
         if c.n >= result.min_samples
-        and c.expectancy > 0
-        and c.expectancy > c.expectancy_stderr
+        and c.sl >= MIN_SL_RUNG
+        and c.net_expectancy > 0
+        and c.net_expectancy > c.expectancy_stderr
     ]
     if not defensive:
         return RegimeDecision(
             deploy=False, bracket=None, risk_scale=0.0, alignment=-1,
             reason="regime opposes and no defensive bracket has a significant edge",
         )
-    # Tightest stop first, break ties by the better per-risk edge.
-    defensive.sort(key=lambda c: (c.sl, -c.expectancy_per_risk))
+    # Tightest eligible stop first, break ties by the better NET per-risk edge.
+    defensive.sort(key=lambda c: (c.sl, -c.net_expectancy_per_risk))
     pick = defensive[0]
     scale = _clamp(0.5 * (1.0 - strength), 0.0, 0.5)
     return RegimeDecision(

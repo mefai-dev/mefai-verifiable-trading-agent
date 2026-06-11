@@ -50,8 +50,11 @@ SKILLS_DB = os.getenv("MEFAI_SKILLS_DB", "data/mefai_skills.db")
 KRONOS_DB = os.getenv("MEFAI_KRONOS_DB", "data/predictions.db")
 
 # A source must have at least this many graded outcomes before we trust its
-# measured hit-rate; below it we fall back to 0.5 (no skill -> ignored).
-MIN_HITRATE_SAMPLES = 20
+# measured hit-rate; below it we fall back to 0.5 (no skill -> ignored). Raised
+# from 20 to 100: a true 0.50 coin-flip source shows a hit-rate up to ~0.62 on 20
+# samples by chance, which would hand it real conviction weight it has not earned.
+# At 100 the sampling band is tight enough that only a genuine edge clears 0.5.
+MIN_HITRATE_SAMPLES = int(os.getenv("BNBHACK_MIN_HITRATE_SAMPLES", "100"))
 
 # How many bars old a TradingView signal may be before its strength decays to
 # the floor, and the hard age past which we drop it entirely.

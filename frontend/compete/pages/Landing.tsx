@@ -132,7 +132,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
           { t: 'Empirical Kelly sizing', d: 'Win rate and optimal TP/SL come from real labeled outcomes not guesses. Size shrinks as the drawdown budget shrinks so the agent maximizes Sharpe while it physically cannot breach the cap.' },
           { t: 'Omni signal fusion', d: 'One conviction score unions every MEFAI capability: signals, expert debate, whale tracking, smart money, accumulation, derivatives risk and the full CoinMarketCap regime, each weighted by its own hit rate.' },
           { t: 'Pre trade security gate', d: 'Honeypot, contract scan, slippage, approval, preflight and MEV checks run before any spend. A GO or BLOCK verdict gates execution. Every spend is quote bounded and capped.' },
-          { t: 'x402 machine payable', d: 'The verified signal feed is served over HTTP 402 with EIP-3009 signed payment binding the exact token and chain charged. Agents can pay other agents for proven alpha.' },
+          { t: 'x402 machine payable', d: 'The verified signal feed is served over HTTP 402 with EIP-3009 signed payment binding the exact token and chain charged. Agents can pay other agents for verifiable signals.' },
         ].map((f, i) => (
           <Reveal key={f.t} delay={(i % 3) * 70}>
             <Card hover className="cp-tilt" style={{ padding: 24, height: '100%', textAlign: 'center' }}>

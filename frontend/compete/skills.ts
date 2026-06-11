@@ -455,7 +455,7 @@ const BNB_CAPS: SkillDef[] = [
   {
     id: 'bnb-x402', name: 'x402 machine payable feed', group: 'bnb', kind: 'skill',
     summary: 'The verified signal feed sold over HTTP 402.',
-    what: 'The verified feed is served over HTTP 402 with EIP-3009 binding the exact BSC token charged so one agent pays another for proven alpha in one settlement.',
+    what: 'The verified feed is served over HTTP 402 with EIP-3009 binding the exact BSC token charged so one agent pays another for verifiable signals in one settlement.',
     invoke: '/bnbhack-api/x402/products', tags: ['x402', 'eip-3009', 'core'],
     related: ['cmc-skill-x402', 'tw-x402', 'bnb-leaderboard'], used: true,
   },

@@ -10,7 +10,8 @@ Covers three audited behaviours of the live trading loop:
 
   2. Daily-floor last-resort base selection (_pick_lastresort_base): the one
      minimal qualifying swap placed late in the UTC day picks the most liquid
-     ROUTABLE eligible base (preference ETH then XRP then ADA), skips bases the
+     ROUTABLE eligible base (preference ETH then LINK then AVAX, the cheapest
+     deep/mid pools), skips bases the
      routability audit flagged and bases the book already holds, and returns
      None when nothing qualifies (the caller then logs and stands down rather
      than trading an unroutable token).
@@ -96,29 +97,34 @@ class SignalFreshnessTest(unittest.TestCase):
 
 
 class LastResortPickerTest(unittest.TestCase):
-    SPOT = {"ETH": "ETH", "XRP": "XRP", "ADA": "ADA", "DOGE": "DOGE",
-            "CAKE": "CAKE"}
+    # Includes the preferred deep/mid bases (ETH, LINK, AVAX) so the preference
+    # order is actually exercised, plus thinner bases that only the alphabetical
+    # fall-through should ever reach.
+    SPOT = {"ETH": "ETH", "LINK": "LINK", "AVAX": "AVAX", "XRP": "XRP",
+            "ADA": "ADA", "DOGE": "DOGE", "CAKE": "CAKE"}
 
     def test_prefers_eth_first(self):
         self.assertEqual(loop._pick_lastresort_base(self.SPOT), ("ETH", "ETH"))
 
     def test_unroutable_base_is_skipped(self):
+        # ETH unroutable -> next preferred deep/mid pool is LINK.
         self.assertEqual(loop._pick_lastresort_base(self.SPOT, ["ETH"]),
-                         ("XRP", "XRP"))
+                         ("LINK", "LINK"))
 
     def test_held_base_is_skipped(self):
-        pick = loop._pick_lastresort_base(self.SPOT, ["ETH"], excluded=["XRP"])
-        self.assertEqual(pick, ("ADA", "ADA"))
+        # ETH unroutable and LINK already held -> next preferred is AVAX.
+        pick = loop._pick_lastresort_base(self.SPOT, ["ETH"], excluded=["LINK"])
+        self.assertEqual(pick, ("AVAX", "AVAX"))
 
     def test_falls_through_to_remaining_spot_map(self):
         # All three preferred bases out: the remaining spot-map bases are
-        # considered alphabetically (CAKE before DOGE).
-        pick = loop._pick_lastresort_base(self.SPOT, ["ETH", "XRP", "ADA"])
-        self.assertEqual(pick, ("CAKE", "CAKE"))
+        # considered alphabetically (ADA before CAKE before DOGE).
+        pick = loop._pick_lastresort_base(self.SPOT, ["ETH", "LINK", "AVAX"])
+        self.assertEqual(pick, ("ADA", "ADA"))
 
     def test_case_insensitive_exclusions(self):
         self.assertEqual(loop._pick_lastresort_base(self.SPOT, ["eth"]),
-                         ("XRP", "XRP"))
+                         ("LINK", "LINK"))
 
     def test_nothing_routable_returns_none(self):
         self.assertIsNone(loop._pick_lastresort_base(self.SPOT, list(self.SPOT)))
@@ -126,8 +132,9 @@ class LastResortPickerTest(unittest.TestCase):
     def test_empty_spot_map_returns_none(self):
         self.assertIsNone(loop._pick_lastresort_base({}))
 
-    def test_preference_order_is_eth_xrp_ada(self):
-        self.assertEqual(loop._FLOOR_LASTRESORT_PREFERENCE, ("ETH", "XRP", "ADA"))
+    def test_preference_order_is_eth_link_avax(self):
+        self.assertEqual(loop._FLOOR_LASTRESORT_PREFERENCE,
+                         ("ETH", "LINK", "AVAX"))
 
 
 if __name__ == "__main__":

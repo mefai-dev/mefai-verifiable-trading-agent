@@ -76,9 +76,57 @@ STATS_CACHE_MAX = 512        # max distinct (symbol,tf,horizon) stat buckets
 # to ~0.20 percent. The out-of-sample walk-forward confirms that at this cost
 # only the 24h holding horizon is net-profitable (1h and 4h lose to cost), which
 # is why the live agent now prioritises the 24h horizon.
-ROUNDTRIP_COST_PCT = float(os.getenv("BNBHACK_ROUNDTRIP_COST_PCT", "0.2"))
-MIN_EDGE_SAMPLES = int(os.getenv("BNBHACK_MIN_EDGE_SAMPLES", "30"))
+# A FLAT round-trip cost under-charges thin alt pegs: the deep majors (BTCB/ETH/
+# BNB vs USDT) route PancakeSwap V3 0.05 percent pools (~0.2 percent round-trip),
+# but the Binance-Peg alt pegs (XRP/ADA/DOGE/LTC ...) route shallower, higher-fee
+# pools whose real round-trip is ~0.4 to 0.7 percent. Charging one flat 0.2 would
+# green-light a bucket whose net edge is actually negative once the true fee is
+# paid, exactly in the judged window. So the net-of-cost gate now subtracts a
+# cost keyed to the token's BSC liquidity TIER, and the same tier cost is threaded
+# into the TP/SL optimizer objective so a bracket can never be tuned around a fee.
+ROUNDTRIP_COST_PCT = float(os.getenv("BNBHACK_ROUNDTRIP_COST_PCT", "0.2"))  # deep
+_COST_MID_PCT = float(os.getenv("BNBHACK_COST_MID_PCT", "0.35"))
+_COST_THIN_PCT = float(os.getenv("BNBHACK_COST_THIN_PCT", "0.6"))
+_DEEP_POOLS = {"BTC", "BTCB", "ETH", "WETH", "BNB", "WBNB",
+               "USDT", "USDC", "BUSD", "FDUSD"}
+_MID_POOLS = {"LINK", "AVAX", "ATOM", "SOL", "XRP", "DOT", "UNI", "LTC",
+              "CAKE", "AAVE", "MATIC", "POL", "TRX", "BCH"}
+
+# A bet is only sized when its EMPIRICAL bucket has at least this many resolved
+# samples. Raised from 30 to 100: a true 0.50 coin-flip bucket shows a win rate
+# up to ~0.62 on 20 to 30 samples by chance, which leaks a fake edge into Kelly;
+# the walk-forward confirms the floor=100 holdout edge is ~6x the floor=20 edge
+# for only ~8 percent fewer trades.
+MIN_EDGE_SAMPLES = int(os.getenv("BNBHACK_MIN_EDGE_SAMPLES", "100"))
 EDGE_STDERR_MULT = float(os.getenv("BNBHACK_EDGE_STDERR_MULT", "1.0"))
+# Split-sign stability: a bucket must show a positive NET edge in BOTH the older
+# and newer half of its own history, not just pooled, so a one-period fluke that
+# averages positive cannot pass. Cuts the train to holdout decay. Env-gated so it
+# can be relaxed if it ever starves the >=1-trade/day cadence.
+REQUIRE_SPLIT_STABLE = os.getenv("BNBHACK_REQUIRE_SPLIT_STABLE", "1") == "1"
+
+
+def _norm_base(symbol: str) -> str:
+    """Strip the .P perp suffix and the quote ccy so a symbol maps to its bare
+    base for liquidity-tier lookup (ETHUSDT.P -> ETH)."""
+    s = (symbol or "").upper().strip()
+    if s.endswith(".P"):
+        s = s[:-2]
+    for q in ("USDT", "USDC", "BUSD", "FDUSD"):
+        if s.endswith(q) and len(s) > len(q):
+            return s[:-len(q)]
+    return s
+
+
+def roundtrip_cost(symbol: str) -> float:
+    """Round-trip execution cost (percent) for the token's BSC liquidity tier:
+    deep majors pay the V3 low-fee cost, mid large-caps and thin alts pay more."""
+    b = _norm_base(symbol)
+    if b in _DEEP_POOLS:
+        return ROUNDTRIP_COST_PCT
+    if b in _MID_POOLS:
+        return _COST_MID_PCT
+    return _COST_THIN_PCT
 
 
 def _finite(x: float, default: float = 0.0) -> float:
@@ -113,6 +161,20 @@ def _ro_db():
         db.close()
 
 
+_colcache: Dict[str, bool] = {}
+
+
+def _has_entry_time(db) -> bool:
+    """Whether signal_performance carries an entry_time column. The production
+    book has it (used for the time split and as_of replay); a minimal synthetic
+    fixture may not, so the split-sign query falls back to rowid ordering."""
+    key = SIGNAL_DB
+    if key not in _colcache:
+        cols = {r[1] for r in db.execute("PRAGMA table_info(signal_performance)")}
+        _colcache[key] = "entry_time" in cols
+    return _colcache[key]
+
+
 # ---------------------------------------------------------------------------
 # Empirical edge from signal_performance
 # ---------------------------------------------------------------------------
@@ -132,6 +194,9 @@ class EmpiricalStats:
     expectancy: float     # mean NET pnl percent per trade (signed), pre-fee
     expectancy_stderr: float  # standard error of that mean (percent)
     shrunk: bool
+    half1_expectancy: float = 0.0  # mean pnl over the OLDER half of the bucket
+    half2_expectancy: float = 0.0  # mean pnl over the NEWER half of the bucket
+    splits_resolved: bool = False  # both halves had samples (split test is valid)
 
 
 @dataclass
@@ -150,12 +215,14 @@ _stats_cache: Dict[str, EmpiricalStats] = {}
 _stats_ts: Dict[str, float] = {}
 
 
-def _global_prior(horizon: str) -> _GlobalPrior:
+def _global_prior(horizon: str, as_of_ts: Optional[int] = None) -> _GlobalPrior:
     if horizon not in _HORIZON_COLS:
         raise ValueError(f"invalid horizon: {horizon}")
-    if horizon in _prior_cache and _now() - _prior_ts.get(horizon, 0) < STATS_TTL:
-        return _prior_cache[horizon]
+    pkey = horizon + (f"|{int(as_of_ts)}" if as_of_ts else "")
+    if pkey in _prior_cache and _now() - _prior_ts.get(pkey, 0) < STATS_TTL:
+        return _prior_cache[pkey]
     pnl_col, res_col = _HORIZON_COLS[horizon]
+    asof_sql = " AND entry_time <= ?" if as_of_ts else ""
     with _ro_db() as db:
         row = db.execute(
             f"""SELECT
@@ -167,7 +234,8 @@ def _global_prior(horizon: str) -> _GlobalPrior:
                   AVG({pnl_col}) AS ex
                 FROM signal_performance
                 WHERE status='completed' AND {res_col} IN ('win','loss')
-                  AND {pnl_col} IS NOT NULL""",
+                  AND {pnl_col} IS NOT NULL{asof_sql}""",
+            ((int(as_of_ts),) if as_of_ts else ()),
         ).fetchone()
     n = int(row["n"] or 0)
     wins = int(row["wins"] or 0)
@@ -179,25 +247,38 @@ def _global_prior(horizon: str) -> _GlobalPrior:
     prior = _GlobalPrior(win_rate=wr, avg_win=max(aw, 1e-6),
                          avg_loss=max(al, 1e-6), avg_max_drawdown=max(adv, 1e-6),
                          expectancy=ex, n=n)
-    _prior_cache[horizon] = prior
-    _prior_ts[horizon] = _now()
+    _prior_cache[pkey] = prior
+    _prior_ts[pkey] = _now()
     return prior
 
 
-def compute_stats(symbol: str, timeframe: str, horizon: str = "24h") -> EmpiricalStats:
+def compute_stats(symbol: str, timeframe: str, horizon: str = "24h",
+                  as_of_ts: Optional[int] = None) -> EmpiricalStats:
     """Empirical win-rate / payoff for one (symbol, timeframe), shrunk toward the
-    global prior so thin buckets cannot produce extreme Kelly values."""
+    global prior so thin buckets cannot produce extreme Kelly values.
+
+    as_of_ts (unix seconds), when set, restricts the bucket to signals entered AT
+    OR BEFORE that time. The live agent leaves it None (every row is already in
+    the past), but an honest in-period backtest replay passes the decision time so
+    no future outcome leaks into the win-rate or Kelly that drove a past trade."""
     if horizon not in _HORIZON_COLS:
         raise ValueError(f"invalid horizon: {horizon}")
     sym = _feed_symbol(symbol)
     tf = str(timeframe)
-    ckey = f"{sym}|{tf}|{horizon}"
+    ckey = f"{sym}|{tf}|{horizon}" + (f"|{int(as_of_ts)}" if as_of_ts else "")
     if ckey in _stats_cache and _now() - _stats_ts.get(ckey, 0) < STATS_TTL:
         return _stats_cache[ckey]
 
-    prior = _global_prior(horizon)
+    prior = _global_prior(horizon, as_of_ts)
     pnl_col, res_col = _HORIZON_COLS[horizon]
     with _ro_db() as db:
+        # entry_time drives the time split and as_of replay; without it (a minimal
+        # synthetic fixture) fall back to rowid (insertion) order and ignore as_of.
+        has_et = _has_entry_time(db)
+        order_col = "entry_time" if has_et else "rowid"
+        use_asof = as_of_ts is not None and has_et
+        asof_sql = " AND entry_time <= ?" if use_asof else ""
+        base_params: tuple = (sym, tf) + ((int(as_of_ts),) if use_asof else ())
         row = db.execute(
             f"""SELECT
                   COUNT(*) AS n,
@@ -209,8 +290,26 @@ def compute_stats(symbol: str, timeframe: str, horizon: str = "24h") -> Empirica
                   AVG({pnl_col}*{pnl_col}) AS ex2
                 FROM signal_performance
                 WHERE symbol=? AND timeframe=? AND status='completed'
-                  AND {res_col} IN ('win','loss') AND {pnl_col} IS NOT NULL""",
-            (sym, tf),
+                  AND {res_col} IN ('win','loss') AND {pnl_col} IS NOT NULL
+                  {asof_sql}""",
+            base_params,
+        ).fetchone()
+        # Split-sign stability: mean pnl over the older vs newer half of the
+        # bucket, ordered by entry_time. A bucket whose edge lives in only one
+        # half is a fluke; the caller's gate requires BOTH halves net-positive.
+        srow = db.execute(
+            f"""WITH r AS (
+                  SELECT {pnl_col} AS p,
+                         ROW_NUMBER() OVER (ORDER BY {order_col}) AS rn,
+                         COUNT(*) OVER () AS tot
+                  FROM signal_performance
+                  WHERE symbol=? AND timeframe=? AND status='completed'
+                    AND {res_col} IN ('win','loss') AND {pnl_col} IS NOT NULL
+                    {asof_sql})
+                SELECT AVG(CASE WHEN rn <= tot/2 THEN p END) AS h1,
+                       AVG(CASE WHEN rn >  tot/2 THEN p END) AS h2
+                FROM r""",
+            base_params,
         ).fetchone()
 
     n = int(row["n"] or 0)
@@ -246,12 +345,17 @@ def compute_stats(symbol: str, timeframe: str, horizon: str = "24h") -> Empirica
     al = max(al, 1e-6)
 
     payoff = min(aw / al, PAYOFF_CAP)
+    h1 = srow["h1"] if srow is not None else None
+    h2 = srow["h2"] if srow is not None else None
     stats = EmpiricalStats(
         symbol=sym, timeframe=tf, horizon=horizon, n=n, wins=wins,
         win_rate=min(max(shrunk_wr, 0.0), 1.0), raw_win_rate=min(max(raw_wr, 0.0), 1.0),
         avg_win=aw, avg_loss=al, payoff=payoff, avg_max_drawdown=max(adv, 1e-6),
         expectancy=expectancy, expectancy_stderr=stderr,
         shrunk=n < (3 * SHRINK_PSEUDO),
+        half1_expectancy=float(h1) if h1 is not None else 0.0,
+        half2_expectancy=float(h2) if h2 is not None else 0.0,
+        splits_resolved=(h1 is not None and h2 is not None),
     )
     if len(_stats_cache) >= STATS_CACHE_MAX and ckey not in _stats_cache:
         # Drop the oldest cached bucket (bounded against symbol/timeframe flooding).
@@ -351,7 +455,8 @@ def size_position(inp: SizingInput) -> SizingResult:
     rho = min(rho_kelly, rho_dd) * regime * conviction
     rho = max(0.0, rho)
 
-    net_edge = stats.expectancy - ROUNDTRIP_COST_PCT
+    cost = roundtrip_cost(stats.symbol)
+    net_edge = stats.expectancy - cost
     result = SizingResult(
         approved=False, symbol=stats.symbol, timeframe=stats.timeframe,
         equity=equity, internal_cap=internal_cap, drawdown_room_R=R,
@@ -389,9 +494,19 @@ def size_position(inp: SizingInput) -> SizingResult:
     if net_edge <= required:
         reasons.append(
             f"net edge {net_edge:.3f}% (exp {stats.expectancy:.3f}% - cost "
-            f"{ROUNDTRIP_COST_PCT:.2f}%) <= {EDGE_STDERR_MULT:.1f} stderr "
+            f"{cost:.2f}%) <= {EDGE_STDERR_MULT:.1f} stderr "
             f"{required:.3f}%: edge not significant after fees")
         return result
+    # Split-sign stability: the net edge must hold in BOTH the older and newer
+    # half of the bucket, not just pooled, so a one-period fluke that averages
+    # positive cannot pass. A bucket too small to split is treated as unstable.
+    if REQUIRE_SPLIT_STABLE:
+        h1n, h2n = stats.half1_expectancy - cost, stats.half2_expectancy - cost
+        if not stats.splits_resolved or h1n <= 0 or h2n <= 0:
+            reasons.append(
+                f"net edge unstable across halves (h1 {h1n:+.3f}% h2 {h2n:+.3f}% "
+                f"net of {cost:.2f}% cost): not both positive, no bet")
+            return result
     if rho <= 0:
         reasons.append("risk budget collapsed to zero")
         return result

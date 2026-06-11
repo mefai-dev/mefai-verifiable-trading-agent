@@ -222,7 +222,7 @@ function X402Panel({ x402 }: { x402: X402Catalog | null }) {
   return <Panel title={'x402 MACHINE PAYABLE FEED'} accent="var(--trust)" right={x402 ? x402.network : ''}
     help={<>{'Each card is a paywalled endpoint priced in stablecoin. A calling agent hits the URL receives HTTP 402 pays the exact quoted amount with an EIP-3009 authorization then re-requests and gets the signed payload. Prices and the payment network below are read live from the running catalog.'}</>}>
     <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--c-text-2)', marginTop: 0 }}>
-      {'The verified signal feed is served over HTTP 402. Payment is bound with EIP-3009 to the exact token and chain charged so one agent can pay another for proven alpha without a human in the loop.'}
+      {'The verified signal feed is served over HTTP 402. Payment is bound with EIP-3009 to the exact token and chain charged so one agent can pay another for verifiable signals without a human in the loop.'}
     </p>
     {products.length === 0
       ? <div style={{ color: 'var(--c-muted)', padding: 20, textAlign: 'center' }}>{'catalog loading…'}</div>

@@ -139,7 +139,12 @@ SIGNAL_MAX_AGE_BARS = int(os.getenv("BNBHACK_SIGNAL_MAX_AGE_BARS", "8"))
 
 # Daily-floor last resort: liquidity preference order for the one minimal swap
 # placed when the relaxed floor pass still found nothing late in the UTC day.
-_FLOOR_LASTRESORT_PREFERENCE = ("ETH", "XRP", "ADA")
+# This forced leg BYPASSES the net-of-cost edge gate (it exists only to keep the
+# >=1-trade/day cadence), so it must route to the CHEAPEST, deepest pool to lose
+# the least to fees: ETH first (V3 0.05% deep pool, ~0.2% round-trip), then the
+# mid-tier majors. The thin alt pegs (XRP/ADA/DOGE) are intentionally NOT
+# preferred here because their ~0.4 to 0.7% round-trip bleeds the floor notional.
+_FLOOR_LASTRESORT_PREFERENCE = ("ETH", "LINK", "AVAX")
 # Stop/target fraction applied to the last-resort leg (no sizer bucket backs
 # it, so a fixed modest envelope bounds the risk on the tiny floor notional).
 _FLOOR_LASTRESORT_STOP_FRAC = 0.02
@@ -493,7 +498,10 @@ class PendingStore:
 class Decision:
     symbol: str
     timeframe: str
-    action: str                # TRADE_LONG / TRADE_SHORT / SKIP
+    action: str                # TRADE_LONG / TRADE_SHORT / PREDICT / SKIP
+                               # PREDICT = verifiable commit-reveal forecast with
+                               # NO capital leg (conviction cleared but the sizer
+                               # declined the net-of-cost edge, or a governor halt)
     direction: int             # +1 / -1 / 0
     conviction: float
     agreement: float
@@ -589,7 +597,8 @@ def _signals_now(watchlist: List[str], tf: str) -> List[Dict[str, Any]]:
                 price = 0.0
             if price <= 0:
                 continue
-            out.append({"pair": pair, "side": side, "price": price})
+            out.append({"pair": pair, "side": side, "price": price,
+                        "ts": row["timestamp"]})
     finally:
         db.close()
     return out
@@ -654,6 +663,13 @@ class AgentLoop:
         # so a mid-day restart does not re-arm the floor after an earlier trade.
         self._trade_day, self._trades_today = self._load_daily_trades()
         self._floor_note: str = ""
+        # PREDICT-only commit dedup: one verifiable forecast per distinct signal
+        # event (symbol, direction, signal timestamp). A signal stays "fresh" for
+        # several bars, so without this a PREDICT-only call would re-commit (and
+        # spend gas) every cycle the same alert is still fresh. Bounded; resets on
+        # restart (at worst one extra forecast for a still-fresh signal). The
+        # capital TRADE path keeps its own position/ladder dedup and is untouched.
+        self._predicted_keys: set = set()
         # Native x402 consumption bookkeeping: the last consumed feed result and
         # the cycle it was bought on, surfaced in the published state. The buyer
         # config is the deployer's published terms (recipient + asset + network),
@@ -1057,7 +1073,7 @@ class AgentLoop:
                                    "data": data})
                 bal = int(raw.hex() or "0x0", 16) / 1e18
                 if math.isfinite(bal) and bal > 0:
-                    total += bal
+                    total += bal  # stablecoin at face value
             for p in (open_positions or []):
                 if (p.get("side") or "long") != "long":
                     continue
@@ -1088,7 +1104,10 @@ class AgentLoop:
             return self.cfg.equity + realized + unrealized
         # PRIMARY: value the portfolio straight from chain RPC (native BNB at
         # mark + idle stablecoins at face + open long-position tokens at mark).
-        # Reliable and token-complete, unlike twak's flaky balance endpoint.
+        # This is reliable and token-complete, unlike twak's balance endpoint
+        # which is intermittently killed and prices neither USDT nor freshly
+        # bought tokens (which would read as a phantom drawdown). twak is the
+        # fallback only if RPC is unavailable.
         try:
             bnb_px = await mark_price("BNBUSDT", fallback=0.0) or 0.0
             rpc_usd = await asyncio.to_thread(self._equity_rpc_sync, bnb_px,
@@ -1302,9 +1321,37 @@ class AgentLoop:
             conviction=fr.conviction / 100.0))
         d.win_rate = sz.win_rate
         d.payoff = sz.payoff
+
+        # Verifiable prediction envelope. The sizer populates stop_distance and
+        # payoff even when it DECLINES the capital leg, so the directional
+        # entry/target/stop forecast is always well-defined. The live floors keep
+        # it sane and reproducible. This is the call the agent commits and reveals
+        # on chain regardless of whether it then risks capital on it.
+        sd = max(sz.stop_distance, _LIVE_MIN_STOP)
+        rr = max(sz.payoff * sd, _LIVE_MIN_TP)
+        if fr.direction > 0:
+            d.stop = entry * (1.0 - sd)
+            d.target = entry * (1.0 + rr)
+        else:
+            # Cap the reward fraction so a short target stays a positive price
+            # (an unclamped payoff*sd > 1 would underflow the target to 0).
+            rr = min(rr, 0.95)
+            d.stop = entry * (1.0 + sd)
+            d.target = entry * (1.0 - rr)
+
+        # PREDICTION vs CAPITAL are now decoupled. Conviction (above) already
+        # cleared, so this is a forecast the agent publishes. It only ADDITIONALLY
+        # risks capital when the sizer approves a positive net-of-cost edge AND the
+        # RiskGovernor is not halted. Otherwise it is committed and revealed on
+        # chain as a PREDICT-only call: a verifiable, graded forecast with ZERO
+        # capital, no spot/perp leg and no position. This keeps the verifiable
+        # protocol record flowing on the high-conviction calls whose measured edge
+        # does not clear the fee hurdle (the common case on this thin-edge data).
         if not sz.approved:
-            d.reasons.extend(sz.reasons[-2:] or ["sizer declined"])
+            d.action = "PREDICT"
+            d.reasons.extend(sz.reasons[-2:] or ["sizer declined; prediction only"])
             return d
+
         d.leverage = sz.leverage
         d.notional = sz.notional
         d.margin = sz.margin
@@ -1321,24 +1368,14 @@ class AgentLoop:
             d.reasons.append(
                 "daily floor (forced past selectivity to keep >=1 trade/day)")
 
-        sd = max(sz.stop_distance, _LIVE_MIN_STOP)
-        rr = max(sz.payoff * sd, _LIVE_MIN_TP)
-        if fr.direction > 0:
-            d.stop = entry * (1.0 - sd)
-            d.target = entry * (1.0 + rr)
-        else:
-            # Cap the reward fraction so a short target stays a positive price
-            # (an unclamped payoff*sd > 1 would underflow the target to 0).
-            rr = min(rr, 0.95)
-            d.stop = entry * (1.0 + sd)
-            d.target = entry * (1.0 - rr)
-
         # RiskGovernor pre-trade gate (read; honours a deployed halt). Offloaded
-        # so the RPC call cannot block the event loop.
+        # so the RPC call cannot block the event loop. A halt blocks the CAPITAL
+        # leg but not the forecast, so it downgrades to PREDICT (committed and
+        # revealed, zero capital) rather than a silent SKIP.
         ok, dd_bps, gdetail = await asyncio.to_thread(self.writer.can_trade)
         if not ok:
-            d.action = "SKIP"
-            d.reasons.append(gdetail)
+            d.action = "PREDICT"
+            d.reasons.append(f"{gdetail}; prediction only (no capital)")
             return d
 
         d.action = "TRADE_LONG" if fr.direction > 0 else "TRADE_SHORT"
@@ -1838,10 +1875,24 @@ class AgentLoop:
             except Exception as exc:
                 logger.warning("decide failed (%s): %s", sig.get("pair"), exc)
                 continue
+            # A PREDICT-only call commits a verifiable forecast but risks no
+            # capital. Dedup it per distinct signal event so a still-fresh alert
+            # is not re-committed (gas) every cycle; the capital TRADE path is
+            # unaffected and keeps its own position/ladder dedup.
+            if d.action == "PREDICT":
+                pkey = (d.symbol, d.direction, sig.get("ts"))
+                if pkey in self._predicted_keys:
+                    decisions.append(d)
+                    continue
+                if len(self._predicted_keys) > 4000:
+                    self._predicted_keys.clear()
+                self._predicted_keys.add(pkey)
             if d.action != "SKIP":
                 # 'open' -> new ladder, 'add' -> next rung, '' -> blocked (cap
                 # full / already scaling out). Both a long and a short take a
-                # leg (the short is paper-only; see _commit_and_act).
+                # leg (the short is paper-only; see _commit_and_act). A PREDICT
+                # passes mode='' so _commit_and_act records the commit + reveal
+                # but never opens a trade leg.
                 mode = (self.pm.entry_mode(d.symbol, self.cfg.max_positions)
                         if d.action in ("TRADE_LONG", "TRADE_SHORT") else "")
                 try:

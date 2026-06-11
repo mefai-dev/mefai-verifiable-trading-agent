@@ -28,7 +28,7 @@ repository-stable `repro_digest`. On the shipped sample DB
 (`sha256 f7202dd2…2bb0282d`, 40000 labeled outcomes) the current digest is:
 
 ```
-repro_digest  a6d1f89e74c50e8265b8a057ba8ffa8725a2726f9948d96abaa5d4d385bdffb8
+repro_digest  8800033e6f55d918369cf5da839430cebbd81ad947823d144f1760327e74e5c8
 overall       PASS  (5/5 skills)
 ```
 
