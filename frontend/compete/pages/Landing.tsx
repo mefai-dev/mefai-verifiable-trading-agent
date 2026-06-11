@@ -25,7 +25,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
   const ddBps = st ? Math.round(st.drawdown * 10000) : 0
   const capBps = st ? Math.round(st.jury_cap * 10000) : 2000
 
-  return <div className="px-landing">
+  return <div>
     {/* ════════ HERO ════════ */}
     <section style={{ position: 'relative', overflow: 'hidden', padding: '92px 22px 60px' }}>
       <div className="cp-mesh">
