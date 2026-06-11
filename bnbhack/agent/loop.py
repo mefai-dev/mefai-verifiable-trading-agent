@@ -924,36 +924,50 @@ class AgentLoop:
             self._floor_note = f"daily floor last resort blocked: {g_detail}"
             logger.warning(self._floor_note)
             return None
-        # Pick the most liquid routable base the book does not already hold
-        # (a held base would need an 'add', whose rung ledger may be full).
+        # Candidate bases the book does not already hold (a held base needs an
+        # 'add', whose rung ledger may be full) and that are NOT manual-hold (a
+        # manual-hold base would open a leg the auto-exit can never close), in
+        # preference order then alphabetical. We iterate and try EACH candidate's
+        # quote until one fills, so a single thin/transient route failure falls
+        # through to the next base instead of forfeiting the whole day (DQ).
         try:
             held = {b for b in _BSC_SPOT if self.pm.has_open(f"{b}USDT")}
         except Exception:
             held = set()
-        pick = _pick_lastresort_base(
-            _BSC_SPOT, self._unroutable_bases(list(_BSC_SPOT)), held)
-        if pick is None:
+        held |= {b for b in _BSC_SPOT
+                 if f"{b}USDT".upper() in self.pm.rules.manual_hold}
+        unroutable = set(self._unroutable_bases(list(_BSC_SPOT)))
+        ordered = [b for b in _FLOOR_LASTRESORT_PREFERENCE if b in _BSC_SPOT]
+        ordered += sorted(b for b in _BSC_SPOT if b not in ordered)
+        candidates = [b for b in ordered if b not in held and b not in unroutable]
+        if not candidates:
             self._floor_note = ("daily floor last resort: no routable free "
                                 "base available")
             logger.error(self._floor_note)
             return None
-        base, tok = pick
-        symbol = f"{base}USDT"
-        # Live entry mark from a fresh quote (usd in / token out), so the
-        # commit and the stop/target envelope reflect the market now, not a
-        # stale stored signal price.
-        try:
-            q = await bsc_exec.quote(usd, "USDT", tok, self.cfg.slippage_pct)
-        except Exception as exc:
-            logger.warning("daily floor last resort quote failed: %s", exc)
-            q = None
-        out_amt = (bsc_exec._amount_field((q.data or {}).get("output"))
-                   if q is not None and q.ok else None)
-        if not out_amt or out_amt <= 0:
-            self._floor_note = "daily floor last resort: quote unavailable"
+        # Live entry mark from a fresh quote (usd in / token out), so the commit
+        # and the stop/target envelope reflect the market now, not a stale price.
+        base = tok = None
+        entry = 0.0
+        for cand in candidates:
+            ctok = _BSC_SPOT[cand]
+            try:
+                q = await bsc_exec.quote(usd, "USDT", ctok, self.cfg.slippage_pct)
+            except Exception as exc:
+                logger.warning("daily floor last resort quote failed (%s): %s",
+                               cand, exc)
+                continue
+            out_amt = (bsc_exec._amount_field((q.data or {}).get("output"))
+                       if q is not None and q.ok else None)
+            if out_amt and out_amt > 0:
+                base, tok, entry = cand, ctok, usd / out_amt
+                break
+        if base is None:
+            self._floor_note = ("daily floor last resort: no candidate quote "
+                                "available across the eligible deep pools")
             logger.warning(self._floor_note)
             return None
-        entry = usd / out_amt
+        symbol = f"{base}USDT"
         d = Decision(
             symbol=symbol, timeframe=self.cfg.timeframe, action="TRADE_LONG",
             direction=1, conviction=0.0, agreement=0.0, coverage=0.0,
@@ -1252,7 +1266,8 @@ class AgentLoop:
             qty = float(p["qty_token"] or 0)
             if not tok or qty <= 0:
                 continue
-            have = bsc_exec._wallet_token_balance(tok)
+            have = bsc_exec._wallet_token_balance(
+                bsc_exec._resolve_token(tok) or tok)
             if have is None:
                 unknown += 1
                 continue  # unknown read: never orphan on a miss

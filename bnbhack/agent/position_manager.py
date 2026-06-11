@@ -124,6 +124,15 @@ def _row_is_floor(row: sqlite3.Row) -> bool:
         return False
 
 
+def _row_flag(row: sqlite3.Row, col: str) -> bool:
+    """Safely read a 0/1 flag column from a position row; legacy rows written
+    before the column existed raise on the missing key and default to False."""
+    try:
+        return bool(row[col])
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Store
 # ---------------------------------------------------------------------------
@@ -159,6 +168,10 @@ class PositionStore:
                 # Disclosure flag: 1 when this leg was opened by the daily-floor
                 # min-1-trade-per-day compliance path, not by a conviction signal.
                 ("is_floor", "is_floor INTEGER DEFAULT 0"),
+                # Operator hold: 1 pins this leg as never-auto-close, PERSISTENTLY
+                # (so a restart or env edit cannot silently re-arm the auto-exit).
+                # The manage guard honours this row flag OR the env manual_hold set.
+                ("manual_hold", "manual_hold INTEGER DEFAULT 0"),
             ):
                 if col not in existing:
                     db.execute("ALTER TABLE positions ADD COLUMN " + ddl)
@@ -301,6 +314,11 @@ class PositionStore:
     def update_peak(self, pos_id: int, peak: float) -> None:
         with self._conn() as db:
             db.execute("UPDATE positions SET peak=? WHERE id=?", (peak, pos_id))
+
+    def mark_manual_hold(self, pos_id: int) -> None:
+        """Persist the operator never-auto-close flag on a leg (survives restart)."""
+        with self._conn() as db:
+            db.execute("UPDATE positions SET manual_hold=1 WHERE id=?", (pos_id,))
 
     def update_stop(self, pos_id: int, stop: float, peak: float) -> None:
         with self._conn() as db:
@@ -495,6 +513,10 @@ class PositionManager:
                 logger.warning(
                     "record_open blocked for %s: open leg / cap re-check failed",
                     symbol)
+            elif symbol.upper() in self.rules.manual_hold:
+                # Persist the operator hold on the row so a restart / env edit can
+                # never silently re-arm the auto-exit (manage honours row OR env).
+                self.store.mark_manual_hold(pid)
             return pid
         except Exception as exc:
             logger.warning("record_open failed for %s: %s", symbol, exc)
@@ -572,8 +594,10 @@ class PositionManager:
         target = float(p["target"] or 0)
         tp1_done = bool(p["tp1_done"])
 
-        # Operator manual hold: never auto-close this symbol; just track peak.
-        if symbol.upper() in self.rules.manual_hold:
+        # Operator manual hold: never auto-close this leg; just track peak. Honour
+        # the PERSISTED row flag OR the env set, so a restart / env edit can never
+        # silently re-arm the auto-exit on a leg the operator pinned.
+        if symbol.upper() in self.rules.manual_hold or _row_flag(p, "manual_hold"):
             if peak != prev_peak:
                 self.store.update_peak(int(p["id"]), peak)
             return None

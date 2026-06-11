@@ -98,6 +98,19 @@ _USD_STABLES = {"USDT", "USDC", "BUSD"}
 _BSC_BALANCE_RPC = (os.getenv("BNBHACK_RPC_URL", "").split(",")[0].strip()
                     or "https://bsc-rpc.publicnode.com")
 
+# Most BEP-20 in the registry are 18-decimal; Binance-Peg DOGE is the lone
+# 8-decimal token. Balance and sell-unit math MUST scale by the token's real
+# decimals or a DOGE leg misreads its balance by 1e10 (the close clamps the sell
+# to dust so the leg can never spot-exit, and reconcile false-flags it orphaned).
+# Keyed by lowercase address so _wallet_token_balance (address-only) can look up.
+_TOKEN_DECIMALS = {
+    "0xba2ae424d960c26247dd6c32edc70b295c744c43": 8,  # DOGE (Binance-Peg)
+}
+
+
+def _token_decimals(addr) -> int:
+    return _TOKEN_DECIMALS.get((addr or "").strip().lower(), 18)
+
 
 def _wallet_token_balance(token_addr):
     """balanceOf(AGENT_WALLET) for an 18-decimal BEP-20 via one eth_call. Returns
@@ -121,7 +134,7 @@ def _wallet_token_balance(token_addr):
         hx = r.get("result")
         if not hx or hx == "0x":
             return None
-        return int(hx, 16) / 1e18
+        return int(hx, 16) / float(10 ** _token_decimals(token_addr))
     except Exception:
         return None
 
@@ -187,16 +200,23 @@ def assert_routable(bases: Iterable[str]) -> List[str]:
 
 
 def _cli_token_arg(sym_or_addr: str) -> Optional[str]:
-    """The exact argument handed to `twak swap` for a token leg. A known symbol
-    is passed verbatim (twak resolves it); a raw address is passed as-is. Anything
-    that is neither a clean symbol nor a 0x address is refused (no injection)."""
+    """The exact argument handed to `twak swap` for a token leg. twak resolves
+    almost every BEP-20 ONLY by its 0x address (it accepts a bare SYMBOL just for
+    native BNB and a couple of bluechips); routing alts like LINK/AVAX/DOGE by
+    symbol silently fails the quote. So a known symbol is mapped to its canonical
+    BSC address here, native BNB is passed as the symbol (no ERC-20 address), and a
+    raw 0x address is passed as-is. Anything else is refused (no injection)."""
     if not isinstance(sym_or_addr, str):
         return None
     s = sym_or_addr.strip()
     if _is_addr(s):
         return s.lower()
     if _SYMBOL_RE.match(s) and s.upper() in BSC_TOKENS:
-        return s.upper()
+        up = s.upper()
+        if up in ("BNB", "WBNB"):
+            return up  # native / wrapped native: twak resolves by symbol
+        addr = BSC_TOKENS[up]
+        return addr if (_is_addr(addr) and int(addr, 16) != 0) else up
     return None
 
 
@@ -410,15 +430,17 @@ def _plan_tx_from_quote(qbody: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _sell_base_units(amount: float, from_token: str) -> Optional[int]:
     """The sold amount in raw base units, for the solver's standing-allowance
-    comparison. Every token in the BSC registry is 18-decimal, so a known symbol
-    converts exactly; an unknown raw-address sold token has no safe default and is
-    left unquantified (the allowance read still runs, only the size compare SKIPs).
+    comparison. A known symbol converts exactly using its real decimals (see
+    _token_decimals · 18 for most, 8 for DOGE); an unknown raw-address sold token
+    has no safe default and is left unquantified (the allowance read still runs,
+    only the size compare SKIPs).
     Native BNB has no ERC-20 allowance leg, so it is excluded."""
     sym = (from_token or "").strip().upper()
     if sym == "BNB" or sym not in BSC_TOKENS:
         return None
     try:
-        return int(Decimal(str(amount)) * (Decimal(10) ** 18))
+        dec = _token_decimals(BSC_TOKENS[sym])
+        return int(Decimal(str(amount)) * (Decimal(10) ** dec))
     except (InvalidOperation, ValueError, TypeError):
         return None
 
