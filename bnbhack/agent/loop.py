@@ -102,6 +102,33 @@ PEAK_EQUITY_PATH = Path(os.getenv("BNBHACK_PEAK_EQUITY_FILE",
 DAILY_TRADE_PATH = Path(os.getenv("BNBHACK_DAILY_TRADE_FILE",
                                   str(_STATE_DIR / "daily_trades.json")))
 
+# Append-only structured audit log. Every decision, open fill, guard block and
+# close is written here with its FULL math (sizing inputs, spend, qty, fill price,
+# slippage vs mark, pnl), so any anomaly is diagnosable after the fact from one
+# file. Best-effort and isolated: a logging failure never touches trade logic.
+_AUDIT_PATH = Path(os.getenv("BNBHACK_AUDIT_LOG",
+                             str(_STATE_DIR / "audit_log.jsonl")))
+_AUDIT_MAX_BYTES = int(os.getenv("BNBHACK_AUDIT_MAX_BYTES", str(50_000_000)))
+
+
+def _audit(kind: str, **fields: Any) -> None:
+    """Append one structured record {ts, kind, ...fields} to the audit log.
+    Rotates to .jsonl.1 once past the size cap. Never raises into the loop."""
+    try:
+        rec = {"ts": _now(), "kind": kind}
+        rec.update(fields)
+        line = json.dumps(rec, separators=(",", ":"), default=str)
+        try:
+            if (_AUDIT_PATH.exists()
+                    and _AUDIT_PATH.stat().st_size > _AUDIT_MAX_BYTES):
+                _AUDIT_PATH.replace(_AUDIT_PATH.with_suffix(".jsonl.1"))
+        except Exception:
+            pass
+        with open(_AUDIT_PATH, "a") as fh:
+            fh.write(line + "\n")
+    except Exception:
+        pass
+
 _TF_SECONDS = {
     "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
     "1h": 3600, "2h": 7200, "4h": 14400, "6h": 21600, "12h": 43200,
@@ -1778,9 +1805,25 @@ class AgentLoop:
                             self.pm.record_add(
                                 symbol=d.symbol, add_size_usd=spent_usd,
                                 fill_price=d.entry, swap_result=sw.result)
+                        # Full open / guard-block math, append-only.
+                        _audit("open" if (record_it and sw.executed)
+                               else ("paper_open" if record_it else "guard_block"),
+                               symbol=d.symbol, base=base, mode=mode,
+                               dir=d.direction, requested_usd=round(rung_usd, 4),
+                               spent_usd=round(spent_usd, 4),
+                               entry=round(d.entry, 8), target=round(d.target, 8),
+                               stop=round(d.stop, 8), mark=round(_mk or 0.0, 6),
+                               qty=_amount_from_result(sw.result or {}),
+                               go=sw.go, executed=sw.executed, gate_score=sc,
+                               detail=sw.detail,
+                               tx=(_tx_hash_from_result(sw.result)
+                                   if sw.executed else ""),
+                               reasons=d.reasons[-3:])
                     except Exception as exc:
                         logger.warning("spot swap failed for %s: %s", d.symbol, exc)
                         d.security = {"go": False, "detail": "swap error"}
+                        _audit("error", stage="spot_swap", symbol=d.symbol,
+                               error=str(exc))
         elif d.action in ("TRADE_LONG", "TRADE_SHORT"):
             d.security = {"go": False,
                           "detail": "position manager full / already built; "
@@ -2010,6 +2053,13 @@ class AgentLoop:
         except Exception as exc:
             logger.warning("position manage failed: %s", exc)
             closes = []
+            _audit("error", stage="manage", error=str(exc))
+        for c in closes:
+            # Full exit math, append-only (TP1 partial or full close).
+            _audit("close", symbol=c.symbol, reason=c.reason,
+                   exit=round(c.exit_price, 8), pnl_usd=round(c.pnl_usd, 4),
+                   pnl_pct=round(c.pnl_pct, 4), partial=c.partial,
+                   executed=c.executed, detail=c.detail)
         positions = await self.pm.snapshot()
         equity = await self._read_equity(
             realized=positions.get("realized_usd", 0.0),
@@ -2375,8 +2425,26 @@ class AgentLoop:
                 logger.info("cycle %d: %d decisions, mode=%s dd=%.4f",
                             st["cycle"], len(st["decisions"]), st["mode"],
                             st["drawdown"])
+                # Per-cycle audit: equity/drawdown summary + the math of every
+                # decision (action, conviction, entry/target/stop), so the whole
+                # reasoning trail is replayable from the audit log.
+                _audit("cycle", n=st.get("cycle"), mode=st.get("mode"),
+                       equity=st.get("equity"), peak=st.get("peak_equity"),
+                       drawdown=st.get("drawdown"),
+                       n_decisions=len(st.get("decisions", [])))
+                for dc in st.get("decisions", []):
+                    _audit("decision", symbol=dc.get("symbol"),
+                           tf=dc.get("timeframe"), action=dc.get("action"),
+                           dir=dc.get("direction"),
+                           conviction=dc.get("conviction"),
+                           agreement=dc.get("agreement"),
+                           entry=dc.get("entry"), target=dc.get("target"),
+                           stop=dc.get("stop"), notional=dc.get("notional"),
+                           security=(dc.get("security") or {}).get("detail"),
+                           reasons=(dc.get("reasons") or [])[-3:])
             except Exception as exc:
                 logger.exception("cycle error: %s", exc)
+                _audit("error", stage="cycle", error=str(exc))
             elapsed = time.time() - t0
             wait = max(1.0, self.cfg.interval - elapsed)
             try:
