@@ -74,6 +74,25 @@ FUNDING_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
 FUNDING_TTL = 60.0
 _FUNDING_CACHE: Dict[str, Tuple[float, SourceReading]] = {}
 
+# CMC reads (regime / technicals / derivatives) change slowly, so cache each
+# SourceReading and refresh at most every _CMC_TTL seconds. This cuts the per-
+# cycle CMC API calls ~10x (the F&G / regime gauge barely moves minute to minute)
+# and keeps the shared CMC quota well clear of its daily ceiling. Only a
+# successful (available) reading is cached; an error falls through to a fresh try.
+_CMC_TTL = float(os.getenv("BNBHACK_CMC_TTL", "600"))
+_CMC_CACHE: Dict[str, Tuple[float, SourceReading]] = {}
+
+
+async def _cmc_cached(key, factory):
+    now = _now()
+    hit = _CMC_CACHE.get(key)
+    if hit is not None and now - hit[0] < _CMC_TTL:
+        return hit[1]
+    reading = await factory()
+    if getattr(reading, "available", False):
+        _CMC_CACHE[key] = (now, reading)
+    return reading
+
 _TF_SECONDS = {
     "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
     "1h": 3600, "2h": 7200, "4h": 14400, "6h": 21600, "12h": 43200,
@@ -642,9 +661,9 @@ async def gather_cmc_readings(symbol: str) -> List[SourceReading]:
                           available=False, detail="client unavailable"),
         ]
     regime, tech, deriv = await asyncio.gather(
-        _read_cmc_regime(client),
-        _read_cmc_technicals(client, base),
-        _read_cmc_derivatives(client),
+        _cmc_cached("regime", lambda: _read_cmc_regime(client)),
+        _cmc_cached(f"tech:{base}", lambda: _read_cmc_technicals(client, base)),
+        _cmc_cached("deriv", lambda: _read_cmc_derivatives(client)),
         return_exceptions=False,
     )
     return [regime, tech, deriv]
