@@ -168,7 +168,9 @@ def _err_reading(name: str, prior: float, hit_rate: Optional[float],
 
 def _read_mefai_signal(base: str, tf: str) -> SourceReading:
     name = "MEFAI Signal"
-    prior = 2.0
+    # MEFAI signal is the primary source; its fusion prior can be raised for the
+    # judged window to lean the conviction on the live webhook signal. Default 2.0.
+    prior = float(os.getenv("BNBHACK_MEFAI_SIGNAL_PRIOR", "2.0"))
     sym = f"{base}USDT.P"
     try:
         conn = _ro_connect(SIGNAL_DB)
@@ -208,6 +210,14 @@ def _read_mefai_signal(base: str, tf: str) -> SourceReading:
         except Exception:
             hr = 0.5
         hit = hr if n >= MIN_HITRATE_SAMPLES else 0.5
+        # Operator trust floor: lean on the live MEFAI webhook signal even when the
+        # offline hit-rate sample is thin. This is an OPERATOR ASSUMPTION (the MEFAI
+        # panel's own track record), NOT a measured offline edge; it only raises the
+        # signal's internal conviction weight, and risk stays bounded by the drawdown
+        # budget + governor. Default 0.5 = no change (purely measured).
+        _floor = float(os.getenv("BNBHACK_MEFAI_SIGNAL_MIN_HIT", "0.5"))
+        if direction != 0 and _floor > hit:
+            hit = _clamp(_floor, 0.5, 0.95)
         side = "buy" if direction > 0 else "sell" if direction < 0 else "flat"
         return SourceReading(
             name, direction, strength, hit_rate=hit, prior=prior, available=True,
