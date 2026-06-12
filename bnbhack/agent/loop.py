@@ -299,10 +299,11 @@ class LoopConfig:
     # COMMITTED on chain as a verifiable PREDICT (zero capital), keeping the record
     # two-sided, but no short position is opened. Default on (on-chain spot reality).
     long_only: bool = os.getenv("BNBHACK_LONG_ONLY", "1") == "1"
-    # Managed mode: size on the drawdown budget + conviction and let the validated
-    # MANAGEMENT (near TP1 + magnet runner + wide stop) provide the edge, rather
-    # than rejecting every signal whose RAW per-cell expectancy is non-positive.
-    # The 1h long backtest (PF ~1.38, 4/6 walk-forward folds) validated this.
+    # Managed mode: size on the drawdown budget + conviction and rely on the
+    # MANAGEMENT scheme (near TP1 + magnet runner + wide stop) instead of rejecting
+    # every signal whose RAW per-cell expectancy is non-positive. This is NOT a
+    # profit-edge claim: a clean walk-forward shows no robust net-of-cost edge, so
+    # risk stays bounded purely by the drawdown budget and the governor cap.
     managed_mode: bool = os.getenv("BNBHACK_MANAGED_MODE", "0") == "1"
     regime_block_strength: float = float(
         os.getenv("BNBHACK_REGIME_BLOCK_STRENGTH", "0.5"))

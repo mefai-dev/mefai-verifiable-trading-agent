@@ -4,7 +4,7 @@ MEFAI BNB HACK · Drawdown-budget fractional-Kelly position sizing
 The BNB HACK Track 1 judge scores returns, drawdown, risk-adjusted performance
 (Sharpe) and rule adherence on a held-out live window. This module turns a trade
 decision into a position size that, by construction, cannot breach the drawdown
-budget, while sizing each bet by its EMPIRICAL edge from 181k labelled MEFAI
+budget, while sizing each bet by its EMPIRICAL edge from 195k labelled MEFAI
 signal outcomes (signal_performance) rather than a guessed win-rate.
 
 Model (documented so the cockpit can explain every number):

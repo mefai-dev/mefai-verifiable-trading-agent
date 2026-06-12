@@ -139,7 +139,7 @@ const zh: Table = {
   "Reveal": "揭示",
   "Every MEFAI capability reports a directional reading · signals expert debate whale flow smart money accumulation derivatives risk and the full CoinMarketCap regime.": "每一项 MEFAI 能力都报告一个方向性读数 · 信号、专家辩论、巨鲸资金流、聪明钱、吸筹、衍生品风险以及完整的 CoinMarketCap 市场体制。",
   "Readings collapse into one conviction score each weighted by its own historical hit rate. Agreement and coverage qualify the call.": "各读数汇聚为一个信念分数，每项按其自身的历史命中率加权。一致性与覆盖率为该判断把关。",
-  "A fractional Kelly engine sizes the position from 195k empirical outcomes then shrinks it to fit the remaining drawdown budget.": "分数凯利引擎依据 18.1 万个经验结果确定仓位规模，再将其压缩以适配剩余的回撤预算。",
+  "A fractional Kelly engine sizes the position from 195k empirical outcomes then shrinks it to fit the remaining drawdown budget.": "分数凯利引擎依据 19.5 万个经验结果确定仓位规模，再将其压缩以适配剩余的回撤预算。",
   "A pre trade security solver runs honeypot contract slippage approval preflight and MEV checks. GO or BLOCK gates the spend.": "交易前安全求解器执行蜜罐、合约、滑点、授权、预检与 MEV 检查。GO 或 BLOCK 为支出把关。",
   "The full prediction is hashed and written to the registry before entry so the track record cannot be backfilled.": "完整预测在建仓前被哈希并写入登记表，因此业绩记录无法事后补填。",
   "After the window the preimage is revealed the hash verified and the keeper records the outcome to the BSC ledger.": "窗口结束后揭示原像、验证哈希，守护程序将结果记录至 BSC 账本。",
@@ -164,7 +164,7 @@ const zh: Table = {
   "Six steps run on every cycle. The same loop powers the live agent cockpit and the strategy skills. Each step is shown below.": "每个周期运行六个步骤。同一循环驱动实时智能体驾驶舱与策略技能。各步骤如下所示。",
   "MEFAI does not rely on one indicator. It gathers a directional reading from many capabilities. Signals expert debate whale flow smart money accumulation derivatives risk and the full CoinMarketCap regime each cast a vote.": "MEFAI 不依赖单一指标。它从众多能力中采集方向性读数。信号、专家辩论、巨鲸资金流、聪明钱、吸筹、衍生品风险以及完整的 CoinMarketCap 市场体制各投一票。",
   "Those votes do not count equally. Each source earns its weight from its own historical hit rate. A source that has not beaten a coin flip gets no say. A proven engine can never be diluted by an unproven one. The votes collapse into a single conviction score. Agreement across sources and the share of sources that could be read both qualify the call.": "这些投票并非等量齐观。每个来源凭其自身的历史命中率赢得权重。未能胜过抛硬币的来源没有发言权。已被证明的引擎绝不会被未经证明的引擎稀释。这些投票汇聚为单一的信念分数。各来源之间的一致性，以及可被读取的来源占比，共同为该判断把关。",
-  "Conviction alone is not a position. The sizing engine fits a fractional Kelly stake from the realised win rate and payoff of the relevant cell. It draws on a base of 195k labeled outcomes.": "仅有信念还不构成仓位。仓位引擎依据相关单元的已实现胜率与赔付，拟合出一个分数凯利的下注规模。它取材于 18.1 万个带标签结果的基础数据。",
+  "Conviction alone is not a position. The sizing engine fits a fractional Kelly stake from the realised win rate and payoff of the relevant cell. It draws on a base of 195k labeled outcomes.": "仅有信念还不构成仓位。仓位引擎依据相关单元的已实现胜率与赔付，拟合出一个分数凯利的下注规模。它取材于 19.5 万个带标签结果的基础数据。",
   "Before any spend a security solver runs six checks. It probes for a honeypot. It reads the contract. It models slippage. It inspects the approval. It runs a preflight. It checks for MEV exposure.": "在任何支出之前，安全求解器执行六项检查：探测蜜罐、读取合约、建模滑点、审查授权、运行预检、检查 MEV 暴露。",
   "The verdict is a simple GO or BLOCK. A blocked plan never reaches the chain. This gate is the same one a Trust Wallet user can run on any token before they sign.": "结论只有简单的 GO 或 BLOCK。被拦截的计划绝不会上链。这道闸门正是 Trust Wallet 用户在签名前可对任意代币运行的同一道闸门。",
   "For transparency the agent also posts every trade leg to a public Telegram channel during the judged window. Each message carries a BscScan link and nothing else. The feed is read only and anyone can subscribe and watch the record build in real time.": "为保持透明，在评审期间智能体还会将每一笔交易腿发布到一个公开的 Telegram 频道。每条消息仅附带一个 BscScan 链接，别无其它。该频道为只读，任何人都可订阅并实时观看记录的累积。",
@@ -180,7 +180,7 @@ const zh: Table = {
   "CoinMarketCap Agent Hub. Twelve MCP tools gate global metrics derivatives narratives marketcap technicals and macro events into the regime read.": "CoinMarketCap Agent Hub。十二个 MCP 工具将全球指标、衍生品、叙事、市值、技术面与宏观事件汇入市场体制读数。",
   "Trust Wallet Agent Kit. Execution and self custody safety. The approval guard and the security solver both run from this kit.": "Trust Wallet Agent Kit。执行与自托管安全。授权守卫与安全求解器均运行自这套工具包。",
   "BNB Chain. The settlement and proof layer. PancakeSwap and ApolloX for execution. The registry governor ledger and identity for verification.": "BNB Chain。结算与证明层。以 PancakeSwap 与 ApolloX 执行。以登记表、调控合约、账本与身份进行验证。",
-  "The edge is grounded on a base of 195k labeled outcomes across forty assets. Every signal the agent reads has been resolved against what the market actually did.": "这一优势建立在覆盖四十个资产、共 18.1 万个带标签结果的基础之上。智能体读取的每个信号都已对照市场的真实走势进行结算。",
+  "The edge is grounded on a base of 195k labeled outcomes across forty assets. Every signal the agent reads has been resolved against what the market actually did.": "这一优势建立在覆盖四十个资产、共 19.5 万个带标签结果的基础之上。智能体读取的每个信号都已对照市场的真实走势进行结算。",
   "A verifiable agent is only as honest as the engineering behind it. Several safeguards keep the numbers real and keep the agent from harming itself.": "一个可验证的智能体，其诚实程度取决于其背后的工程。若干保护措施让数字保持真实，并让智能体不至于自我伤害。",
   "A signal only sizes a trade when its measured edge clears the full round trip cost. The engine reads the empirical expectancy of the exact cell then subtracts the trading cost. If the net edge does not beat its own error bar the leg is declined. The agent would rather skip a marginal trade than bleed fees on a coin flip.": "只有当某个信号的实测优势能覆盖完整往返成本时，它才会确定一笔交易的规模。引擎读取该确切单元的经验期望值，再减去交易成本。若净优势无法超过其自身的误差区间，该腿便被拒绝。智能体宁可放过一笔边际交易，也不愿在抛硬币般的赌局上白白损耗手续费。",
   "The strategy is validated on a walk forward simulation. Each cell learns its edge from a training window then is tested on a later window it never saw. Equity is compounded net of cost under the same drawdown budget the live engine uses. The report is built from the labeled outcome base and nothing is fitted on the test window.": "该策略通过滚动前推模拟进行验证。每个单元从一个训练窗口中学习其优势，再在一个它从未见过的后续窗口上接受测试。权益在与实时引擎相同的回撤预算下，按扣除成本后复利累积。报告由带标签结果基础数据构建，测试窗口上不进行任何拟合。",
@@ -738,7 +738,7 @@ const zh: Table = {
   'Autonomous Trading Agent': '自主交易智能体',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': '一个自动驾驶式的智能体，将每一个 MEFAI 信号融合成单一信念评分，按无法被突破的回撤预算确定仓位，并在每笔交易发生之前予以证明。',
   'CMC Strategy Skills': 'CMC 策略技能',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': '经过回测的资金配置、止盈与止损优化、叙事轮动以及体系治理，全部由 18.1 万条标注结果和完整的 CoinMarketCap Agent Hub 驱动。',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': '经过回测的资金配置、止盈与止损优化、叙事轮动以及体系治理，全部由 19.5 万条标注结果和完整的 CoinMarketCap Agent Hub 驱动。',
   'Verifiable Protocol': '可验证协议',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': '一个先承诺后揭晓的预测注册表，加上锚定于链上的回撤熔断机制、统一的可验证情报指数，以及一个 x402 机器可支付的数据源。',
   // ---- Protocol ----
@@ -1822,7 +1822,7 @@ const zh: Table = {
   "jury DQ line": "评审 DQ 线",
   /* BNB HACK gap-fill: overview, capability web, skills, reworded risk copy */
   "A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.": "一个自动驾驶式智能体,将每一个 MEFAI 信号融合为单一的信念评分 · 以不可被突破的回撤预算确定仓位 · 并在每笔交易发生前先行证明。",
-  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "经过回测的资产配置 · TP 与 SL 优化 · 叙事轮动 · 状态治理,全部由 18.1 万条带标签的结果与完整的 CoinMarketCap Agent Hub 驱动。",
+  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "经过回测的资产配置 · TP 与 SL 优化 · 叙事轮动 · 状态治理,全部由 19.5 万条带标签的结果与完整的 CoinMarketCap Agent Hub 驱动。",
   "A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.": "一个承诺揭示式预测登记 · 一个链上锚定的回撤断路器 · 一个统一的可验证情报指数 · 以及一个 x402 机器可支付信号源。",
   "Global metrics": "全局指标",
   "Live quotes": "实时报价",
@@ -2766,7 +2766,7 @@ const ru: Table = {
   'Autonomous Trading Agent': 'Автономный торговый агент',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'Самоуправляемый агент, который сводит все сигналы MEFAI в единую оценку убеждённости, рассчитывает объём по непревышаемому бюджету просадки и доказывает каждую сделку до её совершения.',
   'CMC Strategy Skills': 'Стратегические навыки CMC',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Протестированное на истории распределение, оптимизация TP и SL, ротация нарративов и управление режимом · всё это работает на 181 тыс. размеченных исходов и полном CoinMarketCap Agent Hub.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Протестированное на истории распределение, оптимизация TP и SL, ротация нарративов и управление режимом · всё это работает на 195 тыс. размеченных исходов и полном CoinMarketCap Agent Hub.',
   'Verifiable Protocol': 'Проверяемый протокол',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'Реестр прогнозов по схеме «фиксация-раскрытие», а также закреплённый в сети предохранитель по просадке, единый проверяемый индекс аналитики и оплачиваемый машинами поток x402.',
   // ---- Protocol ----
@@ -3850,7 +3850,7 @@ const ru: Table = {
   "jury DQ line": "линия дисквалификации жюри",
   /* BNB HACK gap-fill: overview, capability web, skills, reworded risk copy */
   "A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.": "Самоуправляемый агент, который сводит каждый сигнал MEFAI в единую оценку убеждённости · определяет размер позиции в рамках бюджета просадки, который нельзя превысить · и доказывает каждую сделку до её совершения.",
-  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "Бэктестированное распределение · оптимизация TP и SL · ротация нарративов · управление режимом, всё на основе 181 тыс. размеченных исходов и полного CoinMarketCap Agent Hub.",
+  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "Бэктестированное распределение · оптимизация TP и SL · ротация нарративов · управление режимом, всё на основе 195 тыс. размеченных исходов и полного CoinMarketCap Agent Hub.",
   "A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.": "Реестр прогнозов с фиксацией и раскрытием · закреплённый в сети предохранитель просадки · единый проверяемый индекс интеллекта · и машинно-оплачиваемый канал x402.",
   "Global metrics": "Глобальные метрики",
   "Live quotes": "Котировки в реальном времени",
@@ -4794,7 +4794,7 @@ const es: Table = {
   'Autonomous Trading Agent': 'Agente de trading autónomo',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'Un agente autónomo que fusiona todas las señales de MEFAI en una sola puntuación de convicción, dimensiona con un presupuesto de drawdown inquebrantable y demuestra cada operación antes de que ocurra.',
   'CMC Strategy Skills': 'Habilidades de estrategia CMC',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Asignación con backtest, optimización de TP y SL, rotación de narrativas y gobierno de régimen, todo impulsado por 181 mil resultados etiquetados y el CoinMarketCap Agent Hub completo.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Asignación con backtest, optimización de TP y SL, rotación de narrativas y gobierno de régimen, todo impulsado por 195 mil resultados etiquetados y el CoinMarketCap Agent Hub completo.',
   'Verifiable Protocol': 'Protocolo verificable',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'Un registro de predicciones de compromiso y revelación, más un cortacircuitos de drawdown anclado en la cadena, un índice de inteligencia verificable unificado y un feed x402 pagable por máquinas.',
   // ---- Protocol ----
@@ -6822,7 +6822,7 @@ const tr: Table = {
   'Autonomous Trading Agent': 'Otonom Ticaret Ajanı',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'Tüm MEFAI sinyallerini tek bir kanaat skorunda birleştiren, aşılamayan bir düşüş bütçesiyle pozisyon büyüklüğü belirleyen ve her işlemi gerçekleşmeden önce kanıtlayan, kendi kendine giden bir ajan.',
   'CMC Strategy Skills': 'CMC Strateji Yetenekleri',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Geriye dönük test edilmiş dağıtım, TP ve SL optimizasyonu, anlatı rotasyonu ve rejim yönetimi; tümü 181 bin etiketli sonuç ve eksiksiz CoinMarketCap Agent Hub tarafından desteklenir.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Geriye dönük test edilmiş dağıtım, TP ve SL optimizasyonu, anlatı rotasyonu ve rejim yönetimi; tümü 195 bin etiketli sonuç ve eksiksiz CoinMarketCap Agent Hub tarafından desteklenir.',
   'Verifiable Protocol': 'Doğrulanabilir Protokol',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'Bir taahhüt ifşa tahmin kaydı; ayrıca zincire sabitlenmiş bir düşüş devre kesici, birleşik bir doğrulanabilir istihbarat endeksi ve makineyle ödenebilir bir x402 akışı.',
   // ---- Protocol ----
@@ -7906,7 +7906,7 @@ const tr: Table = {
   "jury DQ line": "jüri DQ çizgisi",
   /* BNB HACK gap-fill: overview, capability web, skills, reworded risk copy */
   "A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.": "Her MEFAI sinyalini tek bir kanaat skorunda birleştiren · aşılamayan bir düşüş bütçesiyle pozisyon büyüklüğü belirleyen · ve her işlemi gerçekleşmeden önce kanıtlayan kendi kendine giden bir ajan.",
-  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "Geriye dönük test edilmiş tahsis · TP ve SL optimizasyonu · anlatı rotasyonu · rejim yönetimi, tümü 181 bin etiketli sonuç ve eksiksiz CoinMarketCap Agent Hub tarafından destekleniyor.",
+  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "Geriye dönük test edilmiş tahsis · TP ve SL optimizasyonu · anlatı rotasyonu · rejim yönetimi, tümü 195 bin etiketli sonuç ve eksiksiz CoinMarketCap Agent Hub tarafından destekleniyor.",
   "A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.": "Bir taahhüt-açıklama tahmin kaydı · zincire sabitlenmiş bir düşüş devre kesicisi · birleşik doğrulanabilir bir zekâ endeksi · ve x402 makine-ödenebilir bir akış.",
   "Global metrics": "Küresel metrikler",
   "Live quotes": "Canlı kotasyonlar",
@@ -8850,7 +8850,7 @@ const vi: Table = {
   'Autonomous Trading Agent': 'Tác nhân giao dịch tự động',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'Một tác nhân tự vận hành hợp nhất mọi tín hiệu MEFAI thành một điểm niềm tin duy nhất, định cỡ theo ngân sách sụt giảm không thể bị vượt qua và chứng minh mỗi giao dịch trước khi nó diễn ra.',
   'CMC Strategy Skills': 'Kỹ năng chiến lược CMC',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Phân bổ đã kiểm chứng lịch sử, tối ưu TP và SL, xoay vòng câu chuyện và quản trị chế độ, tất cả được hỗ trợ bởi 181 nghìn kết quả gắn nhãn và toàn bộ CoinMarketCap Agent Hub.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Phân bổ đã kiểm chứng lịch sử, tối ưu TP và SL, xoay vòng câu chuyện và quản trị chế độ, tất cả được hỗ trợ bởi 195 nghìn kết quả gắn nhãn và toàn bộ CoinMarketCap Agent Hub.',
   'Verifiable Protocol': 'Giao thức có thể kiểm chứng',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'Một sổ đăng ký dự đoán cam kết tiết lộ, cùng với bộ ngắt mạch sụt giảm neo trên chuỗi, một chỉ số trí tuệ có thể kiểm chứng hợp nhất và một luồng x402 máy có thể thanh toán.',
   // ---- Protocol ----
@@ -10878,7 +10878,7 @@ const ko: Table = {
   'Autonomous Trading Agent': '자율 트레이딩 에이전트',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': '모든 MEFAI 신호를 하나의 확신 점수로 융합하고, 넘을 수 없는 손실 예산으로 포지션 크기를 정하며, 모든 거래를 실행 전에 증명하는 자율 주행형 에이전트입니다.',
   'CMC Strategy Skills': 'CMC 전략 스킬',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': '백테스트된 배분, TP 및 SL 최적화, 내러티브 로테이션, 체제 거버닝 모두가 18.1만 건의 라벨링된 결과와 전체 CoinMarketCap Agent Hub로 구동됩니다.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': '백테스트된 배분, TP 및 SL 최적화, 내러티브 로테이션, 체제 거버닝 모두가 19.5만 건의 라벨링된 결과와 전체 CoinMarketCap Agent Hub로 구동됩니다.',
   'Verifiable Protocol': '검증 가능한 프로토콜',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': '커밋 공개 방식의 예측 레지스트리에 더해, 체인에 고정된 손실 서킷 브레이커, 통합된 검증 가능 인텔리전스 인덱스, 그리고 기계 결제 가능한 x402 피드를 제공합니다.',
   // ---- Protocol ----
@@ -11962,7 +11962,7 @@ const ko: Table = {
   "jury DQ line": "심사 실격선",
   /* BNB HACK gap-fill: overview, capability web, skills, reworded risk copy */
   "A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.": "모든 MEFAI 신호를 하나의 확신 점수로 융합하고 · 결코 초과할 수 없는 드로다운 예산으로 포지션 크기를 정하며 · 모든 거래를 실행 전에 증명하는 자율 주행 에이전트입니다.",
-  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "백테스트된 배분 · TP 및 SL 최적화 · 내러티브 로테이션 · 레짐 거버닝, 모두 18.1만 개의 라벨링된 결과와 완전한 CoinMarketCap Agent Hub로 구동됩니다.",
+  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "백테스트된 배분 · TP 및 SL 최적화 · 내러티브 로테이션 · 레짐 거버닝, 모두 19.5만 개의 라벨링된 결과와 완전한 CoinMarketCap Agent Hub로 구동됩니다.",
   "A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.": "커밋-리빌 예측 레지스트리 · 체인에 고정된 드로다운 서킷 브레이커 · 통합 검증 가능 인텔리전스 인덱스 · 그리고 x402 머신 페이어블 피드.",
   "Global metrics": "글로벌 지표",
   "Live quotes": "실시간 시세",
@@ -12906,7 +12906,7 @@ const ja: Table = {
   'Autonomous Trading Agent': '自律トレーディングエージェント',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'すべての MEFAI シグナルを単一の確信スコアに融合し、超えられないドローダウン予算でサイズを決め、各取引を実行前に証明する自律走行型エージェントです。',
   'CMC Strategy Skills': 'CMC 戦略スキル',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'バックテスト済みの配分、TP と SL の最適化、ナラティブローテーション、レジームガバナンスのすべてが、18.1 万件のラベル付き結果と完全な CoinMarketCap Agent Hub によって駆動されます。',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'バックテスト済みの配分、TP と SL の最適化、ナラティブローテーション、レジームガバナンスのすべてが、19.5 万件のラベル付き結果と完全な CoinMarketCap Agent Hub によって駆動されます。',
   'Verifiable Protocol': '検証可能なプロトコル',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'コミット開示型の予測レジストリに加え、チェーンに固定されたドローダウンのサーキットブレーカー、統一された検証可能なインテリジェンス指数、そしてマシン決済対応の x402 フィードを備えます。',
   // ---- Protocol ----
@@ -13990,7 +13990,7 @@ const ja: Table = {
   "jury DQ line": "審査失格ライン",
   /* BNB HACK gap-fill: overview, capability web, skills, reworded risk copy */
   "A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.": "あらゆる MEFAI シグナルを単一の確信スコアに融合し · 決して超えられないドローダウン予算でサイズを決め · すべての取引を実行前に証明する自律走行型エージェント。",
-  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "バックテスト済みの配分 · TP と SL の最適化 · ナラティブのローテーション · レジーム制御。すべて 18.1 万件のラベル付き結果と完全な CoinMarketCap Agent Hub によって駆動されます。",
+  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "バックテスト済みの配分 · TP と SL の最適化 · ナラティブのローテーション · レジーム制御。すべて 19.5 万件のラベル付き結果と完全な CoinMarketCap Agent Hub によって駆動されます。",
   "A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.": "コミット・リビール型の予測レジストリ · チェーンに固定されたドローダウン・サーキットブレーカー · 統合された検証可能なインテリジェンス指数 · そして x402 のマシン支払い可能なフィード。",
   "Global metrics": "グローバル指標",
   "Live quotes": "ライブ相場",
@@ -14934,7 +14934,7 @@ const fr: Table = {
   'Autonomous Trading Agent': 'Agent de trading autonome',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': "Un agent autonome qui fusionne tous les signaux MEFAI en un seul score de conviction, dimensionne selon un budget de drawdown infranchissable et prouve chaque transaction avant qu'elle ait lieu.",
   'CMC Strategy Skills': 'Compétences de stratégie CMC',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': "Allocation backtestée, optimisation des TP et SL, rotation des narratifs et gouvernance de régime, le tout alimenté par 181 k résultats étiquetés et le CoinMarketCap Agent Hub complet.",
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': "Allocation backtestée, optimisation des TP et SL, rotation des narratifs et gouvernance de régime, le tout alimenté par 195 k résultats étiquetés et le CoinMarketCap Agent Hub complet.",
   'Verifiable Protocol': 'Protocole vérifiable',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': "Un registre de prédictions à engagement puis révélation, ainsi qu'un coupe-circuit de drawdown ancré sur la chaîne, un indice d'intelligence vérifiable unifié et un flux x402 payable par machine.",
   // ---- Protocol ----
@@ -16962,7 +16962,7 @@ const pt: Table = {
   'Autonomous Trading Agent': 'Agente de trading autônomo',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'Um agente autônomo que funde todos os sinais MEFAI em uma única pontuação de convicção, dimensiona com um orçamento de drawdown inquebrável e prova cada operação antes de ela acontecer.',
   'CMC Strategy Skills': 'Habilidades de estratégia CMC',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Alocação com backtest, otimização de TP e SL, rotação de narrativas e governança de regime, tudo movido por 181 mil resultados rotulados e o CoinMarketCap Agent Hub completo.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Alocação com backtest, otimização de TP e SL, rotação de narrativas e governança de regime, tudo movido por 195 mil resultados rotulados e o CoinMarketCap Agent Hub completo.',
   'Verifiable Protocol': 'Protocolo verificável',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'Um registro de previsões de compromisso e revelação, mais um disjuntor de drawdown ancorado na cadeia, um índice de inteligência verificável unificado e um feed x402 pagável por máquina.',
   // ---- Protocol ----
@@ -18046,7 +18046,7 @@ const pt: Table = {
   "jury DQ line": "linha de desqualificação do júri",
   /* BNB HACK gap-fill: overview, capability web, skills, reworded risk copy */
   "A self driving agent that fuses every MEFAI signal into one conviction score · sizes with a drawdown budget that cannot be breached · and proves each trade before it happens.": "Um agente autônomo que funde cada sinal da MEFAI em uma única pontuação de convicção · dimensiona com um orçamento de drawdown que não pode ser ultrapassado · e prova cada operação antes que ela aconteça.",
-  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "Alocação com backtest · otimização de TP e SL · rotação de narrativas · governança de regime, tudo impulsionado por 181 mil resultados rotulados e o CoinMarketCap Agent Hub completo.",
+  "Backtested allocation · TP and SL optimization · narrative rotation · regime governing, all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.": "Alocação com backtest · otimização de TP e SL · rotação de narrativas · governança de regime, tudo impulsionado por 195 mil resultados rotulados e o CoinMarketCap Agent Hub completo.",
   "A commit reveal prediction registry · a chain anchored drawdown circuit breaker · a unified verifiable intelligence index · and an x402 machine payable feed.": "Um registro de previsões commit-reveal · um disjuntor de drawdown ancorado na cadeia · um índice de inteligência verificável unificado · e um feed pagável por máquina x402.",
   "Global metrics": "Métricas globais",
   "Live quotes": "Cotações ao vivo",
@@ -18990,7 +18990,7 @@ const de: Table = {
   'Autonomous Trading Agent': 'Autonomer Trading-Agent',
   'A self driving agent that fuses every MEFAI signal into one conviction score sizes with a drawdown budget that cannot be breached and proves each trade before it happens.': 'Ein selbstfahrender Agent, der jedes MEFAI-Signal zu einem Überzeugungswert fusioniert, mit einem unüberschreitbaren Drawdown-Budget dimensioniert und jeden Trade beweist, bevor er stattfindet.',
   'CMC Strategy Skills': 'CMC-Strategie-Skills',
-  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Backgetestete Allokation, TP- und SL-Optimierung, Narrativ-Rotation und Regime-Steuerung, allesamt angetrieben von 181.000 gelabelten Ergebnissen und dem vollständigen CoinMarketCap Agent Hub.',
+  'Backtested allocation TP and SL optimization narrative rotation and regime governing all powered by 195k labeled outcomes and the full CoinMarketCap Agent Hub.': 'Backgetestete Allokation, TP- und SL-Optimierung, Narrativ-Rotation und Regime-Steuerung, allesamt angetrieben von 195.000 gelabelten Ergebnissen und dem vollständigen CoinMarketCap Agent Hub.',
   'Verifiable Protocol': 'Verifizierbares Protokoll',
   'A commit reveal prediction registry plus a chain anchored drawdown circuit breaker a unified verifiable intelligence index and an x402 machine payable feed.': 'Ein Commit-Reveal-Vorhersageregister plus eine an die Chain verankerte Drawdown-Sicherung, ein einheitlicher verifizierbarer Intelligenzindex und ein maschinell zahlbarer x402-Feed.',
   // ---- Protocol ----
