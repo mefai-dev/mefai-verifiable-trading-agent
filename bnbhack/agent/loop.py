@@ -328,6 +328,11 @@ class LoopConfig:
     include_cmc: bool = os.getenv("BNBHACK_INCLUDE_CMC", "1") == "1"
     execute_trades: bool = os.getenv("BNBHACK_EXECUTE_TRADES", "") == "1"
     execute_chain: bool = os.getenv("BNBHACK_EXECUTE_CHAIN", "") == "1"
+    # Whether a PREDICT (no-capital forecast) writes its commit-reveal ON CHAIN.
+    # Default on (the full verifiable-protocol behaviour). Set 0 to conserve gas:
+    # PREDICTs then commit only as PAPER (no tx), and only a real TRADE leg writes
+    # to chain. The daily RiskGovernor equity write is unaffected (still ~1/day).
+    chain_predict_commits: bool = os.getenv("BNBHACK_CHAIN_PREDICT_COMMITS", "1") == "1"
     slippage_pct: float = float(os.getenv("BNBHACK_SLIPPAGE_PCT", "1.0"))
     # Minimum seconds between on-ledger equity writes when execute_chain is on.
     # The decision cadence stays at `interval`, but steady-state RiskGovernor
@@ -1583,9 +1588,17 @@ class AgentLoop:
             try:
                 seal = self.writer.seal_of(agent_id, d.symbol, sig_enum, conf,
                                            e_s, t_s, s_s, expires_at, salt)
+                # Gas policy: a PREDICT (no trade) writes on chain only when
+                # chain_predict_commits is on; otherwise it commits as PAPER (no
+                # tx). A real TRADE leg always commits on chain. This stops the
+                # per-signal mainnet writes from draining BNB while no position
+                # is opened; the daily equity write is separate and unaffected.
+                _is_trade = d.action in ("TRADE_LONG", "TRADE_SHORT")
+                _chain_commit = self.cfg.execute_chain and (
+                    _is_trade or self.cfg.chain_predict_commits)
                 out = await asyncio.to_thread(
                     self.writer.commit, agent_id, seal, expires_at,
-                    reveal_deadline, execute=self.cfg.execute_chain)
+                    reveal_deadline, execute=_chain_commit)
                 d.proof["commit"] = out.detail
                 if out.executed and out.ok:
                     commit_id = out.extra.get("commit_id")
