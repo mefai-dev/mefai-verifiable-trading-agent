@@ -105,6 +105,24 @@ def _amount_from_result(result: Dict[str, Any]) -> Optional[float]:
     return None
 
 
+def _tx_hash_from_result(result: Optional[Dict[str, Any]]) -> str:
+    """Best-effort on-chain tx hash from a twak swap result, so a closing sell
+    can be linked on BscScan. Returns '' when none is present."""
+    if not isinstance(result, dict):
+        return ""
+    for k in ("hash", "txHash", "tx_hash", "transactionHash", "txn_hash"):
+        v = result.get(k)
+        if isinstance(v, str) and v.startswith("0x") and len(v) >= 10:
+            return v
+    for k in ("explorer", "explorerUrl", "url", "tx"):
+        v = result.get(k)
+        if isinstance(v, str) and "/tx/" in v:
+            tail = v.split("/tx/")[-1].split("?")[0].split("#")[0].strip()
+            if tail.startswith("0x") and len(tail) >= 10:
+                return tail
+    return ""
+
+
 def _leg_dir(row: sqlite3.Row) -> int:
     """+1 for a LONG leg, -1 for a SHORT leg. Reads the stored signal_dir; any
     non-negative value is treated as long so legacy rows (written before shorts
@@ -173,6 +191,9 @@ class PositionStore:
                 # (so a restart or env edit cannot silently re-arm the auto-exit).
                 # The manage guard honours this row flag OR the env manual_hold set.
                 ("manual_hold", "manual_hold INTEGER DEFAULT 0"),
+                # Closing swap tx hash, so the cockpit can link the real on-chain
+                # sell of a closed position on BscScan (open_tx links the buy).
+                ("close_tx", "close_tx TEXT DEFAULT ''"),
             ):
                 if col not in existing:
                     db.execute("ALTER TABLE positions ADD COLUMN " + ddl)
@@ -327,12 +348,12 @@ class PositionStore:
                        (stop, peak, pos_id))
 
     def close(self, pos_id: int, exit_price: float, pnl_usd: float,
-              pnl_pct: float, reason: str) -> None:
+              pnl_pct: float, reason: str, close_tx: str = "") -> None:
         with self._conn() as db:
             db.execute(
                 "UPDATE positions SET status='closed', exit_price=?, pnl_usd=?, "
-                "pnl_pct=?, close_reason=?, closed_ts=? WHERE id=?",
-                (exit_price, pnl_usd, pnl_pct, reason, _now(), pos_id))
+                "pnl_pct=?, close_reason=?, closed_ts=?, close_tx=? WHERE id=?",
+                (exit_price, pnl_usd, pnl_pct, reason, _now(), close_tx, pos_id))
 
     def realized_total(self) -> float:
         with self._conn() as db:
@@ -792,6 +813,7 @@ class PositionManager:
         token = p["token"]
         executed = False
         exit_price = mark
+        close_tx = ""
         detail = f"paper close ({reason})"
 
         # A LONG holds a spot token to sell on PancakeSwap; a live SHORT is
@@ -807,6 +829,8 @@ class PositionManager:
                     approx_usd=qty * mark)
                 executed = bool(sw.executed)
                 detail = sw.detail
+                if executed:
+                    close_tx = _tx_hash_from_result(sw.result or {})
                 proceeds = _amount_from_result(sw.result or {})
                 if executed and proceeds and proceeds > 0:
                     exit_price = proceeds / qty
@@ -857,7 +881,7 @@ class PositionManager:
             pnl_usd -= qty * entry * self.rules.roundtrip_cost_pct / 100.0
             pnl_pct -= self.rules.roundtrip_cost_pct
         self._stuck_closes.pop(int(p["id"]), None)
-        self.store.close(p["id"], exit_price, pnl_usd, pnl_pct, reason)
+        self.store.close(p["id"], exit_price, pnl_usd, pnl_pct, reason, close_tx)
         logger.info("CLOSE(%s) %s @ %.8f pnl=%.2f%% ($%.2f) executed=%s",
                     reason, symbol, exit_price, pnl_pct, pnl_usd, executed)
         return CloseEvent(symbol=symbol, reason=reason, exit_price=exit_price,
@@ -897,12 +921,15 @@ class PositionManager:
                 "is_floor": bool(_row_is_floor(p))})
         closes_out: List[Dict[str, Any]] = []
         for c in self.store.recent_closes(8):
+            ck = c.keys()
             closes_out.append({
                 "symbol": c["symbol"], "reason": c["close_reason"],
                 "exit": round(float(c["exit_price"] or 0), 8),
                 "pnl_usd": round(float(c["pnl_usd"] or 0), 2),
                 "pnl_pct": round(float(c["pnl_pct"] or 0), 2),
-                "closed_ts": c["closed_ts"]})
+                "closed_ts": c["closed_ts"],
+                "open_tx": (c["open_tx"] or "") if "open_tx" in ck else "",
+                "close_tx": (c["close_tx"] or "") if "close_tx" in ck else ""})
         open_ids = {int(p["id"]) for p in rows}
         stuck = [{"id": pid, "attempts": n}
                  for pid, n in self._stuck_closes.items()
