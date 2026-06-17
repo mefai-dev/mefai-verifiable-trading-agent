@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>CMC Intelligence · DNA Agent</title>
+<style>
+  :root{ --cyan:#3861fb; --violet:#cfe0ff; --gold:#ffd23f; --green:#16e08f; --red:#ff5d6c; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#04060d}
+  body{font-family:"Inter","Segoe UI",system-ui,sans-serif;color:#eaf2ff}
+  #app{position:fixed;inset:0}
+  .hud{position:fixed;z-index:10;pointer-events:none}
+  .top{top:18px;left:0;right:0;text-align:center}
+  .kick{font-size:11px;letter-spacing:.46em;text-transform:uppercase;color:var(--cyan);opacity:.85}
+  .ttl{font-size:26px;font-weight:800;margin-top:8px;background:linear-gradient(90deg,var(--cyan),#fff 45%,var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:12px;color:#9fb2d6;margin-top:6px}
+  /* status badge removed (no blinking indicator) */
+  .hint{position:fixed;bottom:14px;left:0;right:0;z-index:10;text-align:center;font-size:10px;color:#48597a;letter-spacing:.1em;text-transform:uppercase}
+  .lbl{pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;transition:opacity .2s linear}
+  .lbl .nm{font-size:11px;font-weight:700;color:#eef5ff;text-shadow:0 0 8px rgba(53,230,255,.6)}
+  .lbl .vl{font-size:9.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;margin-top:2px}
+  .lbl .vl.cyan{color:var(--cyan)} .lbl .vl.violet{color:var(--violet)} .lbl .vl.gold{color:var(--gold)}
+
+  .feed{position:fixed;top:18px;bottom:18px;width:210px;z-index:11;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+  .feed.L{left:18px} .feed.R{right:18px;align-items:flex-end}
+  .feed h4{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:#6f82a8;pointer-events:none}
+  .sig{width:100%;display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:12px;cursor:pointer;
+    background:rgba(10,16,28,.7);backdrop-filter:blur(3px);
+    border:1px solid rgba(120,150,200,.16);border-left:3px solid #5b6b8a;
+    animation:sigIn .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 6px 16px rgba(0,0,0,.32);transition:transform .12s}
+  .sig:hover{transform:translateY(-1px)}
+  @keyframes sigIn{from{opacity:0;transform:translateY(-10px) scale(.97)}to{opacity:1;transform:none}}
+  .sig .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:900;color:#04060d;flex:none}
+  .sig .sym{font-weight:800;font-size:12.5px;color:#eaf2ff}
+  .sig .tf{font-size:10px;color:#8398bd;font-family:ui-monospace,monospace}
+  .sig .side{font-weight:800;font-size:11px;letter-spacing:.08em;margin-left:auto}
+  .feed.R .sig{flex-direction:row-reverse;border-left:0;border-right:3px solid #5b6b8a}
+  .feed.R .sig .side{margin-left:0;margin-right:auto}
+  .sig.buy{border-left-color:#16e08f} .feed.R .sig.buy{border-right-color:#16e08f}
+  .sig.buy .ic{background:#16e08f} .sig.buy .side{color:#16e08f}
+  .sig.sell{border-left-color:#ff5d6c} .feed.R .sig.sell{border-right-color:#ff5d6c}
+  .sig.sell .ic{background:#ff5d6c} .sig.sell .side{color:#ff5d6c}
+  #threads{position:fixed;inset:0;z-index:9;pointer-events:none;width:100%;height:100%}
+  #threads path{fill:none;stroke-width:2.2;filter:drop-shadow(0 0 5px currentColor);stroke-linecap:round}
+  .vig{position:fixed;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse 72% 82% at 50% 46%,transparent 42%,rgba(2,4,10,.82) 100%)}
+  #info{position:fixed;left:50%;bottom:60px;transform:translateX(-50%) translateY(20px);z-index:15;width:min(440px,90vw);
+    background:rgba(9,14,26,.95);border:1px solid rgba(120,150,200,.4);border-radius:14px;padding:15px 17px;
+    box-shadow:0 20px 60px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  #info.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  #info .ih{display:flex;align-items:center;gap:9px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(120,150,200,.25)}
+  #info .ih b{font-size:15px} #info .ih .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#7d8fb5;margin-left:auto}
+  #info .row{font-size:12.5px;color:#c6d3ea;line-height:1.55;margin:3px 0}
+  #info .row span{color:#7d8fb5} #info .x{position:absolute;top:10px;right:12px;cursor:pointer;color:#7d8fb5;font-size:14px}
+  #err{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:30px;text-align:center;color:#ff8a8a;font-family:ui-monospace,monospace;font-size:13px;white-space:pre-wrap}
+</style>
+<script type="importmap">
+{ "imports": { "three": "/embeds/vendor/three.module.js", "three/addons/": "/embeds/vendor/addons/" }}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div class="vig"></div>
+<svg id="threads"></svg>
+<div id="err"></div>
+<div class="feed L" id="feedL"><h4>Left hand · signals</h4></div>
+<div class="feed R" id="feedR"><h4>Right hand · signals</h4></div>
+<div id="info"><span class="x" id="infoX">✕</span><div id="infoBody"></div></div>
+
+<script type="module">
+const errBox=document.getElementById('err');
+const fail=e=>{errBox.style.display='flex';errBox.textContent='3D failed to load:\n'+((e&&e.stack)||e);};
+addEventListener('error',ev=>fail(ev.error||ev.message));
+try{
+  const THREE=await import('three');
+  const { OrbitControls }=await import('three/addons/controls/OrbitControls.js');
+  const { CSS2DRenderer, CSS2DObject }=await import('three/addons/renderers/CSS2DRenderer.js');
+  const V=(x,y,z=0)=>new THREE.Vector3(x,y,z);
+  const COL={cyan:0x3861fb,violet:0xe9f0ff,gold:0xffffff};
+  const S=1.5, sv=(x,y,z=0)=>V(x*S,y*S,z*S);
+
+  const BONES=[
+    {a:sv(0,9.4),b:sv(0,12.8),turns:1.2,R:1.05,nodes:[{t:'Conviction',v:'+0.63 long',k:'gold',role:'The fused decision the brain emits'}]},
+    {a:sv(0,9.2),b:sv(0,1.0),turns:2.3,R:1.8,nodes:[
+      {t:'Global Metrics',v:'BTC.D 54.2%',k:'cyan',role:'Market regime read'},
+      {t:'Derivatives',v:'OI $61.4B',k:'cyan',role:'Crowded positioning / funding'},
+      {t:'Technical Analysis',v:'4h · bullish',k:'cyan',role:'Trend and momentum'},
+      {t:'Market Cap TA',v:'regime risk-on',k:'violet',role:'Macro regime gate'},
+      {t:'Regime Governor',v:'deploy · ok',k:'violet',role:'Risk gate · deploy or stand aside'},
+      {t:'Search / Info',v:'1000 assets',k:'cyan',role:'Universe and asset metadata'}]},
+    {a:sv(-1.3,8.7),b:sv(-6.6,3.2),turns:1.6,R:0.8,nodes:[{t:'Quotes Latest',v:'BTC $107,420',k:'cyan',role:'Live price'},{t:'Latest News',v:'42 fresh',k:'cyan',role:'Event flow'}]},
+    {a:sv(1.3,8.7),b:sv(6.6,3.2),turns:1.6,R:0.8,nodes:[{t:'Trending Narratives',v:'AI · RWA · DeFi',k:'violet',role:'Sector rotation'},{t:'Macro Events',v:'CPI in 2d',k:'cyan',role:'Macro calendar'}]},
+    {a:sv(-0.9,1.0),b:sv(-2.7,-10.8),turns:1.9,R:0.82,nodes:[{t:'Risk Allocator',v:'size 0.42R',k:'violet',role:'Position sizing'},{t:'Crypto Metrics',v:'liquidity +3.1%',k:'cyan',role:'Liquidity and flows'}]},
+    {a:sv(0.9,1.0),b:sv(2.7,-10.8),turns:1.9,R:0.82,nodes:[{t:'Narrative Rotation',v:'rotate → RWA',k:'violet',role:'Which sector leads'},{t:'Funding / OI',v:'funding +0.01%',k:'cyan',role:'Perp positioning'}]},
+  ];
+
+  const app=document.getElementById('app');
+  const scene=new THREE.Scene(); scene.fog=new THREE.FogExp2(0x04060d,0.0082);
+  const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,500); camera.position.set(0,2,50);
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.setClearColor(0x04060d,1);
+  app.appendChild(renderer.domElement);
+  const labelRenderer=new CSS2DRenderer(); labelRenderer.setSize(innerWidth,innerHeight);
+  labelRenderer.domElement.style.cssText='position:fixed;top:0;left:0;pointer-events:none'; app.appendChild(labelRenderer.domElement);
+  const controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=0.06;controls.autoRotate=true;controls.autoRotateSpeed=0.85;
+  controls.minDistance=30;controls.maxDistance=120;controls.enablePan=false;controls.target.set(0,2,0);
+
+  scene.add(new THREE.AmbientLight(0x4466aa,0.95));
+  const l1=new THREE.PointLight(0x3861fb,460,300);l1.position.set(32,26,42);scene.add(l1);
+  const l2=new THREE.PointLight(0xe9f0ff,400,300);l2.position.set(-32,-18,30);scene.add(l2);
+
+  function haloTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+    const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.6)');g.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+  const HALO=haloTex();
+  const halo=(color,size,op=0.85)=>{const s=new THREE.Sprite(new THREE.SpriteMaterial({map:HALO,color,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,opacity:op}));s.scale.set(size,size,1);return s;};
+
+  let starPts; {const g=new THREE.BufferGeometry(),Np=1600,p=new Float32Array(Np*3);
+   for(let i=0;i<Np;i++){const r=120+Math.random()*170,th=Math.random()*6.28,ph=Math.acos(2*Math.random()-1);
+     p[i*3]=r*Math.sin(ph)*Math.cos(th);p[i*3+1]=r*Math.cos(ph);p[i*3+2]=r*Math.sin(ph)*Math.sin(th);}
+   g.setAttribute('position',new THREE.BufferAttribute(p,3));
+   starPts=new THREE.Points(g,new THREE.PointsMaterial({color:0x6f8cff,size:0.85,transparent:true,opacity:0.6}));scene.add(starPts);}
+  const neb1=halo(0x1a4cff,180,0.16);neb1.position.set(-22,8,-74);scene.add(neb1);
+  const neb2=halo(0x88a8ff,165,0.15);neb2.position.set(24,-6,-84);scene.add(neb2);
+
+  const fig=new THREE.Group();scene.add(fig);
+  const labels=[], flows=[], pickables=[];
+  const nodeGeo=new THREE.SphereGeometry(0.5,18,18);
+
+  function buildBone(B){
+    const A=B.a,Z=B.b,dir=Z.clone().sub(A).normalize();
+    const up=Math.abs(dir.y)>0.9?V(1,0,0):V(0,1,0);
+    const u=up.clone().cross(dir).normalize(), v=dir.clone().cross(u).normalize();
+    const strand=(t,side)=>{const c=A.clone().lerp(Z,t);const ang=t*B.turns*Math.PI*2+(side?Math.PI:0);
+      return c.add(u.clone().multiplyScalar(Math.cos(ang)*B.R)).add(v.clone().multiplyScalar(Math.sin(ang)*B.R));};
+    for(const [side,color] of [[false,0x3861fb],[true,0xe9f0ff]]){
+      const pts=[],seg=Math.max(30,Math.round(B.turns*22));
+      for(let i=0;i<=seg;i++)pts.push(strand(i/seg,side));
+      const curve=new THREE.CatmullRomCurve3(pts);
+      fig.add(new THREE.Mesh(new THREE.TubeGeometry(curve,seg*2,0.135,10,false),
+        new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:1.6,roughness:0.3,metalness:0.4})));
+      // sample the strand directly with the pure-trig function (never via the
+      // curve's getPoint, which can fault) so the flow path is crash-proof.
+      const samples=[]; for(let q=0;q<=90;q++) samples.push(strand(q/90,side));
+      flows.push({samples, color, upAtEnd: samples[samples.length-1].y >= samples[0].y});
+    }
+    const n=B.nodes.length;
+    B.nodes.forEach((nd,i)=>{
+      const t=(i+0.5)/n,col=COL[nd.k],a=strand(t,false),b=strand(t,true);
+      const rung=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,a.distanceTo(b),8),
+        new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:0.8,transparent:true,opacity:0.55}));
+      rung.position.copy(a).lerp(b,0.5); rung.quaternion.setFromUnitVectors(V(0,1,0),b.clone().sub(a).normalize()); fig.add(rung);
+      for(const pos of [a,b]){
+        const s=new THREE.Mesh(nodeGeo,new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:2.4,roughness:0.2,metalness:0.5}));
+        s.position.copy(pos); s.userData=nd; fig.add(s); pickables.push(s);
+        const h=halo(col,2.6);h.position.copy(pos);fig.add(h);
+      }
+      const div=document.createElement('div');div.className='lbl';
+      div.innerHTML=`<div class="nm">${nd.t}</div><div class="vl ${nd.k}">${nd.v}</div>`;
+      const lo=new CSS2DObject(div);lo.position.copy(a);fig.add(lo);labels.push({lo,div});
+    });
+  }
+  BONES.forEach(buildBone);
+
+  const brainPos=sv(0,12.9), heartPos=sv(0,5.4,0.6), handL=sv(-6.6,3.2), handR=sv(6.6,3.2);
+  const brain=halo(0xffffff,5.6,0.95); brain.position.copy(brainPos); fig.add(brain);
+  const heart=halo(0x9fc0ff,3.6,0.9); heart.position.copy(heartPos); fig.add(heart);
+  const courier=halo(0xe9f0ff,2.4,0); fig.add(courier);           // brain->heart->hand traveller
+  const ring=halo(0xffffff,1,0); fig.add(ring);                    // brain explosion ring
+  const ring2=halo(0xbcd2ff,1,0); fig.add(ring2);                  // second explosion ring
+  const aura=halo(0x3861fb,32,0.18); aura.position.copy(sv(0,3.2,-1)); fig.add(aura);  // body aura
+  const TRAIL=7, trail=[], trailHist=[];
+  for(let i=0;i<TRAIL;i++){const s=halo(0xe9f0ff,2.2-i*0.22,0); fig.add(s); trail.push(s);}
+
+  // continuous data uptake pulses
+  const PULSES=[]; for(const f of flows) for(let k=0;k<3;k++) PULSES.push({f,s:k/3,sp:0.12+Math.random()*0.1});
+  const pulseSprites=PULSES.map(P=>{const s=halo(P.f.color||0xbcd2ff,1.9,0.95);fig.add(s);return s;});
+
+  // ── side signal feeds (sample · real wiring uses MEFAI signals) ──
+  const SVGNS='http://www.w3.org/2000/svg';
+  const threadsSvg=document.getElementById('threads');
+  const threadList=[]; const projV=new THREE.Vector3();
+  function handScreen(local){ projV.copy(local); fig.localToWorld(projV); projV.project(camera);
+    return {x:(projV.x*0.5+0.5)*innerWidth, y:(-projV.y*0.5+0.5)*innerHeight}; }
+
+  // real MEFAI signals (same-origin API) fill the feed; the brain fires them out
+  const sigQueue=[];
+  const cleanSym=s=>String(s||'').replace(/USDT(\.P)?$/i,'').replace(/\.P$/i,'')||'?';
+  async function pollSignals(){
+    try{ const r=await fetch('/bnbhack-api/signals/recent?limit=24',{cache:'no-store'});
+      if(!r.ok) return; const d=await r.json(); const arr=(d&&d.signals)||[];
+      for(const s of arr) sigQueue.push({sym:cleanSym(s.symbol),buy:String(s.direction).toLowerCase()==='long',
+        tf:s.timeframe||'1h',entry:s.entry_price,pnl:s.pnl,result:s.result,pair:s.symbol});
+      if(sigQueue.length>140) sigQueue.splice(0,sigQueue.length-140);
+    }catch(e){}
+  }
+  pollSignals(); setInterval(pollSignals,30000);
+  const FALLBACK=[{sym:'ETH',buy:true,tf:'1h'},{sym:'BTC',buy:false,tf:'4h'},{sym:'BNB',buy:true,tf:'1h'},{sym:'SOL',buy:false,tf:'15m'}];
+  let fi=0; const nextSig=()=> sigQueue.shift() || FALLBACK[(fi++)%FALLBACK.length];
+
+  function emit(side, thread){
+    const g=nextSig(), buy=!!g.buy, sym=g.sym, tf=g.tf||'1h';
+    const feed=document.getElementById(side==='L'?'feedL':'feedR');
+    const el=document.createElement('div'); el.className='sig '+(buy?'buy':'sell');
+    el.innerHTML=`<span class="ic">${buy?'▲':'▼'}</span><span class="sym">${sym}</span><span class="tf">${tf}</span><span class="side">${buy?'BUY':'SELL'}</span>`;
+    el.onclick=()=>showInfo({title:`${sym} ${buy?'BUY':'SELL'}`,tag:`${tf} · MEFAI signal`,
+      rows:[['Pair',g.pair||sym],['Side',buy?'long':'short'],['Timeframe',tf],
+            ['Entry',g.entry!=null?String(g.entry):'live'],
+            ['Outcome',g.result!=null?`${g.result}${g.pnl!=null?' · '+(g.pnl>0?'+':'')+g.pnl+'%':''}`:'open']]});
+    feed.insertBefore(el, feed.children[1]||null);
+    while(feed.children.length>8) feed.removeChild(feed.lastChild);
+    if(thread){
+      const path=document.createElementNS(SVGNS,'path');
+      const c=buy?'#16e08f':'#ff5d6c'; path.setAttribute('stroke',c); path.style.color=c;
+      threadsSvg.appendChild(path);
+      const life = tf==='4h'?13 : tf==='1h'?9 : 6;
+      threadList.push({side,el,path,born:performance.now(),life});
+    }
+  }
+  emit('L');emit('R');
+
+  // info card
+  const info=document.getElementById('info'), infoBody=document.getElementById('infoBody');
+  function showInfo({title,tag,rows}){
+    infoBody.innerHTML=`<div class="ih"><b>${title}</b><span class="tag">${tag||''}</span></div>`+
+      rows.map(([k,v])=>`<div class="row"><span>${k}: </span>${v}</div>`).join('');
+    info.classList.add('on');
+  }
+  document.getElementById('infoX').onclick=()=>info.classList.remove('on');
+
+  // raycast click on nodes
+  const ray=new THREE.Raycaster(), m=new THREE.Vector2();
+  renderer.domElement.addEventListener('pointerdown',ev=>{
+    m.x=(ev.clientX/innerWidth)*2-1; m.y=-(ev.clientY/innerHeight)*2+1;
+    ray.setFromCamera(m,camera);
+    const hit=ray.intersectObjects(pickables,false)[0];
+    if(hit){ const nd=hit.object.userData;
+      showInfo({title:nd.t,tag:'CMC node',rows:[['Live value',nd.v],['Role',nd.role||''],['Feeds','the conviction the brain emits']]}); }
+  });
+
+  // ── signal choreography: brain explosion -> heart -> both hands -> emit ──
+  let ev=null; // {t0, hl:false, hr:false}
+  setInterval(()=>{ ev={t:0,hl:false,hr:false}; }, 3200);
+
+  const tmp=new THREE.Vector3(), camDir=new THREE.Vector3(), nw=new THREE.Vector3();
+  let last=performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    const dt=Math.min(0.05,(now-last)/1000); last=now;
+    controls.update();
+    // life: gentle breathing bob, drifting starfield, pulsing aura
+    fig.position.y=Math.sin(now*0.0011)*0.5;
+    if(starPts) starPts.rotation.y+=dt*0.015;
+    aura.material.opacity=0.14+0.12*(0.5+0.5*Math.sin(now*0.005));
+    neb1.position.x=-22+Math.sin(now*0.0003)*4; neb2.position.x=24+Math.cos(now*0.00026)*4;
+
+    // uptake pulses
+    PULSES.forEach((P,i)=>{ P.s+=P.sp*dt; if(P.s>1)P.s-=1;
+      const arr=P.f.samples; if(!arr||!arr.length) return;
+      let idx=Math.floor((P.f.upAtEnd?P.s:1-P.s)*(arr.length-1));
+      idx=Math.max(0,Math.min(arr.length-1, idx||0));
+      const v=arr[idx]; if(!v) return;
+      pulseSprites[i].position.copy(v);
+      pulseSprites[i].material.opacity=0.25+0.7*Math.sin(P.s*Math.PI); });
+
+    // brain idle glow
+    brain.scale.setScalar(5.6+Math.sin(now*0.004)*0.5);
+    heart.scale.setScalar(3.6+Math.sin(now*0.006)*0.4);
+
+    // event choreography
+    if(ev){
+      ev.t+=dt; const T=ev.t;
+      // 0.0-0.5 brain explosion
+      const ex=Math.max(0,Math.min(1,T/0.5));
+      if(T<0.6){ brain.scale.setScalar(5.6+ex*9); ring.material.opacity=(1-ex)*0.9; ring.scale.setScalar(2+ex*16); ring.position.copy(brainPos); }
+      else ring.material.opacity=0;
+      if(T>0.12&&T<0.80){ const e2=(T-0.12)/0.68; ring2.material.opacity=(1-e2)*0.7; ring2.scale.setScalar(2+e2*26); ring2.position.copy(brainPos);} else ring2.material.opacity=0;
+      // 0.5-1.2 brain -> heart
+      if(T>=0.5&&T<1.2){ const p=(T-0.5)/0.7; courier.material.opacity=0.95; courier.position.copy(brainPos).lerp(heartPos,p); }
+      // 1.2 heart flash
+      if(T>=1.2&&T<1.4){ heart.scale.setScalar(3.6+ (1-(T-1.2)/0.2)*7); }
+      // 1.2-2.0 heart -> both hands (two couriers via one sprite trail look: alternate)
+      if(T>=1.3&&T<2.05){ const p=(T-1.3)/0.75;
+        courier.material.opacity=0.95; courier.position.copy(heartPos).lerp(handR,p); }
+      // arrivals -> emit
+      if(T>=2.0&&!ev.hr){ ev.hr=true; emit('R',true); }
+      if(T>=2.0&&!ev.hl){ ev.hl=true; emit('L',true); }
+      if(T>2.1){ courier.material.opacity=0; ev=null; }
+    }
+    // courier comet trail
+    if(courier.material.opacity>0.05){
+      trailHist.push(courier.position.clone()); if(trailHist.length>26) trailHist.shift();
+      for(let i=0;i<TRAIL;i++){ const v=trailHist[trailHist.length-1-i*3];
+        if(v){ trail[i].position.copy(v); trail[i].material.opacity=courier.material.opacity*(1-i/TRAIL);} else trail[i].material.opacity=0; }
+    } else { trailHist.length=0; for(const s of trail) s.material.opacity=0; }
+
+    camera.getWorldDirection(camDir);
+    for(const {lo,div} of labels){ lo.getWorldPosition(nw);
+      const f=nw.clone().sub(camera.position).normalize().dot(camDir);
+      div.style.opacity=Math.max(0,Math.min(1,(-f-0.12)/0.5)).toFixed(2); }
+
+    // hand -> signal threads (string tethered to the hand that fired it)
+    for(let ti=threadList.length-1; ti>=0; ti--){
+      const th=threadList[ti], age=(now-th.born)/1000;
+      // hold the tether for the whole validity window, then release; also drop it
+      // if the signal scrolled out of the feed.
+      if(age>th.life+0.7 || !th.el.isConnected){ th.path.remove(); threadList.splice(ti,1); continue; }
+      const h=handScreen(th.side==='L'?handL:handR);
+      const r=th.el.getBoundingClientRect();
+      const cx=th.side==='L'?r.right:r.left, cy=r.top+r.height/2;
+      const mx=(h.x+cx)/2, my=(h.y+cy)/2-42;
+      th.path.setAttribute('d',`M${h.x.toFixed(1)},${h.y.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)}`);
+      let op;
+      if(age<0.25) op=age/0.25;                                  // draw in
+      else if(age<th.life) op=0.78+0.18*Math.sin(now*0.006);     // held · gentle shimmer
+      else op=Math.max(0,1-(age-th.life)/0.7);                   // release
+      th.path.style.opacity=op.toFixed(2);
+    }
+
+    renderer.render(scene,camera); labelRenderer.render(scene,camera);
+  }
+  requestAnimationFrame(animate);
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);labelRenderer.setSize(innerWidth,innerHeight);});
+}catch(e){fail(e);}
+</script>
+</body>
+</html>
