@@ -130,9 +130,12 @@ def roundtrip_cost(symbol: str) -> float:
 
 
 def _finite(x: float, default: float = 0.0) -> float:
-    """Coerce a non-finite external float (NaN/inf) to a safe default."""
-    x = float(x)
-    return default if not math.isfinite(x) else x
+    """Coerce a non-finite or non-numeric external value (NaN/inf/None/str) to a safe default."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return default
+    return default if not math.isfinite(v) else v
 
 # Valid horizons map to the labelled columns in signal_performance.
 _HORIZON_COLS = {

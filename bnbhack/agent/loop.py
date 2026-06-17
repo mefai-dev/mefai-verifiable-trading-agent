@@ -365,7 +365,7 @@ class LoopConfig:
     daily_min_trades: int = int(os.getenv("BNBHACK_DAILY_MIN_TRADES", "1"))
     # Only force in the tail of the UTC day, after the agent has had the whole
     # day to find a real high-conviction entry on its own terms.
-    daily_floor_hour_utc: int = int(os.getenv("BNBHACK_DAILY_FLOOR_HOUR_UTC", "21"))
+    daily_floor_hour_utc: int = int(os.getenv("BNBHACK_DAILY_FLOOR_HOUR_UTC", "19"))
     # The forced floor trade is sized down to this small notional (USD), so it
     # satisfies the rule with minimal capital at risk rather than a full bet.
     daily_floor_usd: float = float(os.getenv("BNBHACK_DAILY_FLOOR_USD", "8"))
@@ -378,7 +378,7 @@ class LoopConfig:
     # SELECTIVITY gates; the full security gate and the RiskGovernor halt check
     # still run, so it can never trade through a halt or a blocked token.
     daily_floor_lastresort_hour_utc: int = int(
-        os.getenv("BNBHACK_DAILY_FLOOR_LASTRESORT_HOUR_UTC", "21"))
+        os.getenv("BNBHACK_DAILY_FLOOR_LASTRESORT_HOUR_UTC", "22"))
     # Native x402 consumption: the agent itself buys a premium verified-record
     # feed (the UVII trust index) over the x402 micropayment protocol as part of
     # its own cycle, proving it acts as an agentic-commerce CONSUMER and not only
@@ -1208,10 +1208,7 @@ class AgentLoop:
                     pe = await perp_exec.account_equity_usd()
                     if pe is not None:
                         rpc_usd += pe
-                if self._start_equity_usd is None:
-                    self._start_equity_usd = rpc_usd
-                    self.peak_equity = rpc_usd
-                    self._save_start_equity(rpc_usd)
+                self._seed_start_equity(rpc_usd)
                 self._last_equity_usd = rpc_usd
                 return rpc_usd
         except Exception as exc:
@@ -1254,10 +1251,7 @@ class AgentLoop:
                                 return self._last_equity_usd
                         else:
                             usd += pe
-                    if self._start_equity_usd is None:
-                        self._start_equity_usd = usd
-                        self.peak_equity = usd
-                        self._save_start_equity(usd)
+                    self._seed_start_equity(usd)
                     self._last_equity_usd = usd
                     return usd
             logger.warning("mark-to-market read failed (%s); using last-good",
@@ -1269,6 +1263,45 @@ class AgentLoop:
         # No good reading yet: hold at the configured start (or paper baseline)
         # so we neither halt nor reset on a cold-start RPC failure.
         return self._start_equity_usd or self.cfg.equity
+
+    def _sane_first_seed(self, usd: float) -> bool:
+        """A first AUTO seeded start equity (when the operator did not pin
+        BNBHACK_START_EQUITY_USD) must sit within a sane band of the configured
+        expected equity, so a transient partial RPC read cannot latch a wrong
+        drawdown reference for the whole run and compress the on-chain drawdown
+        percent. Always true when no positive config baseline exists."""
+        base = self.cfg.equity
+        if not (base and base > 0):
+            return True
+        if not (usd and math.isfinite(usd) and usd > 0):
+            return False
+        return 0.2 * base <= usd <= 5.0 * base
+
+    def _seed_start_equity(self, usd: float) -> None:
+        """Latch the drawdown reference from the first sane live reading. A suspect
+        first read (outside the band) is skipped so it cannot compress drawdown, but
+        only for a few attempts: a persistently misconfigured cfg.equity must not
+        leave start un-seeded forever (that disables on-chain drawdown normalisation
+        for the whole window), so after _MAX_SEED_SKIPS rejects the read is latched
+        anyway with a loud warning. Pin BNBHACK_START_EQUITY_USD to avoid all this."""
+        if self._start_equity_usd is not None:
+            return
+        if not (usd and math.isfinite(usd) and usd > 0):
+            return
+        self._seed_skips = getattr(self, "_seed_skips", 0)
+        if self._sane_first_seed(usd) or self._seed_skips >= 5:
+            if not self._sane_first_seed(usd):
+                logger.warning("latching start equity $%.2f after %d suspect reads "
+                               "(config baseline $%.2f); pin BNBHACK_START_EQUITY_USD",
+                               usd, self._seed_skips, self.cfg.equity)
+            self._start_equity_usd = usd
+            self.peak_equity = usd
+            self._save_start_equity(usd)
+        else:
+            self._seed_skips += 1
+            logger.warning("skip latching start equity from suspect first read "
+                           "$%.2f (config baseline $%.2f); awaiting a sane read or "
+                           "BNBHACK_START_EQUITY_USD", usd, self.cfg.equity)
 
     def _drawdown(self, equity: float) -> float:
         if equity > self.peak_equity:
@@ -1783,7 +1816,11 @@ class AgentLoop:
                         # preserved). Paper legs keep the signal price + rung_usd.
                         spent_usd = rung_usd
                         if sw.executed and d.entry > 0 and rung_usd > 0:
-                            qty_fill = _amount_from_result(sw.result or {})
+                            # Prefer the REAL on-chain credited amount measured by
+                            # bsc_exec (balance delta); fall back to parsing the swap
+                            # result only when that could not be measured.
+                            qty_fill = (sw.filled_qty if sw.filled_qty
+                                        else _amount_from_result(sw.result or {}))
                             spent_usd, fill = _live_fill(
                                 rung_usd, sw.input_amount, qty_fill)
                             if spent_usd < rung_usd * 0.95:
@@ -2434,8 +2471,13 @@ class AgentLoop:
         await self._ensure_vault_registered()
         while not self._stop.is_set():
             t0 = time.time()
+            # Hard ceiling on a single cycle so a wedged offloaded chain/RPC call
+            # cannot silently freeze the heartbeat into a restart loop: abandon the
+            # cycle and continue (the leaked worker finishes on its own; next cycle
+            # recovers). Floor at 60s so a slow but healthy cycle is never cut.
+            _cycle_budget = max(60.0, self.cfg.interval * 4)
             try:
-                st = await self.run_cycle()
+                st = await asyncio.wait_for(self.run_cycle(), timeout=_cycle_budget)
                 logger.info("cycle %d: %d decisions, mode=%s dd=%.4f",
                             st["cycle"], len(st["decisions"]), st["mode"],
                             st["drawdown"])
@@ -2456,6 +2498,23 @@ class AgentLoop:
                            stop=dc.get("stop"), notional=dc.get("notional"),
                            security=(dc.get("security") or {}).get("detail"),
                            reasons=(dc.get("reasons") or [])[-3:])
+            except asyncio.TimeoutError:
+                logger.error("cycle exceeded %.0fs budget; abandoned to keep the "
+                             "heartbeat alive (a chain/RPC call likely wedged)",
+                             _cycle_budget)
+                _audit("error", stage="cycle_timeout", budget_sec=_cycle_budget)
+                # Honour the >=1 trade/day floor even when the cycle was abandoned:
+                # the last-resort floor self-executes (and is re-checked every cycle
+                # and across restart), so a slow-RPC tail hour cannot silently
+                # forfeit the day. Bounded so it cannot itself wedge the loop.
+                try:
+                    if (self._floor_lastresort_due(_now())
+                            and self._trades_today < self.cfg.daily_min_trades):
+                        _eq = self._last_equity_usd or self.cfg.equity
+                        await asyncio.wait_for(
+                            self._daily_floor_lastresort(_eq), timeout=120)
+                except Exception as exc:
+                    logger.warning("post-timeout last-resort floor failed: %s", exc)
             except Exception as exc:
                 logger.exception("cycle error: %s", exc)
                 _audit("error", stage="cycle", error=str(exc))

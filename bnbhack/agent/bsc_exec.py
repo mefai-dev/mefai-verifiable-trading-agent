@@ -404,6 +404,89 @@ class SwapOutcome:
     # and fill price from this, never the requested size (else an under-filled
     # swap back-computes a phantom entry). None on a non-executed / quote-only path.
     input_amount: Optional[float] = None
+    # The destination-token amount the swap ACTUALLY credited to the wallet,
+    # measured as an on-chain balance delta after the fill is confirmed. The caller
+    # must book the position from this realised amount, never the quote's estimated
+    # output (which can be a pre-trade estimate). None when it could not be measured.
+    filled_qty: Optional[float] = None
+    # True when a write may have broadcast but its on-chain result could NOT be
+    # confirmed (twak timeout, or receipt/credit unreadable). The caller must treat
+    # the leg as unbooked-but-possibly-live and reconcile against the wallet before
+    # acting on that symbol again, rather than assuming a clean no-op.
+    needs_reconcile: bool = False
+
+
+def _result_tx_hash(data: Any) -> Optional[str]:
+    """Pull a 0x66 tx hash out of a twak swap result under any common key."""
+    if not isinstance(data, dict):
+        return None
+    for k in ("txHash", "transactionHash", "hash", "tx", "txid", "transaction"):
+        v = data.get(k)
+        if isinstance(v, dict):
+            v = v.get("hash") or v.get("txHash")
+        if isinstance(v, str):
+            s = v.strip()
+            if re.match(r"^0x[0-9a-fA-F]{64}$", s):
+                return s
+    return None
+
+
+def _tx_receipt_status(tx_hash: str) -> Optional[int]:
+    """eth_getTransactionReceipt(tx).status via one raw eth_call style RPC. Returns
+    1 (success), 0 (reverted), or None if the receipt is not yet available / on any
+    read failure. Mirrors _wallet_token_balance's no-web3 urllib approach."""
+    if not tx_hash:
+        return None
+    try:
+        body = json.dumps({"jsonrpc": "2.0", "id": 1,
+                           "method": "eth_getTransactionReceipt",
+                           "params": [tx_hash]}).encode("utf-8")
+        req = urllib.request.Request(
+            _BSC_BALANCE_RPC, data=body,
+            headers={"Content-Type": "application/json",
+                     "User-Agent": "Mozilla/5.0 (MEFAI-Agent)"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            r = json.loads(resp.read())
+        rcpt = r.get("result")
+        if not isinstance(rcpt, dict):
+            return None  # not mined yet (null) or malformed
+        st = rcpt.get("status")
+        if st is None:
+            return None
+        return int(st, 16) if isinstance(st, str) else int(st)
+    except Exception:
+        return None
+
+
+async def _confirm_swap_fill(tx_hash: Optional[str], dst_addr: str,
+                             bal_before: Optional[float],
+                             attempts: int = 18, delay: float = 2.5):
+    """Confirm a just-submitted swap actually filled, and measure the real credit.
+    Returns (confirmed, filled_qty, needs_reconcile). The window (~45s by default)
+    comfortably covers BSC finality so a slow-but-successful mine is not declared
+    unconfirmed. Proof rules:
+      - receipt status == 1 -> confirmed (filled_qty = destination balance delta);
+      - receipt status == 0 -> confirmed REVERT, (False, None, False), no phantom;
+      - when NO tx hash is known (e.g. a twak timeout), a positive destination
+        balance credit is the only proof of a fill;
+      - when a hash IS known, require status == 1 so an unrelated concurrent credit
+        of the same token cannot falsely confirm THIS swap.
+    Inability to establish either after the full window returns (False, None, True)."""
+    for i in range(attempts):
+        st = _tx_receipt_status(tx_hash) if tx_hash else None
+        if st == 0:
+            return (False, None, False)
+        bal_after = _wallet_token_balance(dst_addr)
+        delta = None
+        if bal_after is not None and bal_before is not None:
+            delta = bal_after - bal_before
+        if st == 1:
+            return (True, delta if (delta is not None and delta > 0) else None, False)
+        if tx_hash is None and delta is not None and delta > 0:
+            return (True, delta, False)
+        if i < attempts - 1:
+            await asyncio.sleep(delay)
+    return (False, None, True)
 
 
 def _is_native_sentinel(addr: Optional[str]) -> bool:
@@ -649,17 +732,44 @@ async def swap(amount: float, from_token: str, to_token: str,
     if src is None or dst is None:
         return SwapOutcome(True, False, verdict, quote=q.data,
                            detail="gate passed but token args failed revalidation")
+    # Destination balance just before the swap, so the realised credit can be
+    # measured as a delta after the fill is confirmed.
+    bal_before_dst = _wallet_token_balance(dst_addr)
     ex = await _run_twak(
         ["swap", _fmt_amount(amt), src, dst,
          "--chain", CHAIN, "--slippage", _fmt_pct(slip), "--json"],
         timeout=EXEC_TIMEOUT, with_password=True)
     if not ex.ok:
+        timed_out = "timed out" in (ex.error or "").lower()
         logger.warning("bsc swap gate passed but execution failed: %s", ex.error)
+        if timed_out:
+            # twak timed out, but the tx may have broadcast and could still mine.
+            # Confirm by destination credit over the extended window and BOOK it if
+            # it filled, so a slow but successful swap is never left as an unmanaged,
+            # stop-less bag (and is never double-counted: only a real credit books).
+            confirmed, filled, _ = await _confirm_swap_fill(None, dst_addr, bal_before_dst)
+            if confirmed:
+                return SwapOutcome(True, True, verdict, quote=q.data, result=ex.data,
+                                   input_amount=amt, filled_qty=filled,
+                                   detail="executed (confirmed by on-chain credit after twak timeout)")
+            return SwapOutcome(True, False, verdict, quote=q.data,
+                               detail="execution timed out with no on-chain credit (not booked)")
         return SwapOutcome(True, False, verdict, quote=q.data,
                            detail="gate passed but execution failed")
+    # twak's exit code is NOT proof the tx mined: a swap can broadcast then revert
+    # (slippage / MEV / gas) and still print a hash. Confirm the fill on chain and
+    # measure the REAL credited amount before booking, so neither a phantom position
+    # (revert) nor a wrong qty (quote estimate) is ever recorded.
+    confirmed, filled, reconcile = await _confirm_swap_fill(
+        _result_tx_hash(ex.data), dst_addr, bal_before_dst)
+    if not confirmed:
+        logger.warning("bsc swap reported ok but on-chain fill unconfirmed (dst %s)", to_token)
+        return SwapOutcome(True, False, verdict, quote=q.data, result=ex.data,
+                           detail="execution unconfirmed on chain (not booked)",
+                           needs_reconcile=reconcile)
     return SwapOutcome(True, True, verdict, quote=q.data, result=ex.data,
-                       input_amount=amt,
-                       detail=f"executed after passing security gate{impact_note}")
+                       input_amount=amt, filled_qty=filled,
+                       detail=f"executed and confirmed on chain{impact_note}")
 
 
 @dataclass

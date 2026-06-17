@@ -260,6 +260,11 @@ class ChainWriter:
         self._candidates: list = []
         self._rpc_idx = -1
         self._rpc_url = ""
+        # Serialises provider rebinds so two reconnect paths (a write under the
+        # nonce lock and a read offloaded to a worker thread) cannot interleave a
+        # torn swap of the active web3/contract handles. Safe ordering: only ever
+        # acquired inside _bind, which no lock-holder calls re-entrantly.
+        self._conn_lock = threading.Lock()
 
     # -- init / accounts -----------------------------------------------------
     @staticmethod
@@ -279,16 +284,17 @@ class ChainWriter:
     def _bind(self, idx: int, url: str, w3, chain_ok: bool) -> None:
         """Adopt a dialed Web3 as the active provider and (re)bind contracts."""
         from web3 import Web3
-        self._w3 = w3
-        self._chain_ok = chain_ok
-        self._rpc_idx = idx
-        self._rpc_url = url
-        self._registry = (w3.eth.contract(address=Web3.to_checksum_address(REGISTRY_ADDR),
-                                           abi=_REGISTRY_ABI) if REGISTRY_ADDR else None)
-        self._governor = (w3.eth.contract(address=Web3.to_checksum_address(GOVERNOR_ADDR),
-                                          abi=_GOVERNOR_ABI) if GOVERNOR_ADDR else None)
-        self._agent_acct = w3.eth.account.from_key(_AGENT_KEY) if _AGENT_KEY else None
-        self._oracle_acct = w3.eth.account.from_key(_ORACLE_KEY) if _ORACLE_KEY else None
+        with self._conn_lock:
+            self._registry = (w3.eth.contract(address=Web3.to_checksum_address(REGISTRY_ADDR),
+                                               abi=_REGISTRY_ABI) if REGISTRY_ADDR else None)
+            self._governor = (w3.eth.contract(address=Web3.to_checksum_address(GOVERNOR_ADDR),
+                                              abi=_GOVERNOR_ABI) if GOVERNOR_ADDR else None)
+            self._agent_acct = w3.eth.account.from_key(_AGENT_KEY) if _AGENT_KEY else None
+            self._oracle_acct = w3.eth.account.from_key(_ORACLE_KEY) if _ORACLE_KEY else None
+            self._chain_ok = chain_ok
+            self._rpc_idx = idx
+            self._rpc_url = url
+            self._w3 = w3
 
     def _ensure(self) -> bool:
         if self._init:
@@ -549,39 +555,62 @@ class ChainWriter:
         governor fails CLOSED so a transient RPC fault cannot bypass the halt."""
         if not self._ensure() or self._governor is None:
             return (True, 0, "governor not configured (paper mode)")
+        from web3 import Web3
+        addr = Web3.to_checksum_address(agent or self.agent_address)
         try:
-            from web3 import Web3
-            addr = Web3.to_checksum_address(agent or self.agent_address)
             ok, dd = self._governor.functions.canTrade(addr).call()
             return (bool(ok), int(dd),
                     "ok" if ok else f"blocked by RiskGovernor (dd {dd}bps)")
         except Exception as exc:
             logger.warning("canTrade read failed: %s", exc)
+            # A bad RPC node must not silently freeze all trading to PREDICT-only.
+            # Rotate to a fresh node once and retry before failing closed.
+            if self._reconnect():
+                try:
+                    ok, dd = self._governor.functions.canTrade(addr).call()
+                    return (bool(ok), int(dd),
+                            "ok" if ok else f"blocked by RiskGovernor (dd {dd}bps)")
+                except Exception as exc2:
+                    logger.warning("canTrade retry after reconnect failed: %s", exc2)
             return (False, 0, "governor read error (failing closed)")
 
     def arena_stats(self) -> Dict[str, Any]:
         if not self._ensure() or self._registry is None:
             return {}
-        try:
+        def _read():
             r = self._registry.functions.getArenaStats().call()
             return {"total_agents": r[0], "committed": r[1], "revealed": r[2],
                     "verified": r[3], "pending_reveals": r[4],
                     "pending_outcomes": r[5]}
+        try:
+            return _read()
         except Exception as exc:
             logger.warning("arena_stats read failed: %s", exc)
+            if self._reconnect():
+                try:
+                    return _read()
+                except Exception as exc2:
+                    logger.warning("arena_stats retry failed: %s", exc2)
             return {}
 
     def vault(self, agent: Optional[str] = None) -> Dict[str, Any]:
         if not self._ensure() or self._governor is None:
             return {}
-        try:
-            from web3 import Web3
-            addr = Web3.to_checksum_address(agent or self.agent_address)
+        from web3 import Web3
+        addr = Web3.to_checksum_address(agent or self.agent_address)
+        def _read():
             r = self._governor.functions.getVault(addr).call()
             return {"hwm": int(r[0]), "equity": int(r[1]), "updated_at": int(r[2]),
                     "halted": bool(r[3]), "registered": bool(r[4])}
+        try:
+            return _read()
         except Exception as exc:
             logger.warning("vault read failed: %s", exc)
+            if self._reconnect():
+                try:
+                    return _read()
+                except Exception as exc2:
+                    logger.warning("vault retry failed: %s", exc2)
             return {}
 
     # -- explorer links ------------------------------------------------------
