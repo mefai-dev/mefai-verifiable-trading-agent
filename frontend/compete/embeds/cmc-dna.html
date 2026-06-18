@@ -88,6 +88,24 @@ try{
   const { CSS2DRenderer, CSS2DObject }=await import('three/addons/renderers/CSS2DRenderer.js');
   const V=(x,y,z=0)=>new THREE.Vector3(x,y,z);
   const COL={cyan:0x3861fb,violet:0xe9f0ff,gold:0xffffff};
+  // which CoinMarketCap Agent Hub skill each node reads from
+  const SKILL={
+    'Quotes Latest':'get_crypto_quotes_latest',
+    'Global Metrics':'get_global_metrics_latest',
+    'Derivatives':'get_global_crypto_derivatives_metrics',
+    'Funding / OI':'get_global_crypto_derivatives_metrics',
+    'Technical Analysis':'get_crypto_technical_analysis',
+    'Market Cap TA':'get_crypto_marketcap_technical_analysis',
+    'Crypto Metrics':'get_crypto_metrics',
+    'Latest News':'get_crypto_latest_news',
+    'Macro Events':'get_upcoming_macro_events',
+    'Trending Narratives':'trending_crypto_narratives',
+    'Search / Info':'search_cryptos · get_crypto_info',
+    'Narrative Rotation':'narrative-rotation (trending_crypto_narratives)',
+    'Risk Allocator':'risk-budgeted-allocator',
+    'Regime Governor':'regime-risk-governor (global + derivatives)',
+    'Conviction':'meta-strategy-composer (fuses all CMC tools)',
+  };
   const S=1.5, sv=(x,y,z=0)=>V(x*S,y*S,z*S);
 
   const BONES=[
@@ -253,7 +271,10 @@ try{
     ray.setFromCamera(m,camera);
     const hit=ray.intersectObjects(pickables,false)[0];
     if(hit){ const nd=hit.object.userData;
-      showInfo({title:nd.t,tag:'CMC node',rows:[['Live value',nd.v],['Role',nd.role||''],['Feeds','the conviction the brain emits']]}); }
+      showInfo({title:nd.t,tag:'CMC Agent Hub',rows:[
+        ['CMC skill',SKILL[nd.t]||nd.t],
+        ['Live value',nd.v],['Role',nd.role||''],
+        ['Feeds','the conviction the brain emits']]}); }
   });
 
   // ── signal choreography: brain explosion -> heart -> both hands -> emit ──
