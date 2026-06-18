@@ -223,8 +223,9 @@ try{
     const feed=document.getElementById(side==='L'?'feedL':'feedR');
     const el=document.createElement('div'); el.className='sig '+(buy?'buy':'sell');
     el.innerHTML=`<span class="ic">${buy?'▲':'▼'}</span><span class="sym">${sym}</span><span class="tf">${chg}</span><span class="side">${buy?'BUY':'SELL'}</span>`;
+    const reason=`CoinMarketCap rates ${sym} "${g.verdict||'-'}"${g.score!=null?` with a MEFAI score of ${g.score}`:''} on a 24h move of ${chg}, so the agent fires ${buy?'a BUY':'a SELL'}.`;
     el.onclick=()=>showInfo({title:`${sym} ${buy?'BUY':'SELL'}`,tag:'from CoinMarketCap data',
-      rows:[['CMC verdict',g.verdict||'-'],['MEFAI score',g.score!=null?String(g.score):'-'],
+      rows:[['Why it fired',reason],['CMC verdict',g.verdict||'-'],['MEFAI score',g.score!=null?String(g.score):'-'],
             ['24h change',chg],['Price',g.price!=null?'$'+g.price:'-']]});
     feed.insertBefore(el, feed.children[1]||null);
     while(feed.children.length>8) feed.removeChild(feed.lastChild);
