@@ -257,9 +257,18 @@ try{
 
   // ── signal choreography: brain explosion -> heart -> both hands -> emit ──
   let ev=null, beatSide='R';
-  // fire ONE queued CMC-derived signal per beat (alternating hands); idle if none
-  setInterval(()=>{ const g=sigQueue.shift(); if(!g) return;
-    beatSide = beatSide==='R'?'L':'R'; ev={t:0,side:beatSide,done:false,sig:g}; }, 7000);
+  // No fixed cadence: each fire is scheduled after a random gap, so signals arrive
+  // organically (not on a metronome). Still one queued CMC signal per fire,
+  // alternating hands, and it idles whenever the queue is empty.
+  function scheduleBeat(){
+    const delay = 4000 + Math.random()*9000;   // random 4s .. 13s
+    setTimeout(()=>{
+      const g = sigQueue.shift();
+      if(g){ beatSide = beatSide==='R'?'L':'R'; ev={t:0,side:beatSide,done:false,sig:g}; }
+      scheduleBeat();
+    }, delay);
+  }
+  scheduleBeat();
 
   const tmp=new THREE.Vector3(), camDir=new THREE.Vector3(), nw=new THREE.Vector3();
   let last=performance.now();
