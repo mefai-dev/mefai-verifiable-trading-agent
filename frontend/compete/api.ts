@@ -124,7 +124,7 @@ export type LoopPosition = {
   tp1_done?: boolean; rungs_filled?: number; rungs_total?: number; realized_partial_usd?: number
   opened_ts: number; open_tx: string
 }
-export type LoopClose = { symbol: string; reason: string; exit: number; pnl_usd: number; pnl_pct: number; closed_ts: number }
+export type LoopClose = { symbol: string; reason: string; exit: number; pnl_usd: number; pnl_pct: number; closed_ts: number; open_tx?: string; close_tx?: string }
 export type LoopPositions = { open: LoopPosition[]; open_count: number; unrealized_usd: number; realized_usd: number; closes: LoopClose[] }
 export type LoopCycleClose = { symbol: string; reason: string; exit_price: number; pnl_usd: number; pnl_pct: number; executed: boolean; partial?: boolean; detail: string }
 export type LoopState = {
@@ -216,22 +216,30 @@ export type CmcGlobal = {
   btc_dominance: number; eth_dominance: number
   active_cryptocurrencies: number; markets: number; mcap_change_24h: number
 }
-export async function fetchCmcGlobal(_signal?: AbortSignal): Promise<CmcGlobal> {
-  return memo<CmcGlobal>('cmc-global', async () => {
-    const r = await timedFetch('/superbsc/api/coingecko/global', { cache: 'no-store' })
-    if (!r.ok) throw new Error(`${r.status}`)
-    const d = (await r.json())?.data ?? {}
-    const cap = d.market_cap_percentage ?? {}
-    return {
-      total_market_cap_usd: d.total_market_cap?.usd ?? 0,
-      total_volume_usd: d.total_volume?.usd ?? 0,
-      btc_dominance: cap.btc ?? 0,
-      eth_dominance: cap.eth ?? 0,
-      active_cryptocurrencies: d.active_cryptocurrencies ?? 0,
-      markets: d.markets ?? 0,
-      mcap_change_24h: d.market_cap_change_percentage_24h_usd ?? 0,
-    }
-  })
+export async function fetchCmcGlobal(signal?: AbortSignal): Promise<CmcGlobal> {
+  // Aggregated from the live CoinMarketCap intelligence read (the audited top 1000),
+  // so this page draws only on CoinMarketCap data with no third party global feed.
+  // Reuses the same memoised intelligence call the page already makes, so it adds
+  // no extra request.
+  const intel = await fetchCmcIntel(1000, signal)
+  const toks = intel.tokens || []
+  let mc = 0, vol = 0, btc = 0, eth = 0, chgW = 0
+  for (const t of toks) {
+    const m = Number(t.market_cap) || 0
+    mc += m; vol += Number(t.volume_24h) || 0; chgW += (Number(t.change_24h) || 0) * m
+    const s = (t.symbol || '').toUpperCase()
+    if (s === 'BTC') btc = m
+    else if (s === 'ETH') eth = m
+  }
+  return {
+    total_market_cap_usd: mc,
+    total_volume_usd: vol,
+    btc_dominance: mc ? (btc / mc) * 100 : 0,
+    eth_dominance: mc ? (eth / mc) * 100 : 0,
+    active_cryptocurrencies: toks.length,
+    markets: 0,
+    mcap_change_24h: mc ? chgW / mc : 0,
+  }
 }
 
 export type CmcToken = {
