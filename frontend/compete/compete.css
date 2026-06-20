@@ -277,7 +277,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root .cp-code { font-family: "JetBrains Mono", "Fira Code", ui-monospace, Menlo, monospace !important; font-variant-numeric: tabular-nums; }
 /* Keep a section title on one line on wide screens, wrap naturally on mobile. */
 .compete-root .cp-sec-1line { white-space: nowrap; }
-@media (max-width: 980px) { .compete-root .cp-sec-1line { white-space: normal; } }
+@media (max-width: 1100px) { .compete-root .cp-sec-1line { white-space: normal; } }
 
 /* ── scrollbar ── */
 .compete-root ::-webkit-scrollbar { width: 10px; height: 10px; }

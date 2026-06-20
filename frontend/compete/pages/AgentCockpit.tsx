@@ -709,7 +709,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
         <div style={{ display: 'grid', gap: 8, marginBottom: 18 }}>
           {byReason.map((a) => {
             const tone = CLOSE_TONE[a.key] ?? 'var(--c-muted)'
-            return <div key={a.key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr 110px', gap: 10, alignItems: 'center' }}>
+            return <div key={a.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,150px) minmax(40px,1fr) minmax(0,110px)', gap: 10, alignItems: 'center' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Chip tone={tone}>{a.key}</Chip>
                 <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{a.n}</span>

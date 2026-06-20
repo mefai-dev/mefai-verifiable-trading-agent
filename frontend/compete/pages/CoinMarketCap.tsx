@@ -112,7 +112,7 @@ function CmcEmbedViewer() {
   </Panel>
 }
 
-/* ─────────────── live market read (CMC + CoinGecko global) ─────────────── */
+/* ─────────────── live market read (CMC intelligence only, no third party feed) ─────────────── */
 function LiveMarket() {
   const { data: g } = usePoll<CmcGlobal>((s) => fetchCmcGlobal(s), 60_000)
   const { data: intel, error: intelErr } = usePoll<CmcIntel>((s) => fetchCmcIntel(1000, s), 60_000)

@@ -173,7 +173,7 @@ function AgentIdentityPanel() {
       ? <div style={{ fontSize: 13, color: 'var(--c-muted)', padding: '14px 0' }}>{error || !loading ? 'The agent server is unreachable right now.' : <>{'Reading the identity'}<span className="cp-ellipsis" /></>}</div>
       : <div style={{ display: 'grid', gap: 16 }}>
         {/* registry coordinates */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+        {reg && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
           <div style={{ padding: 13, borderRadius: 11, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)' }}>
             <div style={{ fontSize: 10.5, letterSpacing: .6, color: 'var(--c-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>{'Identity registry'}</div>
             <ScanLink addr={reg!.contract} chain={56} />
@@ -184,7 +184,7 @@ function AgentIdentityPanel() {
             <ScanLink addr={reg!.agent_wallet} chain={56} />
             <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 4 }}>{reg!.minted ? `${'agent id'} ${reg!.agent_id}` : 'holds the identity'}</div>
           </div>
-        </div>
+        </div>}
 
         {/* track-record metadata */}
         <div>

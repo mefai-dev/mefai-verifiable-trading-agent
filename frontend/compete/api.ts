@@ -210,7 +210,7 @@ export async function fetchDebate(symbol: string, _signal?: AbortSignal): Promis
 }
 
 /* ─────────────── CoinMarketCap live surface (same hardened edge the main
-   terminal uses; CoinGecko global + the audited CMC intelligence skill) ─────────────── */
+   terminal uses; the audited CMC intelligence skill, no third party feed) ─────────────── */
 export type CmcGlobal = {
   total_market_cap_usd: number; total_volume_usd: number
   btc_dominance: number; eth_dominance: number

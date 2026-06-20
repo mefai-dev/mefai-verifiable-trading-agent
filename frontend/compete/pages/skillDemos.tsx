@@ -335,7 +335,7 @@ const cell = (r: any[], i: number) => (i >= 0 && r[i] != null ? String(r[i]) : '
    market-wide regulatory baskets that all track the whole market; the rotation
    skill instead ranks distinct ecosystem narratives by their own 24h momentum. ── */
 function NarrativeRotationDemo() {
-  const { data, error, loading } = usePoll<CmcIntel>((s) => fetchCmcIntel(s), 90_000)
+  const { data, error, loading } = usePoll<CmcIntel>((s) => fetchCmcIntel(60, s), 90_000)
   const rows = useMemo(() => {
     const tokens = data?.tokens ?? []
     const map = new Map<string, { chgSum: number; n: number; mcap: number }>()
@@ -428,8 +428,8 @@ function CmcGateDemo({ s }: { s: SkillDef }) {
   const { data, error, loading } = usePoll<CmcGate>((sig) => fetchCmcGate(map.slug, sig), 120_000, [map.slug])
   if (loading) return <DemoFrame label={map.label} right={'reading'}><Reading /></DemoFrame>
   if (error || !data?.data || !gateValid(s.id, data.data)) {
-    // Graceful real fallback: cap/regime tools still read CoinGecko global (key
-    // free, real). Pure hub feeds fall back to the honest invoke + shape.
+    // Graceful real fallback: cap/regime tools fall back to the CMC global read
+    // (aggregated from the CMC intelligence skill). Pure hub feeds fall back to the honest invoke + shape.
     if (s.id === 'cmc-global') return <GlobalDemo />
     if (s.id === 'cmc-mcap-ta') return <GlobalDemo regime />
     return <SchemaDemo s={s} />
