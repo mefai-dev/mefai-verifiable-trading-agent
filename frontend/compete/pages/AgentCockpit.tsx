@@ -644,7 +644,7 @@ function CloseCard({ c }: { c: LoopClose }) {
   return <div className="cp-close-card" style={{ padding: 13, borderRadius: 12, background: 'var(--c-panel-2)', border: '1px solid var(--c-line)', borderLeft: `3px solid ${rcol}` }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CoinLogo symbol={c.symbol} size={20} /><b style={{ fontSize: 13.5 }}>{c.symbol.replace('USDT', '')}</b></span>
-      <Chip tone={rtone}>{c.reason}</Chip>
+      <Chip tone={rtone}>{c.reason === 'manual' ? 'closed' : c.reason}</Chip>
     </div>
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
       <span className="mono" style={{ fontSize: 18, fontWeight: 900, color: rcol }}>{c.pnl_pct >= 0 ? '+' : ''}{fmtNum(c.pnl_pct, 2)}%</span>
@@ -711,7 +711,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
             const tone = CLOSE_TONE[a.key] ?? 'var(--c-muted)'
             return <div key={a.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,150px) minmax(40px,1fr) minmax(0,110px)', gap: 10, alignItems: 'center' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Chip tone={tone}>{a.key}</Chip>
+                <Chip tone={tone}>{a.key === 'manual' ? 'closed' : a.key}</Chip>
                 <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{a.n}</span>
               </span>
               <div style={{ height: 8, borderRadius: 4, background: 'var(--c-panel-2)', overflow: 'hidden' }}>
