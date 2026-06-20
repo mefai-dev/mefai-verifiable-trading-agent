@@ -204,7 +204,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
             sub={`${'cap'} ${fmtNum(internalBps, 0)} bps`} />
           <div className="cp-judge-gov-stats">
             <Stat label={'Governor'} value={gov.ok ? 'OK' : 'HALT'} tone={gov.ok ? 'var(--green)' : 'var(--red)'} sub={'live state'} />
-            <Stat label={'Drawdown'} value={`${fmtNum(ddBps, 0)} bps`} tone={GOLD} sub={`${'internal cap'} ${fmtNum(internalBps, 0)}`} />
+            <Stat label={'Drawdown'} value={st ? `${fmtNum(ddBps, 0)} bps` : '-'} tone={GOLD} sub={st ? `${'internal cap'} ${fmtNum(internalBps, 0)}` : 'standby'} />
             {st && <Stat label={'Equity'} value={<CountUp value={st.equity} prefix="$" decimals={2} />} sub={'simulated book · real proofs'} />}
             {gov.record && <Stat label={'Record'} value={gov.record} sub={'keeper feed'} mono />}
           </div>
