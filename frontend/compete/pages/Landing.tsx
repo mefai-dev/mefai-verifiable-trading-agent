@@ -70,7 +70,7 @@ export default function Landing({ go }: { go: (p: string) => void }) {
             <Stat label={'Agent equity'} value={st ? <CountUp value={st.equity} decimals={0} prefix="$" /> : '-'} tone="var(--c-primary)" sub={st ? 'live' : 'standby'} />
             <Stat label={'Live drawdown'} value={st ? `${ddBps} bps` : '-'} tone={ddBps >= capBps * 0.9 ? 'var(--red)' : 'var(--green)'} sub={st ? `${'cap'} ${capBps} bps` : 'standby'} />
             <a href={`https://bscscan.com/txs?a=${ADDR.ledger}&p=178`} target="_blank" rel="noopener noreferrer" className="cp-stat-link" title={'View the result ledger transactions on BscScan'}>
-              <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off-chain edge base · proofs anchored on the ledger ↗'} />
+              <Stat label={'Labeled outcomes'} value={ov ? <CountUp value={ov.n_resolved} /> : '-'} tone="var(--trust)" sub={'off chain edge base · proofs anchored on the ledger ↗'} />
             </a>
           </div>
         </Reveal>

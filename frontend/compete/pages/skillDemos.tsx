@@ -1,6 +1,6 @@
 /* BNB HACK · live working demo per skill.
    Clicking a capability card opens its dossier and, where the data is reachable
-   key-free, a working panel that runs the same read the agent runs. Every number
+   key free, a working panel that runs the same read the agent runs. Every number
    here is live: global metrics and the per token audit come from the CMC backed
    intelligence endpoint, order flow from the real Binance spot tape. The few hub
    feeds that need the CMC Pro key (derivatives, narratives, macro, news) show the
@@ -81,7 +81,7 @@ function useTokens() {
   const { data, error, loading } = usePoll<CmcIntel>((s) => fetchCmcIntel(40, s), 60_000)
   return { tokens: data?.tokens ?? [], error, loading }
 }
-/* shared honest down/reading state for the token-driven CMC demos · render this
+/* shared honest down/reading state for the token driven CMC demos · render this
    in JSX (`return <TokenGate .../>`) when the token feed has nothing yet. */
 function TokenGate({ label, error }: { label: string; error: unknown }) {
   return error
@@ -278,7 +278,7 @@ const GATE_TOOL: Record<string, { slug: string; label: string; method: string }>
 }
 /* a signed value string like "-31.66 B" / "+0.45%" coloured by its sign */
 const signedTone = (v?: string) => { const t = (v || '').trim(); if (t.startsWith('-')) return 'var(--red)'; if (t.startsWith('+')) return 'var(--green)'; return 'var(--c-text)' }
-/* fear & greed / altcoin-season index 0-100 → tone (low = fear/red, high = greed/green) */
+/* fear & greed / altcoin season index 0-100 → tone (low = fear/red, high = greed/green) */
 const idxTone = (n: number) => n >= 55 ? 'var(--green)' : n <= 25 ? 'var(--red)' : 'var(--gold)'
 /* RSI tone: oversold reads bullish (green), overbought reads bearish (red) */
 const rsiTone = (n: number) => n <= 30 ? 'var(--green)' : n >= 70 ? 'var(--red)' : 'var(--c-text)'
@@ -332,7 +332,7 @@ function DerivGate({ d }: { d: any }) {
 const cell = (r: any[], i: number) => (i >= 0 && r[i] != null ? String(r[i]) : '-')
 /* ── narrative rotation · differentiated sector narratives grouped live from the
    CMC token universe by ecosystem (cmc-narratives). The raw trending feed returns
-   market-wide regulatory baskets that all track the whole market; the rotation
+   market wide regulatory baskets that all track the whole market; the rotation
    skill instead ranks distinct ecosystem narratives by their own 24h momentum. ── */
 function NarrativeRotationDemo() {
   const { data, error, loading } = usePoll<CmcIntel>((s) => fetchCmcIntel(60, s), 90_000)

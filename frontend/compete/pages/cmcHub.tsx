@@ -2,7 +2,7 @@
    The whole CMC hub, read at once, distilled into one market-context lean that
    feeds the Omni Signal decision. Six live gates land in parallel · sentiment
    (Fear and Greed + altcoin season + dominance), derivatives (open interest +
-   funding + volume), trending narratives, market-wide technicals, upcoming
+   funding + volume), trending narratives, market wide technicals, upcoming
    macro events, and the latest news. A transparent composite blends the live
    numeric regime signals (Fear and Greed, market RSI, MACD, BTC dominance, perp
    funding) into a single 0-100 reading; every figure is the gate's own value and
@@ -132,7 +132,7 @@ function parseNews(g: CmcGate | null): News[] | null {
    Four numeric CMC regime signals, each mapped to a 0-100 lean (50 = neutral),
    then weighted. Fear and Greed and market RSI are read contrarian (deep fear /
    oversold = a higher bullish lean); the MACD histogram is read with the trend
-   (positive = bullish), and falling BTC dominance is read risk-on. The exact
+   (positive = bullish), and falling BTC dominance is read risk on. The exact
    inputs are shown beside the dial so the number is never a black box. */
 type Sub = { key: string; label: string; reading: string; lean: number; ok: boolean }
 function buildContext(sent: Sentiment | null, deriv: Derivs | null, ta: Ta | null): { score: number; subs: Sub[] } {

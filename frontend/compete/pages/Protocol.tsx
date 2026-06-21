@@ -1,6 +1,6 @@
 /* BNB HACK · Track 3 · Verifiable Protocol (Trust Wallet blue).
    Commit-reveal prediction registry, the RiskGovernor circuit breaker, the unified
-   verifiable intelligence index (UVII) and the x402 machine-payable feed. */
+   verifiable intelligence index (UVII) and the x402 machine payable feed. */
 
 import { useState } from 'react'
 import {

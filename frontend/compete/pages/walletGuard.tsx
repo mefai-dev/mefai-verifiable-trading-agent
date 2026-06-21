@@ -1,7 +1,7 @@
 /* BNB HACK · MEFAI wallet approval guard, surfaced as a Trust Wallet feature.
    This is the same wallet safety check the MEFAI terminal runs: it reads every
    live ERC-20 allowance a wallet has granted on BSC, flags unlimited approvals
-   and possible-spam tokens, and ranks each by the USD it puts at risk. Real
+   and possible spam tokens, and ranks each by the USD it puts at risk. Real
    Moralis-backed chain data, no fabrication. Trade execution lives in Trust
    Wallet, so the same self custody users get their approval surface audited
    before an exploit can drain it. The compete site is read only: revoke runs in

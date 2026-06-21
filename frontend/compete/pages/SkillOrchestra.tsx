@@ -37,7 +37,7 @@ const ROSTER: Seat[] = [
   { id: 'neuron', name: 'NEURON', role: 'Pattern net', bid: 'ml_ensemble',
     desc: 'A machine learning ensemble trained on verified outcomes blending several models into one probability rather than a hand tuned rule.' },
 ]
-/* pre-computed seat coordinates (percent of the square), top seat first */
+/* precomputed seat coordinates (percent of the square), top seat first */
 const SEATS = ROSTER.map((_, i) => {
   const a = (-90 + i * 60) * Math.PI / 180
   const R = 37
@@ -86,7 +86,7 @@ export default function SkillOrchestra({ go }: { go: (p: string) => void }) {
     })
   }, [debate])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* read-only aggregate (not the debate) keeps the scoreboard live */
+  /* read only aggregate (not the debate) keeps the scoreboard live */
   const { data: arena } = usePoll<{ agents: ArenaAgent[] }>((s) => fetchArenaLeaderboard(s), 60_000)
 
   /* the debate only runs when the visitor convenes it */
@@ -230,7 +230,7 @@ function RoundTable({ symbol, experts, consensus, exchanges, learning, loading, 
   const cTone = sigTone(consensus?.signal)
   const sym = symbol.replace('/USDT', '')
   const [open, setOpen] = useState<number | null>(null)
-  /* never let a dossier left open carry over into a new or re-convened market */
+  /* never let a dossier left open carry over into a new or reconvened market */
   useEffect(() => { setOpen(null) }, [symbol])
 
   /* fill all six seats deterministically: bind each chair to its backend id
@@ -540,7 +540,7 @@ function CouncilChat({ symbol, consensus, convened }: { symbol: string; consensu
     return clean(`Council consensus on ${symbol}: ${consensus.signal} at ${fmtNum((consensus.confidence ?? 0) * 100, 0)}% confidence. ${consensus.summary || consensus.reason || ''} ${consensus.risk_note || ''}`)
   }, [symbol, consensus])
 
-  /* clear the thread whenever the market is re-convened */
+  /* clear the thread whenever the market is reconvened */
   useEffect(() => { setMsgs([]); setErr('') }, [symbol])
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }) }, [msgs])
   useEffect(() => () => ctrl.current?.abort(), [])

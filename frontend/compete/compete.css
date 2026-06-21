@@ -589,11 +589,11 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   padding: 12px 14px; border-bottom: 1px solid var(--c-line); white-space: nowrap;
 }
 .compete-root table.cmc thead th.l { text-align: left; }
-.compete-root table.cmc thead th.sticky-name { left: 0; z-index: 3; }
+.compete-root table.cmc thead th.sticky-name { left: 0; z-index: 3; box-shadow: 5px 0 7px -4px rgba(0,0,0,.45); }
 .compete-root table.cmc tbody td { padding: 13px 14px; border-bottom: 1px solid var(--c-line); text-align: right; white-space: nowrap; color: var(--c-text); font-weight: 600; }
 .compete-root table.cmc tbody td.l { text-align: left; }
 /* keep the market column pinned in body rows too, matching its sticky header */
-.compete-root table.cmc tbody td.sticky-name { position: sticky; left: 0; z-index: 1; background: var(--c-panel); }
+.compete-root table.cmc tbody td.sticky-name { position: sticky; left: 0; z-index: 1; background: var(--c-panel); box-shadow: 5px 0 7px -4px rgba(0,0,0,.45); }
 .compete-root table.cmc tbody tr:hover td.sticky-name { background: var(--c-panel-2); }
 .compete-root table.cmc tbody tr { transition: background .12s; }
 .compete-root table.cmc tbody tr:hover { background: var(--c-fill); }

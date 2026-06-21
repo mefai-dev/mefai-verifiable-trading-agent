@@ -122,7 +122,7 @@ export default function SkillStudio({ go }: { go: (p: string) => void }) {
 
 /* ─────────────── reproducible backtest verification ───────────────
    Renders the artifact written by skills/run_backtests.py: every skill's
-   PASS/FAIL plus the dataset and code fingerprints and a repository-stable
+   PASS/FAIL plus the dataset and code fingerprints and a repository stable
    repro_digest. One click opens a skill's full manifest (content hash, the
    exact regenerate command, the file hashes and the backtest console). A judge
    reruns the command on the public repo and confirms the hashes match. */
@@ -263,7 +263,7 @@ function AllocatorSkill({ lb }: { lb: Leaderboard | null }) {
 
 /* Plain-language note for why every leg currently reads "blocked": the
    allocator only funds a leg whose edge is positive AFTER the modelled
-   round-trip cost, so at a marginal gross edge no risk budget is deployed. */
+   round trip cost, so at a marginal gross edge no risk budget is deployed. */
 function BlockedLegsNote() {
   const [open, setOpen] = useState(false)
   return <div style={{ marginTop: 12, fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.6 }}>
@@ -278,8 +278,8 @@ function BlockedLegsNote() {
       This is the discipline working, not a failure. The allocator only funds a
       leg when its edge is positive AFTER costs. At the current data each leg's
       gross expectancy is marginal (win rate near 50 percent, a tiny positive R),
-      and the modelled 0.2 percent round-trip swap cost erases it, so the
-      net-of-cost fractional Kelly comes out at or below zero. A non-positive
+      and the modelled 0.2 percent round trip swap cost erases it, so the
+      net of cost fractional Kelly comes out at or below zero. A non positive
       Kelly means no bet, so the gate marks the leg blocked and holds it at 0
       percent rather than forcing a negative expected value trade that would just
       bleed on fees. The moment a leg's measured edge clears the cost hurdle, the
@@ -471,7 +471,7 @@ function MetaComposerSkill() {
 
   return <Panel title="META STRATEGY COMPOSER" accent="#8b5cf6" right={loading ? 'composing…' : plan ? `${deployed.length} ${'legs deployed'}` : ''}
     help={<>{'The flagship skill · it runs the other four as one pipeline. Selection ranks the watchlist by verified expectancy, the optimizer brackets each pick against resolved outcomes, the regime governor decides whether to deploy and at what risk scale, the allocator sizes every surviving leg, and a final budget step proves the SUM of worst case losses stays inside one account drawdown budget. Change the account state below and the whole plan recomputes live · this is the exact function the reproducible backtest hashes.'}</>}>
-    {/* account-state controls */}
+    {/* account state controls */}
     <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11.5, color: 'var(--c-muted)' }}>
         {'Account equity'}

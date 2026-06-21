@@ -111,7 +111,7 @@ const CMC_TOOLS: SkillDef[] = [
   {
     id: 'cmc-narratives', name: 'trending_crypto_narratives', group: 'cmc', kind: 'mcp-tool',
     summary: 'Live ecosystem narratives ranked by their own 24h momentum.',
-    what: 'The raw trending tool feeds the CMC hub narratives tile directly. The rotation skill then groups the live CMC token universe into ecosystem narratives and ranks them by momentum, rotating the book into the strongest but only after the verifiable leaderboard confirms the edge is real. The raw trending feed often returns market-wide regulatory baskets, so the rotation skill works from differentiated ecosystem narratives instead.',
+    what: 'The raw trending tool feeds the CMC hub narratives tile directly. The rotation skill then groups the live CMC token universe into ecosystem narratives and ranks them by momentum, rotating the book into the strongest but only after the verifiable leaderboard confirms the edge is real. The raw trending feed often returns market wide regulatory baskets, so the rotation skill works from differentiated ecosystem narratives instead.',
     inputs: 'none', outputs: 'ranked ecosystem narratives · constituent count · momentum',
     invoke: 'mcp__cmc__trending_crypto_narratives', tags: ['narrative', 'rotation'],
     related: ['bnb-leaderboard', 'cmc-info'], used: true, link: CMC_REPO,
@@ -428,7 +428,7 @@ const BNB_CAPS: SkillDef[] = [
     id: 'bnb-registry', name: 'Commit reveal registry', group: 'bnb', kind: 'contract',
     summary: 'Every call sealed before the outcome is known.',
     what: 'A public notebook where each prediction is sealed as a keccak hash on BSC mainnet before entry and revealed after impossible to backfill or fake.',
-    invoke: '0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB', tags: ['commit-reveal', 'proof', 'core'],
+    invoke: '0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB', tags: ['commit reveal', 'proof', 'core'],
     related: ['bnb-ledger', 'bnb-signals'], used: true,
   },
   {

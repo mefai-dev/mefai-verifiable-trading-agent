@@ -211,10 +211,10 @@ export function Gauge({ value, label, tone, max = 100, size = 130, sub }: { valu
       <circle cx={cx} cy={cx} r={r} fill="none" stroke={tone} strokeWidth={10} strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={c * (1 - frac)} style={{ transition: 'stroke-dashoffset 1s cubic-bezier(.2,.7,.2,1)' }} />
     </svg>
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: `0 ${Math.round(size * 0.17)}px`, boxSizing: 'border-box' }}>
       <div className="mono" style={{ fontSize: size * 0.22, fontWeight: 800, color: tone }}>{fmtNum(value, value < 10 ? 1 : 0)}</div>
-      <div style={{ fontSize: 10, letterSpacing: 1.2, color: 'var(--c-muted)', textTransform: 'uppercase' }}>{label}</div>
-      {sub && <div style={{ fontSize: 9.5, color: 'var(--c-muted-2)', marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: 9.5, letterSpacing: 0.4, color: 'var(--c-muted)', textTransform: 'uppercase', lineHeight: 1.1, maxWidth: '100%' }}>{label}</div>
+      {sub && <div style={{ fontSize: 8.5, color: 'var(--c-muted-2)', marginTop: 2, lineHeight: 1.1, maxWidth: '100%' }}>{sub}</div>}
     </div>
   </div>
 }

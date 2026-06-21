@@ -1,5 +1,5 @@
 /* BNB HACK · the skill catalog UI.
-   One always-open dossier per sponsor capability, plus a filter and search bar.
+   One always open dossier per sponsor capability, plus a filter and search bar.
    Every skill renders its live capability inline under its own title (no click
    to open). Used by the three "Built with" pages (CMC, Trust, BNB) to surface
    every skill. The catalog is data driven from skills.ts, so a new capability is
@@ -21,7 +21,7 @@ function UsedDot({ used, tone }: { used: boolean; tone: string }) {
 }
 
 /* the dossier body: live capability first, then how MEFAI uses it, the IO
-   shape, the invoke line and what it connects to. Shared by the always-open
+   shape, the invoke line and what it connects to. Shared by the always open
    catalog card and the capability-web modal. `lazy` defers the live panel
    until it scrolls near the viewport (catalog only). */
 function SkillBody({ s, tone, onJump, lazy }: {
@@ -66,7 +66,7 @@ function SkillBody({ s, tone, onJump, lazy }: {
   </>
 }
 
-/* one always-open skill: the capability sits under its own title, no click. */
+/* one always open skill: the capability sits under its own title, no click. */
 function SkillDossier({ s, tone, onJump }: { s: SkillDef; tone: string; onJump: (id: string) => void }) {
   return <article id={`cp-sk-${s.id}`} className="cp-sk-open" style={{ ['--sk-tone' as string]: tone }}>
     <div className="cp-sk-modal-head">

@@ -1,5 +1,5 @@
 /* BNB HACK · Track 1 · Autonomous Trading Agent cockpit (BSC gold / black).
-   Live agent heartbeat, fused conviction, drawdown-Kelly sizing, commit-reveal
+   Live agent heartbeat, fused conviction, drawdown-Kelly sizing, commit reveal
    proofs and an AI "why this trade" desk grounded only on the agent's own
    numbers. */
 
@@ -98,7 +98,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </Card>
     </Reveal>
 
-    {/* live transparency feed · per-user Telegram bot DM, one message per trade leg */}
+    {/* live transparency feed · per user Telegram bot DM, one message per trade leg */}
     <Reveal delay={140}>
       <Card glow="var(--cmc)" style={{ padding: '14px 18px', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -147,7 +147,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </Reveal>
     </div>
 
-    {/* live equity curve · real per-cycle equity from the published snapshot ring */}
+    {/* live equity curve · real per cycle equity from the published snapshot ring */}
     <Reveal delay={80}>
       <div style={{ marginTop: 28 }}>
         <EquityCurve st={st} />
@@ -189,7 +189,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
 
-    {/* commit-reveal proofs */}
+    {/* commit reveal proofs */}
     <Reveal delay={80}>
       <div style={{ marginTop: 28 }}>
         <ProofsPanel st={st} />
@@ -322,7 +322,7 @@ function SizingPanel({ sizing, tpsl }: { sizing: SizingResult | null; tpsl: TpSl
 
 /* Plain-language explainer for the BLOCKED sizing state. This is capital
    preservation by design: the sizer only takes a trade when the edge is
-   positive AFTER costs, so a non-positive net-of-cost Kelly means it stands
+   positive AFTER costs, so a non positive net of cost Kelly means it stands
    aside rather than pay fees on a coin-flip. */
 function WhyNoPositionModal({ onClose }: { onClose: () => void }) {
   return <Portal>
@@ -338,23 +338,23 @@ function WhyNoPositionModal({ onClose }: { onClose: () => void }) {
             the disciplined sizer stands aside and holds 0.
           </p>
           <p style={{ margin: 0 }}>
-            On the current data the per-signal gross expectancy is marginal: the
+            On the current data the per signal gross expectancy is marginal: the
             win rate sits near 50 percent and the edge is a tiny positive R. Once
-            the modelled 0.2 percent round-trip swap cost is subtracted, the
-            net-of-cost expectancy lands at or below zero, so fractional Kelly
-            computes at or below zero. A non-positive Kelly means no bet, and the
+            the modelled 0.2 percent round trip swap cost is subtracted, the
+            net of cost expectancy lands at or below zero, so fractional Kelly
+            computes at or below zero. A non positive Kelly means no bet, and the
             agent refuses to pay fees on a coin flip just to look active.
           </p>
           <p style={{ margin: 0 }}>
             The RiskGovernor and the market regime gate can also stand the book
-            aside when conditions are risk-off, even when a single signal looks
+            aside when conditions are risk off, even when a single signal looks
             tempting.
           </p>
           <p style={{ margin: 0, color: 'var(--gold)', fontWeight: 600 }}>
             The instant a signal's measured edge clears the cost hurdle and the
-            regime is not risk-off, Kelly turns positive and the sizer scales a
+            regime is not risk off, Kelly turns positive and the sizer scales a
             real position back up. Until then, no position is the correct,
-            capital-preserving call: no negative expected value trades.
+            capital preserving call: no negative expected value trades.
           </p>
         </div>
       </div>
@@ -491,7 +491,7 @@ function DecisionsTable({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
   </Panel>
 }
 
-/* ─────────────── live equity curve (real per-cycle equity) ─────────────── */
+/* ─────────────── live equity curve (real per cycle equity) ─────────────── */
 function EquityCurve({ st }: { st?: LoopEnvelope['state'] }) {
   const hist = st?.equity_history ?? []
   const peak = st?.peak_equity ?? 0
@@ -558,14 +558,14 @@ function EquityCurve({ st }: { st?: LoopEnvelope['state'] }) {
 /* ─────────────── live managed positions · open + close lifecycle ─────────────── */
 const CLOSE_TONE: Record<string, string> = {
   target: 'var(--green)', tp1: 'var(--gold)', tp2: 'var(--green)',
-  stop: 'var(--red)', 'signal-flip': 'var(--gold)', trail: 'var(--cmc)',
+  stop: 'var(--red)', 'signal flip': 'var(--gold)', trail: 'var(--cmc)',
 }
 function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s: string) => void }) {
   const pos = st?.positions
   const open = pos?.open ?? []
   const closes = (pos?.closes ?? []).filter((c) => Math.abs(c.pnl_usd) >= 1)
-  // A swap only counts as live-signed once a position actually carries an on-chain
-  // open_tx. The commit reveal proofs are real on-chain regardless; the execution
+  // A swap only counts as live signed once a position actually carries an on chain
+  // open_tx. The commit reveal proofs are real on chain regardless; the execution
   // is simulated until a real open_tx lands, so do not assert a signed swap early.
   const signedExec = open.some((p) => !!txHashOf(p.open_tx))
   const paper = !signedExec
@@ -616,9 +616,9 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
       <Stat label="Unrealized PnL" value={open.length ? `${unreal >= 0 ? '+' : ''}${fmtUsd(unreal)}` : '-'} tone={unreal >= 0 ? 'var(--green)' : 'var(--red)'} sub="open book" />
       <Stat label="Realized PnL" value={fmtUsd(realized)} tone={realized >= 0 ? 'var(--green)' : 'var(--red)'} sub="closed trades" />
       <Stat label="Scale out" value={'TP1 · lock · TP2'} tone="var(--green)" sub="partial + profit lock" />
-      <Stat label="Scale in" value={rungs > 1 ? `${rungs} ${'rungs'}` : 'single'} tone="var(--cmc)" sub={rungs > 1 ? 'laddered entry' : 'one-shot entry'} />
+      <Stat label="Scale in" value={rungs > 1 ? `${rungs} ${'rungs'}` : 'single'} tone="var(--cmc)" sub={rungs > 1 ? 'laddered entry' : 'one shot entry'} />
       <Stat label="Time stop" value={maxHoldH > 0 ? `${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h` : 'off'} tone={GOLD} sub="bank the edge beat decay" />
-      <Stat label="Risk gate" value={regimeOn ? 'regime + cost' : `${'cost'} ${fmtNum(costPct, 1)}%`} tone="var(--cmc)" sub={regimeOn ? 'flat in risk-off' : 'fee-modelled'} />
+      <Stat label="Risk gate" value={regimeOn ? 'regime + cost' : `${'cost'} ${fmtNum(costPct, 1)}%`} tone="var(--cmc)" sub={regimeOn ? 'flat in risk off' : 'fee modelled'} />
       <Stat label="Two-sided" value={perp?.enabled ? 'long + short live' : 'long spot · short perp'} tone={perp?.enabled ? 'var(--green)' : GOLD} sub={perp?.enabled ? `short · ${perp.venue ?? 'perp'} ${perp.leverage ?? 1}x` : 'long spot · short perp venue'} />
     </div>
     <CmcTable columns={cols} rows={open}
@@ -632,8 +632,8 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
     </div>}
     <p style={{ color: 'var(--c-muted-2)', fontSize: 11, lineHeight: 1.6, margin: '12px 0 0' }}>
       {paper
-        ? `${'Proof-live · execution simulated. The on-chain commit reveal proof for every call is real, but no signed swap is recorded yet for the open positions, so the book is marked off the live mark price against real entries (no swap signed), with a'} ${fmtNum(costPct, 1)}% ${'round-trip swap cost charged to every close so the book is honest against the live venue. Entries scale in over rungs on persistent buy signals; at the first target the agent books a TP1 partial (only when the move clears the cost), pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`
-        : `${'Live signed execution · each leg routes through the security gate and a real swap is signed on chain, recorded as the open tx. Entries scale in over rungs on persistent buy signals; at the first target the agent sells a TP1 partial back to USDT, pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk-off.'}` : ''}`}
+        ? `${'Proof-live · execution simulated. The on chain commit reveal proof for every call is real, but no signed swap is recorded yet for the open positions, so the book is marked off the live mark price against real entries (no swap signed), with a'} ${fmtNum(costPct, 1)}% ${'round trip swap cost charged to every close so the book is honest against the live venue. Entries scale in over rungs on persistent buy signals; at the first target the agent books a TP1 partial (only when the move clears the cost), pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk off.'}` : ''}`
+        : `${'Live signed execution · each leg routes through the security gate and a real swap is signed on chain, recorded as the open tx. Entries scale in over rungs on persistent buy signals; at the first target the agent sells a TP1 partial back to USDT, pulls the stop into profit and lets the runner ride to TP2, with a ratcheting trailing stop, an immediate exit on a MEFAI sell flip'}${maxHoldH > 0 ? `, ${'and a'} ${fmtNum(maxHoldH, maxHoldH < 1 ? 1 : 0)}h ${'time stop that banks the edge before it decays'}` : ''}.${regimeOn ? ` ${'New longs stand aside while the CMC regime reads risk off.'}` : ''}`}
     </p>
   </Panel>
 }
@@ -846,7 +846,7 @@ function X402ConsumePanel({ st }: { st?: LoopEnvelope['state'] }) {
       ? <div style={{ color: 'var(--c-muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>{'No feed bought yet this run · runs on a low cadence'}</div>
       : <>
         <div style={{ color: 'var(--c-muted)', fontSize: 12.5, marginBottom: 14, lineHeight: 1.6 }}>
-          {'The agent itself buys a premium verified-record feed over the x402 micropayment protocol · full 402 challenge, EIP-3009 signed authorization, server-side signature recovery, then 200 verified feed. Settlement is deferred to a facilitator, so no funds move and no key is held.'}
+          {'The agent itself buys a premium verified record feed over the x402 micropayment protocol · full 402 challenge, EIP-3009 signed authorization, server side signature recovery, then 200 verified feed. Settlement is deferred to a facilitator, so no funds move and no key is held.'}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
           <Stat label={'product'} value={x.product_id} tone={GOLD} />

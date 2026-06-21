@@ -16,7 +16,7 @@ import { IconExternal } from '../icons'
 
 const TONE = 'var(--gold)'
 
-/* plain-language explanations of each contract, so a non-developer gets it */
+/* plain language explanations of each contract, so a non developer gets it */
 const CONTRACTS: { label: string; plain: string; addr: string }[] = [
   { label: 'Prediction notebook', plain: 'A public notebook where the agent writes down every call (sealed) before the outcome is known then reveals it after. Nobody can edit the past.', addr: ADDR.registry },
   { label: 'Automatic circuit breaker', plain: 'A contract that halts trading the instant losses approach the limit. The agent cannot exceed its own risk cap.', addr: ADDR.governor },
@@ -104,7 +104,7 @@ const EMBEDS: { label: string; path: string; note: string }[] = [
   { label: 'Token Holders', path: '/bnb-holder-dist', note: 'Concentration map for any BSC token: supply tiers Lorenz curve top holders and 24h flow.' },
   { label: 'DEX Activity', path: '/bnb-dex-activity', note: 'The live BSC swap firehose top pairs fresh pair radar and whale DEX flow.' },
   { label: 'Network Pulse', path: '/bnb-network-info', note: 'BSC network health: gas ring block health multi endpoint RPC probes and chain TVL.' },
-  { label: 'Smart Money Lens', path: '/smart-money', note: 'The proven BSC trader leaderboard with cohorts first movers and Sharpe based skill scoring.' },
+  { label: 'Smart Money Lens', path: '/smart money', note: 'The proven BSC trader leaderboard with cohorts first movers and Sharpe based skill scoring.' },
 ]
 
 function EmbedViewer() {
@@ -139,7 +139,7 @@ function eip155Scan(v: string): { chain: number; addr: string; url: string } | n
   const host = chain === 97 ? 'testnet.bscscan.com' : 'bscscan.com'
   return { chain, addr: m[2], url: `https://${host}/address/${m[2]}` }
 }
-const stripDry = (s: string) => (s || '').replace(/^dry-run \(execute=False\):\s*/i, '')
+const stripDry = (s: string) => (s || '').replace(/^dry run \(execute=False\):\s*/i, '')
 const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 
 function ScanLink({ addr, chain }: { addr: string; chain: number }) {
@@ -186,7 +186,7 @@ function AgentIdentityPanel() {
           </div>
         </div>}
 
-        {/* track-record metadata */}
+        {/* track record metadata */}
         <div>
           <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>{'Track record metadata (setMetadata)'}</div>
           <div style={{ display: 'grid', gap: 6 }}>

@@ -206,7 +206,7 @@ export default function JudgeMode({ go }: { go: (p: string) => void }) {
             <Stat label={'Governor'} value={gov.ok ? 'OK' : 'HALT'} tone={gov.ok ? 'var(--green)' : 'var(--red)'} sub={'live state'} />
             <Stat label={'Drawdown'} value={st ? `${fmtNum(ddBps, 0)} bps` : '-'} tone={GOLD} sub={st ? `${'internal cap'} ${fmtNum(internalBps, 0)}` : 'standby'} />
             {st && <Stat label={'Equity'} value={<CountUp value={st.equity} prefix="$" decimals={2} />} sub={'simulated book · real proofs'} />}
-            {gov.record && <Stat label={'Record'} value={gov.record} sub={'keeper feed'} mono />}
+            {gov.record && <Stat label={'Record'} value={<span style={{ fontSize: 12, fontWeight: 700, wordBreak: 'break-word', lineHeight: 1.2, display: 'inline-block' }}>{gov.record}</span>} sub={'keeper feed'} mono />}
           </div>
         </div>}
         {gov?.detail && <p className="cp-judge-note">{gov.detail}</p>}

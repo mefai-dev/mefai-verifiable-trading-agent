@@ -1,5 +1,5 @@
 /* MEFAI · BNB HACK sub-site icon set.
-   Every glyph is hand-drawn SVG (no icon library, no emoji, no external
+   Every glyph is hand drawn SVG (no icon library, no emoji, no external
    assets). Stroke icons inherit currentColor and a 24x24 viewBox so they
    align on any baseline. Pass `size` to scale, `style`/`className` to theme. */
 
@@ -58,9 +58,9 @@ export const IconDocs = (p: IconProps) => <S {...p}><path d="M6 3h8l4 4v14H6V3Z"
 export const IconWhale = (p: IconProps) => <S {...p}><path d="M3 12c3 0 4-4 8-4s5 4 8 4c0 4-4 6-8 6-3 0-5-1.5-6-3" /><path d="M19 12c1-1 2-1 2-3M9 11.5h.01" /></S>
 export const IconGavel = (p: IconProps) => <S {...p}><path d="M14 6l4 4-5 5-4-4 5-5Z" /><path d="M9 9l-5 5M19 21H9M14.5 10.5l3-3" /></S>
 
-/* ─────────── sponsor / stack brand glyphs (hand-drawn SVG, no assets) ───────────
+/* ─────────── sponsor / stack brand glyphs (hand drawn SVG, no assets) ───────────
    Each mark is redrawn from the real brand silhouette so it reads as the brand
-   at a glance · the BNB four-diamond, the Trust shield, the CMC ring meter, the
+   at a glance · the BNB four diamond, the Trust shield, the CMC ring meter, the
    PancakeSwap rabbit, the ERC token hexagon, the HTTP 402 coin, the Binance
    candles, the BscScan magnifier on a block. */
 function Bs({ size = 22, children }: { size?: number; children: ReactNode }) {

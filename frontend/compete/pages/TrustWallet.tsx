@@ -40,7 +40,7 @@ export default function TrustWallet({ go }: { go: (p: string) => void }) {
     </Reveal>
 
     <SponsorSectionHead tone={TONE} eyebrow={'Quote, gate, sign'} title={'The execution pipeline · preview'}
-      sub={'The exact chain the agent runs before any trade. We quote a real PancakeSwap-class route through the Agent Kit, then run the full pre-trade security gate on that quote. The sign and broadcast step is always your own self-custody wallet, so no key is held and no funds move in this preview.'} />
+      sub={'The exact chain the agent runs before any trade. We quote a real PancakeSwap-class route through the Agent Kit, then run the full pre trade security gate on that quote. The sign and broadcast step is always your own self custody wallet, so no key is held and no funds move in this preview.'} />
     <Reveal>
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 22px' }}>
         <ExecutionPipeline />
@@ -176,7 +176,7 @@ function SafetyGate() {
     </div>}
 
     <div style={{ fontSize: 11, color: 'var(--c-muted-2)', marginTop: 14 }}>
-      {'Six core go / no-go checks · honeypot · contract · slippage · approval · preflight · MEV · plus advisory reads such as gas sanity · the standing allowance · and the risk governor. The agent runs this exact gate and stops on a BLOCK verdict before your wallet is ever asked to sign.'}
+      {'Six core go / no go checks · honeypot · contract · slippage · approval · preflight · MEV · plus advisory reads such as gas sanity · the standing allowance · and the risk governor. The agent runs this exact gate and stops on a BLOCK verdict before your wallet is ever asked to sign.'}
     </div>
   </Panel>
 }

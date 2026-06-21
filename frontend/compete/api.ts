@@ -1,7 +1,7 @@
 /* Shared backend client for the BNB HACK sub-site.
    All reads hit the same hardened edge the terminal cockpit uses:
      /bnbhack-api/*  → FastAPI (port 8401) over the audited pure modules
-     /svc/trade-chat → grounded AI assistant (model key stays server-side)
+     /svc/trade-chat → grounded AI assistant (model key stays server side)
    No secrets ever touch the client. */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -34,7 +34,7 @@ function memo<T>(key: string, run: () => Promise<T>, ttl = CACHE_TTL): Promise<T
 }
 
 /* Shared fetch with a hard wall-clock cap. A slow or hung edge must not leave
-   an always-open panel spinning forever: after the cap the request aborts and
+   an always open panel spinning forever: after the cap the request aborts and
    the memo entry clears, so the panel shows its honest error/fallback view and
    the next poll retries. Consumer abort signals are deliberately not threaded
    in (see cache note); this only bounds the shared round trip. */
@@ -263,7 +263,7 @@ export async function fetchCmcIntel(limit = 60, _signal?: AbortSignal): Promise<
   })
 }
 
-/* ─────────────── live taker order flow (real Binance spot tape, key-free) ───────────────
+/* ─────────────── live taker order flow (real Binance spot tape, key free) ───────────────
    Aggregated trades carry `m` = isBuyerMaker: m=false is an aggressive taker BUY,
    m=true is an aggressive taker SELL. Summed over the window this is the real
    buy versus sell pressure, not an estimate. The depth read gives the resting
@@ -312,7 +312,7 @@ export async function fetchOrderFlow(symbol: string, signal?: AbortSignal): Prom
 /* ─────────────── wallet approval guard (live, Moralis-backed allowance scan) ───────────────
    MEFAI's own wallet safety check, the same scan the terminal runs before the
    agent ever asks Trust Wallet to sign. It reads every live ERC-20 allowance a
-   wallet has granted on BSC, flags unlimited approvals and possible-spam tokens,
+   wallet has granted on BSC, flags unlimited approvals and possible spam tokens,
    and ranks each by the USD it puts at risk. Real chain data, no fabrication.
    The compete site is read only; revoke runs in the full terminal with the
    visitor's own connected Trust Wallet. */
@@ -402,7 +402,7 @@ export async function fetchArenaPredictions(status = 'pending', limit = 12, _sig
 
 /* ─────────────── agent decision pipeline (nginx injects the data key) ───────────────
    Every endpoint here is the same audited read the live agent runs. The browser
-   never sees a key: the /bnbhack-api edge injects it server-side. Real output only,
+   never sees a key: the /bnbhack-api edge injects it server side. Real output only,
    never fabricated; callers fall back to an honest schema when a feed is down. */
 export async function fetchFusion(symbol: string, timeframe = '4h', signal?: AbortSignal): Promise<FusionResult> {
   return apiPost<FusionResult>('/fusion', { symbol, timeframe, include_cmc: true }, signal)
@@ -481,7 +481,7 @@ export async function fetchX402CmcChallenge(signal?: AbortSignal): Promise<X402C
 
 /* ─────────────── ERC-8004 identity + ERC-8183 commerce server template ───────────────
    The agent's live identity surface: the registration-v1 card, the registry
-   coordinates, and the full ERC-8183 job lifecycle exposed as honest dry-run
+   coordinates, and the full ERC-8183 job lifecycle exposed as honest dry run
    previews from the real agent code path. No write executes from this surface. */
 export type AgentService = { name: string; endpoint: string; version?: string; skills?: string[]; domains?: string[] }
 export type AgentCard = {
