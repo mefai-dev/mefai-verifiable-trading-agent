@@ -219,7 +219,9 @@ try{
   const sigQueue=[]; const seen=new Set();
   function pushCandidates(toks){
     const dec=(toks||[]).filter(t=>['strong buy','buy','weak','avoid'].includes(String(t.verdict||'').toLowerCase()) && Number(t.market_cap)>0);
-    dec.sort((a,b)=>Math.abs((Number(b.mefai_score)||50)-50)-Math.abs((Number(a.mefai_score)||50)-50));
+    // Shuffle the decisive set so each visit surfaces a varied real subset rather than the
+    // same extreme tokens in a fixed order; every fired signal is still a live CMC verdict.
+    for(let i=dec.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const _t=dec[i];dec[i]=dec[j];dec[j]=_t;}
     for(const t of dec.slice(0,80)){
       const v=String(t.verdict).toLowerCase(), key=t.symbol+'|'+v;
       if(seen.has(key)) continue; seen.add(key); if(seen.size>500) seen.clear();
