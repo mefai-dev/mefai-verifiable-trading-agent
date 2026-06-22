@@ -567,7 +567,7 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
   // A swap only counts as live signed once a position actually carries an on chain
   // open_tx. The commit reveal proofs are real on chain regardless; the execution
   // is simulated until a real open_tx lands, so do not assert a signed swap early.
-  const signedExec = open.some((p) => !!txHashOf(p.open_tx))
+  const signedExec = open.some((p) => /^0x[0-9a-fA-F]{64}$/.test(txHashOf(p.open_tx) || ''))
   const paper = !signedExec
   const maxPos = st?.config?.max_positions ?? 3
   const realized = pos?.realized_usd ?? 0
@@ -602,11 +602,14 @@ function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s
         {r.tp1_done && <Chip tone="var(--green)">{'TP1 booked'}</Chip>}
       </span>
     }},
-    { key: 'tx', header: 'Swap tx', align: 'l', hideSm: true, sortValue: (r) => (txHashOf(r.open_tx) ? 1 : 0), render: (r) => {
+    { key: 'tx', header: 'Swap tx', align: 'l', hideSm: true, sortValue: (r) => (r.open_tx ? 1 : 0), render: (r) => {
       const h = txHashOf(r.open_tx)
-      return h
+      const full = /^0x[0-9a-fA-F]{64}$/.test(h || '')
+      return full
         ? <a className="cp-a mono" href={`https://bscscan.com/tx/${h}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--gold)' }}>{shortAddr(h)} <IconExternal size={11} /></a>
-        : <span style={{ color: 'var(--c-muted-2)' }} title={'simulated leg · no signed swap'}>{'paper'}</span>
+        : r.open_tx
+          ? <span className="mono" style={{ fontSize: 12, color: 'var(--c-text-2)' }} title={'operator entry'}>{r.open_tx}</span>
+          : <span style={{ color: 'var(--c-muted-2)' }} title={'simulated leg · no signed swap'}>{'paper'}</span>
     }},
   ]
   return <Panel title="MANAGED POSITIONS · OPEN AND CLOSE" accent="var(--gold)"
