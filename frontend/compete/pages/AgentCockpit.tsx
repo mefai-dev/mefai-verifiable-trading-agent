@@ -563,7 +563,7 @@ const CLOSE_TONE: Record<string, string> = {
 function PositionsPanel({ st, onPick }: { st?: LoopEnvelope['state']; onPick: (s: string) => void }) {
   const pos = st?.positions
   const open = pos?.open ?? []
-  const closes = (pos?.closes ?? []).filter((c) => Math.abs(c.pnl_usd) >= 1)
+  const closes = (pos?.closes ?? []).filter((c) => Number.isFinite(c.pnl_usd))
   // A swap only counts as live signed once a position actually carries an on chain
   // open_tx. The commit reveal proofs are real on chain regardless; the execution
   // is simulated until a real open_tx lands, so do not assert a signed swap early.
@@ -663,7 +663,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
   // Only count trades that actually moved the book · ignore sub-$1 noise so
   // every number below (counts, by-reason, by-market, profit factor, realized)
   // reflects materially realized PnL.
-  const closes = (st?.positions?.closes ?? []).filter((c) => Math.abs(c.pnl_usd) >= 1)
+  const closes = (st?.positions?.closes ?? []).filter((c) => Number.isFinite(c.pnl_usd))
   const n = closes.length
   const net = closes.reduce((a, c) => a + c.pnl_usd, 0)
   const grossWin = closes.filter((c) => c.pnl_usd > 0).reduce((a, c) => a + c.pnl_usd, 0)
